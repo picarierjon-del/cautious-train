@@ -1,83 +1,466 @@
 <!doctype html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gestionale SmartApp</title>
-<meta name="theme-color" content="#0b1223">
-<link rel="manifest" href="manifest.json">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Gestionale SmartApp — Fase 2a (Impostazioni base)</title>
+<meta name="theme-color" content="#0b1223" />
 <style>
-  /* Tailwind-like mini CSS o tuo stile personalizzato */
-  body{margin:0;font-family:system-ui;background:#0b1223;color:#fff;display:flex;flex-direction:column;height:100vh}
-  header,footer{background:#0f172a;padding:10px;display:flex;align-items:center;justify-content:space-between}
-  main{flex:1;display:grid;grid-template-columns:300px 1fr}
-  aside{background:#111827;padding:10px;overflow:auto}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;padding:8px}
-  button{border:none;border-radius:10px;padding:12px;color:#fff;font-weight:bold;cursor:pointer}
+  :root{
+    --bg:#0b1223; --panel:#0f172a; --bar:#0c1426; --muted:#1f2937;
+    --ink:#e5e7eb; --ink-dim:#9aa4bf; --ring:rgba(255,255,255,.08);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+    display:flex; flex-direction:column;
+  }
+  header, footer{
+    position:fixed; left:0; right:0; z-index:20; display:flex; align-items:center; gap:8px;
+    background:rgba(12,20,38,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--ring);
+  }
+  header{ top:0; padding:calc(env(safe-area-inset-top)+8px) 10px 8px; }
+  footer{ bottom:0; padding:8px 10px calc(env(safe-area-inset-bottom)+8px); border-top:1px solid var(--ring); border-bottom:none; }
+
+  .brand{font-weight:700}
+  .grow{flex:1}
+  .btn{cursor:pointer; border:1px solid var(--ring); padding:8px 12px; border-radius:10px;
+       background:linear-gradient(180deg,#1f2937,#0b1223); color:var(--ink); font-weight:600}
+  .btn.icon{padding:8px; width:42px; justify-content:center}
+  .btn.danger{border-color:rgba(239,68,68,.4)}
+  .btn.primary{border-color:rgba(59,130,246,.4)}
+
+  main{
+    flex:1; display:grid; grid-template-columns:300px 1fr; gap:0; min-height:0;
+    margin-top:calc(env(safe-area-inset-top)+60px);
+    margin-bottom:calc(env(safe-area-inset-bottom)+64px);
+  }
+  @media (max-width: 960px){ main{grid-template-columns:1fr} }
+
+  /* Ticket */
+  aside{background:var(--panel); border-right:1px solid var(--ring); padding:10px; overflow:auto}
+  .line{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap}
+  .ticket-item{border-bottom:1px dashed var(--ring); padding:8px 4px; cursor:pointer}
+  .ticket-item.active{outline:2px solid #3b82f6; border-radius:8px}
+  .qtybtn{background:var(--muted); border:1px solid var(--ring); border-radius:8px; padding:2px 8px; cursor:pointer}
+  .extra{font-size:.9rem; color:var(--ink-dim); display:flex; align-items:center; gap:6px; justify-content:space-between}
+  .total{padding-top:8px; margin-top:8px; border-top:1px solid var(--ring); font-weight:700}
+  .small{font-size:.85rem; opacity:.85}
+
+  /* Stage (tabs + search + grid) */
+  .stage{display:flex; flex-direction:column; min-width:0}
+  .tabs{display:flex; gap:8px; padding:10px; border-bottom:1px solid var(--ring); background:var(--panel); overflow-x:auto}
+  .tab{border:1px solid var(--ring); border-radius:10px; padding:6px 10px; cursor:pointer; white-space:nowrap; background:#0e1427}
+  .tab.active{outline:2px solid rgba(255,255,255,.18)}
+  .searchbox{padding:6px 12px; background:var(--panel); border-bottom:1px solid var(--ring)}
+  .searchbox input{width:90%; padding:8px; border-radius:10px; border:1px solid var(--ring); background:#0b1223; color:#e5e7eb}
+  .grid{flex:1; overflow:auto; padding:12px; display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px}
+  .gridbtn{border:none; border-radius:12px; padding:16px 10px; color:#fff; font-weight:700; cursor:pointer; text-shadow:0 1px 1px rgba(0,0,0,.3)}
+  .gridbtn small{display:block; opacity:.9; font-weight:600}
+
+  /* Footer (gruppi modificatori) */
+  .quick{border:1px solid var(--ring); border-radius:10px; padding:10px 12px; background:linear-gradient(180deg,#1f2937,#0b1223); color:#fff; cursor:pointer; font-weight:600}
+
+  /* Colori base (semplici) */
+  .c-red{background:#ef4444}.c-orange{background:#f97316}.c-yellow{background:#eab308}
+  .c-green{background:#22c55e}.c-blue{background:#3b82f6}.c-purple{background:#8b5cf6}
+  .c-pink{background:#ec4899}.c-gray{background:#6b7280}.c-slate{background:#475569}
+
+  /* Modal impostazioni (overlay custom, no <dialog> per compatibilità iOS) */
+  .modal{
+    position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.55);
+  }
+  .modal.show{display:flex}
+  .panel{
+    width:min(1100px,95vw); max-height:80vh; overflow:auto;
+    background:#0b1223; color:#e5e7eb; border:1px solid var(--ring); border-radius:16px; padding:12px;
+  }
+  .card{border:1px solid var(--ring); border-radius:12px; padding:10px; background:#0e1427}
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .hr{height:1px; background:var(--ring); margin:8px 0}
+  input[type="text"], input[type="number"]{background:#0b1223; color:#e5e7eb; border:1px solid var(--ring); border-radius:8px; padding:8px}
+  .section{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width: 900px){ .section{grid-template-columns:1fr} }
+
+  /* Stampa */
+  @media print{
+    header, footer, .tabs, .searchbox, .grid, .modal{display:none !important}
+    main{grid-template-columns:1fr}
+    aside{border:none}
+    body{background:#fff; color:#000}
+  }
 </style>
 </head>
 <body>
 <header>
-  <strong>🧾 Gestionale Smart</strong>
-  <button @click="openSettings">⚙️</button>
+  <div class="brand">🧾 Gestionale SmartApp</div>
+  <div class="tabs" id="topTabs" v-scope="App" @vue:mounted="init()">
+    <!-- Tabs categorie -->
+    <button
+      v-for="(g,i) in topGroups" :key="g.label"
+      class="tab" :class="{active: currentBottomGroup==null && currentTopIndex===i}"
+      @click="currentBottomGroup=null; currentTopIndex=i; search='';"
+    >{{ g.icon }} {{ g.label }}</button>
+  </div>
+  <div class="grow"></div>
+  <div class="toolbar" v-scope="App">
+    <button class="btn" @click="printOrder" title="Stampa / PDF">🖨️</button>
+    <button class="btn" @click="shareWA" title="WhatsApp">🟢</button>
+    <button class="btn" @click="shareEmail" title="Email">✉️</button>
+    <button class="btn" @click="copyOrder" title="Copia riepilogo">📋</button>
+    <button class="btn icon" @click="showSettings=true" title="Impostazioni">⚙️</button>
+    <button class="btn danger" @click="clearOrder" title="Svuota ordine">🗑️</button>
+  </div>
 </header>
 
-<main v-scope="App">
-  <aside>
-    <h3>Ordine</h3>
-    <div v-for="(item,i) in cart" :key="i">
-      {{item.qty}}× {{item.name}} – €{{item.price}}
-      <button @click="remove(i)">✖</button>
+<main>
+  <!-- Ticket -->
+  <aside v-scope="App">
+    <div class="line" style="margin-bottom:6px">
+      <strong>Ordine</strong>
+      <span class="small">{{ now }}</span>
     </div>
-    <h4>Totale: €{{total}}</h4>
+
+    <template v-if="cart.length>0">
+      <div
+        class="ticket-item" :class="{active: activeIndex===i}"
+        v-for="(it,i) in cart" :key="i"
+        @click="activeIndex=i"
+      >
+        <div class="line">
+          <div>
+            <strong contenteditable @input="e=>editName(i,e)">{{ it.name }}</strong>
+            <span class="small" v-if="it.isService">(servizio)</span>
+          </div>
+          <div>
+            <button class="qtybtn" @click.stop="decQty(i)">−</button>
+            <span contenteditable @input="e=>editQty(i,e)">{{ it.qty }}</span>
+            <button class="qtybtn" @click.stop="incQty(i)">+</button>
+            &nbsp;×&nbsp;€ <span contenteditable @input="e=>editPrice(i,e)">{{ it.price.toFixed(2) }}</span>
+            <button class="qtybtn" @click.stop="removeItem(i)" title="Elimina">🗑️</button>
+          </div>
+        </div>
+
+        <div class="extra" v-for="(ex,ei) in it.extras" :key="ei">
+          <span>• <span contenteditable @input="e=>editExText(i,ei,e)">{{ ex.text }}</span></span>
+          <span class="small">+ € <span contenteditable @input="e=>editExPrice(i,ei,e)">{{ ex.price.toFixed(2) }}</span></span>
+          <button class="qtybtn" @click.stop="removeExtra(i,ei)">✖</button>
+        </div>
+
+        <div class="line">
+          <span class="small">Subtotale</span>
+          <strong>{{ money(lineTotal(it)) }}</strong>
+        </div>
+      </div>
+    </template>
+
+    <template v-else>
+      <div class="small" style="opacity:.7">Nessun articolo ancora.</div>
+    </template>
+
+    <div class="total">Totale: <span>{{ money(grandTotal) }}</span></div>
   </aside>
 
-  <section>
-    <div style="padding:8px">
-      <input v-model="search" placeholder="🔍 Cerca…" style="width:100%;padding:6px;border-radius:8px">
+  <!-- Stage -->
+  <section class="stage" v-scope="App">
+    <div class="searchbox">
+      🔍 <input type="text" v-model.trim="search" placeholder="Cerca..." />
     </div>
+
     <div class="grid">
-      <button v-for="p in filteredProducts" :style="{background:p.color}" @click="add(p)">
-        {{p.label}}<br>€{{p.price}}
-      </button>
+      <!-- Vista CATEGORIE (top) -->
+      <template v-if="currentBottomGroup==null">
+        <button
+          v-for="it in filteredTopItems" :key="it.label"
+          class="gridbtn" :style="bgStyle(it)"
+          @click="addItem(it)"
+        >
+          {{ it.icon }} {{ it.label }} <small>{{ money(it.price) }}</small>
+        </button>
+      </template>
+
+      <!-- Vista MODIFICATORI (bottom group selezionato) -->
+      <template v-else>
+        <button
+          v-for="ex in filteredBottomItems" :key="ex.label"
+          class="gridbtn" :style="bgStyle(ex)"
+          @click="applyModifier(ex)"
+        >
+          {{ ex.icon }} {{ ex.label }} <small>{{ money(ex.price) }}</small>
+        </button>
+      </template>
     </div>
   </section>
 </main>
 
-<footer>
-  <button v-for="g in bottomGroups" :style="{background:g.color}" @click="showGroup(g)">
-    {{g.label}}
-  </button>
+<footer v-scope="App">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;overflow-x:auto;width:100%">
+    <button
+      v-for="g in bottomGroups" :key="g.label"
+      class="quick" :style="bgStyle(g)"
+      @click="selectBottomGroup(g)"
+    >
+      {{ g.icon }} {{ g.label }}
+    </button>
+  </div>
 </footer>
 
-<script src="https://unpkg.com/petite-vue"></script>
+<!-- MODAL IMPOSTAZIONI (base) -->
+<div class="modal" v-scope="App" :class="{show: showSettings}" @click.self="showSettings=false">
+  <div class="panel">
+    <div class="line" style="margin-bottom:10px">
+      <strong>Impostazioni (base Fase 2a)</strong>
+      <div class="grow"></div>
+      <button class="btn" @click="applyAndSave">💾 Salva</button>
+      <button class="btn danger" @click="resetConfig">Ripristina</button>
+      <button class="btn" @click="showSettings=false">Chiudi</button>
+    </div>
+
+    <div class="section">
+      <!-- Categorie (Top) -->
+      <div class="card">
+        <h3 style="margin:6px 0">Barra superiore — Categorie</h3>
+        <div class="hr"></div>
+        <div v-for="(g,gi) in editTop" :key="gi" class="card" style="margin-bottom:8px">
+          <div class="row">
+            <label>Icona</label>
+            <input type="text" style="width:80px" v-model="g.icon" />
+            <label>Nome</label>
+            <input type="text" style="flex:1" v-model="g.label" />
+          </div>
+          <div class="hr"></div>
+          <div class="small" style="opacity:.8;margin-bottom:6px">Articoli</div>
+          <div v-for="(it,ii) in g.items" :key="ii" class="row" style="gap:6px;margin-bottom:6px">
+            <input type="text" placeholder="Icona" style="width:80px" v-model="it.icon" />
+            <input type="text" placeholder="Nome" style="flex:1" v-model="it.label" />
+            <input type="number" step="0.01" placeholder="Prezzo" style="width:140px" v-model.number="it.price" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Modificatori (Bottom) -->
+      <div class="card">
+        <h3 style="margin:6px 0">Barra inferiore — Modificatori</h3>
+        <div class="hr"></div>
+        <div v-for="(g,gi) in editBottom" :key="gi" class="card" style="margin-bottom:8px">
+          <div class="row">
+            <label>Icona</label>
+            <input type="text" style="width:80px" v-model="g.icon" />
+            <label>Nome</label>
+            <input type="text" style="flex:1" v-model="g.label" />
+          </div>
+          <div class="hr"></div>
+          <div class="small" style="opacity:.8;margin-bottom:6px">Voci</div>
+          <div v-for="(it,ii) in g.items" :key="ii" class="row" style="gap:6px;margin-bottom:6px">
+            <input type="text" placeholder="Icona" style="width:80px" v-model="it.icon" />
+            <input type="text" placeholder="Nome" style="flex:1" v-model="it.label" />
+            <input type="number" step="0.01" placeholder="Prezzo" style="width:140px" v-model.number="it.price" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="small" style="margin-top:10px;opacity:.8">
+      Suggerimento: in <strong>Fase 2b</strong> aggiungeremo scelta colori e pulsanti Aggiungi/Elimina elementi.
+    </p>
+  </div>
+</div>
+
+<!-- Petite-Vue -->
+<script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.iife.js"></script>
 <script>
+const money = n => (isNaN(n)?0:n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
+
+const DEFAULT_CONFIG = {
+  topGroups: [
+    {icon:"🍕", label:"Pizze", color:"#ef4444", items:[
+      {icon:"🍕",label:"Margherita",price:6,color:"#ef4444"},
+      {icon:"🌶️",label:"Diavola",price:7,color:"#ef4444"},
+      {icon:"🍄",label:"Funghi",price:7,color:"#22c55e"},
+      {icon:"🥓",label:"Capricciosa",price:7.5,color:"#ef4444"},
+      {icon:"🕓",label:"Quattro Stagioni",price:7.5,color:"#ef4444"},
+      {icon:"🐃",label:"Bufala",price:8,color:"#ec4899"}
+    ]},
+    {icon:"🥟", label:"Calzoni", color:"#f97316", items:[
+      {icon:"🥟",label:"Classico",price:7,color:"#f97316"},
+      {icon:"🧀",label:"Ripieno",price:8,color:"#f97316"}
+    ]},
+    {icon:"🥪", label:"Panini", color:"#eab308", items:[
+      {icon:"🍔",label:"Hamburger",price:5.5,color:"#eab308"},
+      {icon:"🌭",label:"Hot Dog",price:4.5,color:"#eab308"}
+    ]},
+    {icon:"🍞", label:"Schiacciata grande", color:"#22c55e", items:[
+      {icon:"🍞",label:"Semplice",price:9,color:"#22c55e"}
+    ]},
+    {icon:"📏", label:"Mezzo metro", color:"#3b82f6", items:[
+      {icon:"🥓",label:"Salumi",price:14,color:"#3b82f6"}
+    ]},
+    {icon:"🥤", label:"Bibite", color:"#3b82f6", items:[
+      {icon:"🥤",label:"Cola 33cl",price:2,color:"#3b82f6"},
+      {icon:"💧",label:"Acqua",price:1,color:"#06b6d4"},
+      {icon:"🍺",label:"Birra",price:3,color:"#3b82f6"}
+    ]},
+    {icon:"🧾", label:"Ordini", color:"#475569", items:[]}
+  ],
+  bottomGroups: [
+    {icon:"➕",label:"Più",color:"#22c55e",items:[
+      {icon:"🧀",label:"Mozzarella",price:1,color:"#22c55e"},
+      {icon:"🍄",label:"Funghi",price:1,color:"#22c55e"},
+      {icon:"🥓",label:"Prosciutto",price:1.5,color:"#22c55e"}
+    ]},
+    {icon:"➖",label:"Senza",color:"#6b7280",items:[
+      {icon:"🍅",label:"Pomodoro",price:0,color:"#6b7280"},
+      {icon:"🧅",label:"Cipolla",price:0,color:"#6b7280"}
+    ]},
+    {icon:"🥄",label:"Poco",color:"#eab308",items:[
+      {icon:"🫒",label:"Olio",price:0,color:"#eab308"}
+    ]},
+    {icon:"🍽️",label:"Abbondante",color:"#8b5cf6",items:[
+      {icon:"🧀",label:"Formaggio",price:1,color:"#8b5cf6"},
+      {icon:"🫒",label:"Olive",price:0.5,color:"#8b5cf6"}
+    ]},
+    {icon:"🚚",label:"Consegna a domicilio",color:"#3b82f6",items:[
+      {icon:"🚚",label:"Consegna",price:1.5,color:"#3b82f6",applyToOrder:true}
+    ]},
+    {icon:"🥡",label:"Da asporto",color:"#14b8a6",items:[]},
+    {icon:"🪑",label:"Banco",color:"#71717a",items:[]}
+  ]
+};
+
 function App(){
   return {
-    search:'',
-    currentGroup:null,
-    cart:[],
-    configTop:[
-      {label:'Pizze',color:'#ef4444',items:[{label:'Margherita',price:6,color:'#ef4444'}]},
-      {label:'Bibite',color:'#3b82f6',items:[{label:'Acqua',price:1,color:'#3b82f6'}]}
-    ],
-    configBottom:[
-      {label:'Più',color:'#22c55e',items:[{label:'Mozzarella',price:1,color:'#22c55e'}]},
-      {label:'Senza',color:'#6b7280',items:[{label:'Pomodoro',price:0,color:'#6b7280'}]}
-    ],
-    get products(){ return this.currentGroup?.items || this.configTop.flatMap(g=>g.items) },
-    get filteredProducts(){
-      return this.products.filter(p=>p.label.toLowerCase().includes(this.search.toLowerCase()));
+    /* ===== STATO ===== */
+    now: new Date().toLocaleString('it-IT', {dateStyle:'short', timeStyle:'short'}),
+    search: '',
+    activeIndex: -1,
+    currentTopIndex: 0,
+    currentBottomGroup: null,
+    showSettings: false,
+
+    topGroups: [],
+    bottomGroups: [],
+    cart: [], // {name,price,qty,extras,isService?}
+
+    /* ===== LIFECYCLE ===== */
+    init(){
+      setInterval(()=>{ this.now=new Date().toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) }, 1000);
+      // Config
+      const cfgRaw = localStorage.getItem('smartapp_cfg_v2');
+      if(cfgRaw){ try{ const cfg=JSON.parse(cfgRaw); this.topGroups=cfg.topGroups; this.bottomGroups=cfg.bottomGroups; }catch{ this.resetConfig(true); } }
+      else { this.resetConfig(true); }
+      // Cart
+      const cartRaw = localStorage.getItem('smartapp_cart_v1');
+      if(cartRaw){ try{ this.cart = JSON.parse(cartRaw) || []; }catch{} }
+      // Watchers
+      this.$watch(() => [this.topGroups, this.bottomGroups], () => this.saveConfig(), {deep:true});
+      this.$watch('cart', ()=> localStorage.setItem('smartapp_cart_v1', JSON.stringify(this.cart)), {deep:true});
     },
-    get bottomGroups(){ return this.configBottom },
-    get total(){ return this.cart.reduce((s,i)=>s+i.price*i.qty,0) },
-    add(p){ this.cart.push({...p,qty:1}) },
-    remove(i){ this.cart.splice(i,1) },
-    showGroup(g){ this.currentGroup=g },
-    openSettings(){ alert('Qui puoi aprire un dialog per modificare pulsanti, colori e prezzi') }
+
+    /* ===== DERIVATI & STYLE ===== */
+    get topItems(){ return (this.topGroups[this.currentTopIndex]?.items)||[]; },
+    get filteredTopItems(){
+      const q=this.search.toLowerCase();
+      return this.topItems.filter(p=>`${p.icon||''} ${p.label}`.toLowerCase().includes(q));
+    },
+    get filteredBottomItems(){
+      const q=this.search.toLowerCase();
+      const list=(this.currentBottomGroup?.items)||[];
+      return list.filter(p=>`${p.icon||''} ${p.label}`.toLowerCase().includes(q));
+    },
+    get grandTotal(){
+      return this.cart.reduce((sum,it)=> sum + this.lineTotal(it), 0);
+    },
+    bgStyle(obj){ return {background: obj.color || '#6b7280'}; },
+    money,
+
+    /* ===== AZIONI GRIGLIA ===== */
+    selectBottomGroup(g){ this.currentBottomGroup=g; this.search=''; },
+    addItem(p){
+      this.cart.push({name:p.label, price:+p.price||0, qty:1, extras:[], isService:false});
+      this.activeIndex=this.cart.length-1;
+    },
+    applyModifier(ex){
+      if(ex.applyToOrder){
+        this.cart.push({name:ex.label, price:+ex.price||0, qty:1, extras:[], isService:true});
+        this.activeIndex=this.cart.length-1;
+        return;
+      }
+      if(!this.cart.length){ alert('Aggiungi prima un articolo.'); return; }
+      const idx = this.activeIndex>=0 ? this.activeIndex : this.cart.length-1;
+      const target = this.cart[idx];
+      const gname = this.currentBottomGroup?.label || '';
+      const prefixNeeded = /Più|Senza|Poco|Abbondante/i.test(gname) ? (gname+' ') : '';
+      target.extras.push({text: prefixNeeded + ex.label, price:+ex.price||0});
+      this.activeIndex = idx;
+    },
+
+    /* ===== TICKET ===== */
+    lineTotal(it){
+      const extras = (it.extras||[]).reduce((s,e)=> s + (+e.price||0), 0);
+      return ((+it.price||0) + extras) * (it.qty||1);
+    },
+    incQty(i){ this.cart[i].qty = (this.cart[i].qty||1)+1; },
+    decQty(i){ this.cart[i].qty = Math.max(1,(this.cart[i].qty||1)-1); },
+    removeItem(i){ this.cart.splice(i,1); if(this.activeIndex>=this.cart.length) this.activeIndex=this.cart.length-1; },
+    removeExtra(i,ei){ this.cart[i].extras.splice(ei,1); },
+
+    editName(i,e){ this.cart[i].name = e.target.textContent.trim(); },
+    editQty(i,e){ const n=parseInt(e.target.textContent)||1; this.cart[i].qty = Math.max(1,n); },
+    editPrice(i,e){ const n=parseFloat(e.target.textContent.replace(',','.'))||0; this.cart[i].price = n; },
+    editExText(i,ei,e){ this.cart[i].extras[ei].text = e.target.textContent.trim(); },
+    editExPrice(i,ei,e){ const n=parseFloat(e.target.textContent.replace(',','.'))||0; this.cart[i].extras[ei].price = n; },
+
+    clearOrder(){ if(confirm('Svuotare l’ordine?')){ this.cart.splice(0); this.activeIndex=-1; } },
+
+    /* ===== Condivisione ===== */
+    orderText(){
+      const lines = this.cart.map(it=>{
+        const cad = (+it.price||0) + (it.extras||[]).reduce((s,e)=>s+(+e.price||0),0);
+        const extras = (it.extras||[]).map(e=>`   • ${e.text} ${e.price?`(+${money(e.price)})`:''}`).join('\n');
+        return `${it.qty}× ${it.name} — ${money(cad)} cad.\n${extras}`;
+      }).join('\n');
+      return `ORDINE\n${lines}\nTotale: ${money(this.grandTotal)}\nOra: ${this.now}`;
+    },
+    printOrder(){ window.print(); },
+    async copyOrder(){ try{ await navigator.clipboard.writeText(this.orderText()); alert('Riepilogo copiato!'); }catch{ alert('Copia non disponibile.'); } },
+    shareWA(){ const t=encodeURIComponent(this.orderText()); window.open(`https://wa.me/?text=${t}`,'_blank'); },
+    shareEmail(){ const s=encodeURIComponent('Nuovo ordine'); const b=encodeURIComponent(this.orderText()); location.href=`mailto:?subject=${s}&body=${b}`; },
+
+    /* ===== Impostazioni (BASE) ===== */
+    editTop: [],   // copie di lavoro
+    editBottom: [],
+    openSettings(){
+      // Copie profonde per lavorare “in bozza”
+      this.editTop = JSON.parse(JSON.stringify(this.topGroups));
+      this.editBottom = JSON.parse(JSON.stringify(this.bottomGroups));
+      this.showSettings = true;
+    },
+    applyAndSave(){
+      // Applica le modifiche di base (label, icon, price)
+      this.topGroups = JSON.parse(JSON.stringify(this.editTop));
+      this.bottomGroups = JSON.parse(JSON.stringify(this.editBottom));
+      this.saveConfig();
+      this.showSettings = false;
+      // Se ero su un gruppo bottom cancellato (in 2a non si può), o cambiato nome, nessun problema
+      alert('Impostazioni salvate!');
+    },
+    saveConfig(){
+      const cfg = { topGroups: this.topGroups, bottomGroups: this.bottomGroups };
+      localStorage.setItem('smartapp_cfg_v2', JSON.stringify(cfg));
+    },
+    resetConfig(quiet=false){
+      this.topGroups = JSON.parse(JSON.stringify(DEFAULT_CONFIG.topGroups));
+      this.bottomGroups = JSON.parse(JSON.stringify(DEFAULT_CONFIG.bottomGroups));
+      this.saveConfig();
+      if(!quiet) alert('Configurazione ripristinata.');
+    }
   }
 }
-PetiteVue.createApp(App).mount()
+
+PetiteVue.createApp({ App }).mount()
 </script>
 </body>
 </html>
