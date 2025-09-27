@@ -74,15 +74,59 @@ const $$=s=>Array.from(document.querySelectorAll(s));
 const money=n=>(isNaN(n)?0:n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const nowFmt=()=>new Date().toLocaleString('it-IT',{timeStyle:'short'});
 
-// Config di esempio
+// === Tutti i gruppi e articoli ===
 const configTop=[
-  {label:"Pizze",color:"c-red",items:[{label:"Margherita",price:6,color:"c-red"},{label:"Diavola",price:7,color:"c-red"}]},
-  {label:"Bibite",color:"c-blue",items:[{label:"Cola",price:2,color:"c-blue"},{label:"Acqua",price:1,color:"c-blue"}]}
+  {label:"Pizze",color:"c-red",items:[
+    {label:"Margherita",price:6,color:"c-red"},
+    {label:"Diavola",price:7,color:"c-red"},
+    {label:"Capricciosa",price:7.5,color:"c-red"},
+    {label:"Quattro Stagioni",price:7.5,color:"c-red"},
+    {label:"Bufala",price:8,color:"c-pink"}
+  ]},
+  {label:"Calzoni",color:"c-orange",items:[
+    {label:"Classico",price:7,color:"c-orange"},
+    {label:"Ripieno",price:8,color:"c-orange"}
+  ]},
+  {label:"Panini",color:"c-yellow",items:[
+    {label:"Hamburger",price:5.5,color:"c-yellow"},
+    {label:"Hot Dog",price:4.5,color:"c-yellow"}
+  ]},
+  {label:"Schiacciata grande",color:"c-green",items:[
+    {label:"Semplice",price:9,color:"c-green"}
+  ]},
+  {label:"Mezzo metro",color:"c-blue",items:[
+    {label:"Salumi",price:14,color:"c-blue"}
+  ]},
+  {label:"Bibite",color:"c-purple",items:[
+    {label:"Cola",price:2,color:"c-purple"},
+    {label:"Acqua",price:1,color:"c-purple"},
+    {label:"Birra",price:3,color:"c-purple"}
+  ]},
+  {label:"Ordini",color:"c-gray",items:[]}
 ];
+
 const configBottom=[
-  {label:"Più",color:"c-green",items:[{label:"Mozzarella",price:1,color:"c-green"},{label:"Funghi",price:1,color:"c-green"}]},
-  {label:"Senza",color:"c-gray",items:[{label:"Cipolla",price:0,color:"c-gray"},{label:"Pomodoro",price:0,color:"c-gray"}]},
-  {label:"Abbondante",color:"c-purple",items:[{label:"Formaggio",price:1,color:"c-purple"}]}
+  {label:"Più",color:"c-green",items:[
+    {label:"Mozzarella",price:1,color:"c-green"},
+    {label:"Funghi",price:1,color:"c-green"},
+    {label:"Prosciutto",price:1.5,color:"c-green"}
+  ]},
+  {label:"Senza",color:"c-gray",items:[
+    {label:"Pomodoro",price:0,color:"c-gray"},
+    {label:"Cipolla",price:0,color:"c-gray"}
+  ]},
+  {label:"Poco",color:"c-yellow",items:[
+    {label:"Olio",price:0,color:"c-yellow"}
+  ]},
+  {label:"Abbondante",color:"c-purple",items:[
+    {label:"Formaggio",price:1,color:"c-purple"},
+    {label:"Olive",price:0.5,color:"c-purple"}
+  ]},
+  {label:"Consegna a domicilio",color:"c-blue",items:[
+    {label:"Consegna",price:1.5,color:"c-blue"}
+  ]},
+  {label:"Da asporto",color:"c-orange",items:[]},
+  {label:"Banco",color:"c-gray",items:[]}
 ];
 
 let items=[],activeIndex=-1,currentTop=0,currentBottomGroup=null;
