@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gestionale Pizzeria — App Web</title>
+<meta name="theme-color" content="#0b1223">
+<style>
+  :root{
+    --bg:#0b1223; --panel:#0f172a; --bar:#0c1426; --muted:#1f2937;
+    --ink:#e5e7eb; --ink-dim:#9aa4bf; --ring:rgba(255,255,255,.08);
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+    background:var(--bg); color:var(--ink);
+    display:flex; flex-direction:column;
+  }
+
+  /* App shell (header/footer fissi + safe areas) */
+  header, footer{
+    position:fixed; left:0; right:0; z-index:20; display:flex; align-items:center; gap:8px;
+    background:rgba(12,20,38,.9); backdrop-filter:saturate(1.2) blur(10px);
+  }
+  header{ top:0; padding: calc(env(safe-area-inset-top) + 8px) 10px 8px 10px; border-bottom:1px solid var(--ring); }
+  footer{ bottom:0; padding: 8px 10px calc(env(safe-area-inset-bottom) + 8px) 10px; border-top:1px solid var(--ring); }
+  .brand{font-weight:700}
+  .grow{flex:1}
+
+  /* Bottoni */
+  .btn{
+    cursor:pointer; border:1px solid var(--ring); padding:8px 12px; border-radius:10px;
+    background:linear-gradient(180deg,#1f2937,#0b1223); color:var(--ink); font-weight:600;
+  }
+  .btn.icon{padding:8px; width:42px; justify-content:center}
+  .btn.danger{border-color:rgba(239,68,68,.35)}
+  .btn.primary{border-color:rgba(59,130,246,.35)}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap}
+
+  /* Menù a tendina */
+  .dropdown{position:relative}
+  .dd-toggle:after{content:"▾"; opacity:.7; margin-left:6px}
+  .dd-menu{
+    position:absolute; top:110%; left:0; min-width:260px; background:var(--panel);
+    border:1px solid var(--ring); border-radius:12px; box-shadow:var(--shadow);
+    display:none; overflow:auto; max-height:60vh; z-index:30;
+  }
+  .dropdown.open .dd-menu{display:block}
+  .dd-item{display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer}
+  .dd-item:hover{background:rgba(255,255,255,.06)}
+
+  /* Layout centrale */
+  main{
+    flex:1; display:grid; grid-template-columns:300px 1fr; gap:0; min-height:0;
+    margin-top: calc(env(safe-area-inset-top) + 64px);
+    margin-bottom: calc(env(safe-area-inset-bottom) + 64px);
+  }
+  @media (max-width: 980px){ main{grid-template-columns:1fr} }
+  aside{background:var(--panel); border-right:1px solid var(--ring); padding:10px; overflow:auto}
+  .ticket-item{border-bottom:1px dashed var(--ring); padding:8px 4px; cursor:pointer}
+  .ticket-item.active{outline:2px solid #3b82f6; border-radius:8px}
+  .line{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap}
+  .qtybtn{background:var(--muted); border:1px solid var(--ring); border-radius:8px; padding:2px 8px; cursor:pointer}
+  .extra{font-size:.9rem; color:var(--ink-dim); display:flex; align-items:center; gap:6px; justify-content:space-between}
+  .total{padding-top:8px; margin-top:8px; border-top:1px solid var(--ring); font-weight:700}
+
+  /* Stage (tabs + griglia) */
+  .stage{display:flex; flex-direction:column; min-width:0}
+  .tabs{display:flex; gap:8px; padding:10px; border-bottom:1px solid var(--ring); background:var(--panel); overflow-x:auto}
+  .tab{border:1px solid var(--ring); border-radius:10px; padding:6px 10px; cursor:pointer; white-space:nowrap; background:#0e1427}
+  .tab.active{outline:2px solid rgba(255,255,255,.18)}
+  .grid{padding:12px; display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; overflow:auto}
+  .gridbtn{border:none; border-radius:12px; padding:16px 10px; color:#fff; font-weight:700; cursor:pointer; text-shadow:0 1px 1px rgba(0,0,0,.3)}
+  .gridbtn small{display:block; opacity:.9; font-weight:600}
+
+  /* Footer (gruppi modificatori) */
+  .quick{border:1px solid var(--ring); border-radius:10px; padding:10px 12px; background:linear-gradient(180deg,#1f2937,#0b1223); color:#fff; cursor:pointer; font-weight:600}
+
+  /* Dialog impostazioni */
+  dialog{border:none; border-radius:16px; width:min(1100px,95vw); background:#0b1223; color:var(--ink)}
+  dialog::backdrop{background:rgba(0,0,0,.55)}
+  .settings{display:grid; grid-template-columns:1fr 1fr; gap:12px; max-height:70vh; overflow:auto; padding:8px}
+  @media (max-width: 900px){ .settings{grid-template-columns:1fr} }
+  .card{border:1px solid var(--ring); border-radius:12px; padding:10px; background:#0e1427}
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .hr{height:1px; background:var(--ring); margin:8px 0}
+  input,select{background:#0b1223; color:var(--ink); border:1px solid var(--ring); border-radius:8px; padding:8px}
+  .small{font-size:.85rem}
+  .colorbox{display:flex; flex-wrap:wrap; gap:6px}
+  .swatch{width:26px; height:26px; border-radius:6px; border:2px solid rgba(255,255,255,.2); cursor:pointer}
+  .swatch.active{outline:2px solid #fff}
+
+  /* Colori (palette ampia) */
+  .c-red{background:#ef4444}.c-orange{background:#f97316}.c-amber{background:#f59e0b}
+  .c-yellow{background:#eab308}.c-lime{background:#84cc16}.c-green{background:#22c55e}
+  .c-emerald{background:#10b981}.c-teal{background:#14b8a6}.c-cyan{background:#06b6d4}
+  .c-sky{background:#0ea5e9}.c-blue{background:#3b82f6}.c-indigo{background:#6366f1}
+  .c-violet{background:#8b5cf6}.c-purple{background:#a855f7}.c-fuchsia{background:#d946ef}
+  .c-pink{background:#ec4899}.c-rose{background:#f43f5e}.c-slate{background:#475569}
+  .c-gray{background:#6b7280}.c-zinc{background:#71717a}.c-stone{background:#78716c}
+
+  /* Stampa */
+  @media print{
+    header, footer, .tabs, .grid, .toolbar-print{display:none !important}
+    main{grid-template-columns:1fr}
+    aside{border:none}
+    body{background:#fff; color:#000}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">🧾 Gestionale Pizzeria</div>
+    <div class="toolbar" id="topMenus"><!-- generato --></div>
+    <div class="grow"></div>
+    <div class="toolbar">
+      <button class="btn" id="btnPrint" title="Stampa / PDF">🖨️</button>
+      <button class="btn" id="btnWA" title="WhatsApp">🟢</button>
+      <button class="btn" id="btnMail" title="Email">✉️</button>
+      <button class="btn" id="btnCopy" title="Copia riepilogo">📋</button>
+      <button class="btn icon" id="btnSettings" title="Impostazioni">⚙️</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Ticket a sinistra -->
+    <aside>
+      <div class="line" style="margin-bottom:6px">
+        <strong>Ordine</strong>
+        <span class="small" id="now"></span>
+      </div>
+      <div id="ticket"></div>
+      <div class="total">Totale: <span id="grandTotal">€ 0,00</span></div>
+    </aside>
+
+    <!-- Stage (tabs + griglia) -->
+    <section class="stage">
+      <div class="tabs" id="tabs"><!-- generato --></div>
+      <div class="grid" id="grid"><!-- generato --></div>
+    </section>
+  </main>
+
+  <footer>
+    <div id="bottomMenus" class="toolbar" style="flex-wrap:wrap; overflow-x:auto"><!-- generato --></div>
+  </footer>
+
+  <!-- IMPOSTAZIONI -->
+  <dialog id="dlg">
+    <form method="dialog">
+      <div style="display:flex; align-items:center; gap:8px; padding:8px 12px">
+        <strong style="font-size:1.1rem">Impostazioni</strong>
+        <div class="grow"></div>
+        <button class="btn danger" id="resetCfg" value="cancel">Ripristina</button>
+        <button class="btn" value="cancel">Chiudi</button>
+        <button class="btn primary" id="saveCfg">Salva</button>
+      </div>
+      <div class="settings">
+        <div class="card">
+          <h3>Barra superiore (Categorie)</h3>
+          <div id="editTop"></div>
+          <div class="hr"></div>
+          <button class="btn" id="addTop">➕ Aggiungi categoria</button>
+        </div>
+        <div class="card">
+          <h3>Barra inferiore (Modificatori)</h3>
+          <div id="editBottom"></div>
+          <div class="hr"></div>
+          <button class="btn" id="addBottom">➕ Aggiungi gruppo</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===== PARTE 2/2: incolla subito qui sotto lo script completo ===== -->
+<script>
+/* ======= Util ======= */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const money = n => (isNaN(n)?0:n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
+const nowFmt = () => new Date().toLocaleString('it-IT',{dateStyle:'short', timeStyle:'short'});
+
+/* ======= Palette ======= */
+const PALETTE = [
+  'c-red','c-orange','c-amber','c-yellow','c-lime','c-green','c-emerald','c-teal','c-cyan',
+  'c-sky','c-blue','c-indigo','c-violet','c-purple','c-fuchsia','c-pink','c-rose','c-slate',
+  'c-gray','c-zinc','c-stone'
+];
+
+/* ======= Config predefinita ======= */
+const DEFAULT_CONFIG = {
+  top:[
+    {icon:"🍕", label:"Pizze", color:"c-rose", items:[
+      {icon:"🍕", label:"Margherita", price:6.00, color:"c-rose"},
+      {icon:"🌶️", label:"Diavola",    price:7.00, color:"c-red"},
+      {icon:"🍄", label:"Funghi",      price:7.00, color:"c-emerald"}
+    ]},
+    {icon:"🥟", label:"Calzoni", color:"c-orange", items:[
+      {icon:"🥟", label:"Classico", price:7.00, color:"c-orange"}
+    ]},
+    {icon:"🥪", label:"Panini", color:"c-yellow", items:[
+      {icon:"🥪", label:"Panino Classico", price:5.50, color:"c-yellow"}
+    ]},
+    {icon:"🍞", label:"Schiacciata grande", color:"c-green", items:[
+      {icon:"🍞", label:"Semplice", price:9.00, color:"c-green"}
+    ]},
+    {icon:"📏", label:"Mezzo metro", color:"c-indigo", items:[
+      {icon:"📏", label:"Salumi", price:14.00, color:"c-indigo"}
+    ]},
+    {icon:"🥤", label:"Bibite", color:"c-sky", items:[
+      {icon:"🥤", label:"Cola 33cl", price:2.00, color:"c-sky"},
+      {icon:"🥤", label:"Acqua", price:1.00, color:"c-cyan"}
+    ]},
+    {icon:"🧾", label:"Ordini", color:"c-slate", items:[]}
+  ],
+  bottom:[
+    {icon:"➕", label:"Più", color:"c-green", items:[
+      {icon:"🧀", label:"Mozzarella", price:1.00, color:"c-green", applyToOrder:false},
+      {icon:"🥓", label:"Pancetta",   price:1.50, color:"c-green", applyToOrder:false}
+    ]},
+    {icon:"➖", label:"Senza", color:"c-gray", items:[
+      {icon:"🧅", label:"Cipolla", price:0, color:"c-gray", applyToOrder:false},
+      {icon:"🍅", label:"Pomodoro", price:0, color:"c-gray", applyToOrder:false}
+    ]},
+    {icon:"🥄", label:"Poco", color:"c-amber", items:[
+      {icon:"🧂", label:"Sale", price:0, color:"c-amber", applyToOrder:false}
+    ]},
+    {icon:"🍽️", label:"Abbondante", color:"c-blue", items:[
+      {icon:"🍄", label:"Funghi", price:1.00, color:"c-blue", applyToOrder:false}
+    ]},
+    {icon:"🚚", label:"Consegna a domicilio", color:"c-purple", items:[
+      {icon:"🚚", label:"Consegna", price:1.50, color:"c-purple", applyToOrder:true}
+    ]},
+    {icon:"🥡", label:"Da asporto", color:"c-teal", items:[]},
+    {icon:"🪑", label:"Banco", color:"c-zinc", items:[]}
+  ]
+};
+
+/* ======= Stato ======= */
+let config = loadConfig();
+let items = []; // {name, price, qty, color, extras:[{text, price, color}], isService?}
+let activeIndex = -1;
+let currentTopTab = 0;
+
+/* ======= Load/Save ======= */
+function loadConfig(){
+  try{
+    const raw = localStorage.getItem('pizzeriaConfigV3');
+    return raw ? JSON.parse(raw) : structuredClone(DEFAULT_CONFIG);
+  }catch(e){ return structuredClone(DEFAULT_CONFIG); }
+}
+function saveConfig(){ localStorage.setItem('pizzeriaConfigV3', JSON.stringify(config)); }
+
+/* ======= Menù e griglia ======= */
+function buildTopMenus(){
+  const holder = $('#topMenus'); holder.innerHTML='';
+  config.top.forEach((grp,gi)=>{
+    const wrap = document.createElement('div'); wrap.className='dropdown';
+    const btn = document.createElement('button'); btn.className = `btn dd-toggle ${grp.color}`;
+    btn.innerHTML = `${grp.icon||'🔘'} <strong>${grp.label||'Gruppo'}</strong>`;
+    btn.addEventListener('click',(e)=>{ e.preventDefault(); toggleDD(wrap); currentTopTab=gi; buildTabsAndGrid(); });
+    const menu = document.createElement('div'); menu.className='dd-menu';
+    (grp.items||[]).forEach((it,ii)=>{
+      const row = document.createElement('div'); row.className='dd-item';
+      row.innerHTML = `<span>${it.icon||'•'}</span> <span>${it.label}</span><span class="small" style="margin-left:auto">${money(it.price||0)}</span>`;
+      row.addEventListener('click',()=>{ addArticleFromItem(grp,it); closeAllDD(); });
+      menu.appendChild(row);
+    });
+    wrap.append(btn,menu); holder.appendChild(wrap);
+  });
+}
+
+function buildBottomMenus(){
+  const holder = $('#bottomMenus'); holder.innerHTML='';
+  config.bottom.forEach((grp,gi)=>{
+    const wrap = document.createElement('div'); wrap.className='dropdown';
+    const btn = document.createElement('button'); btn.className=`quick ${grp.color}`; btn.innerHTML=`${grp.icon||'•'} ${grp.label}`;
+    const menu = document.createElement('div'); menu.className='dd-menu';
+    (grp.items||[]).forEach((it,ii)=>{
+      const row = document.createElement('div'); row.className='dd-item';
+      row.innerHTML = `<span>${it.icon||'•'}</span> <span>${it.label}</span>${it.applyToOrder?'<span class="small" style="opacity:.8"> (ordine)</span>':''}<span class="small" style="margin-left:auto">${money(it.price||0)}</span>`;
+      row.addEventListener('click',()=>{ applyModifier(grp,it); closeAllDD(); });
+      menu.appendChild(row);
+    });
+    btn.addEventListener('click',(e)=>{ e.preventDefault(); toggleDD(wrap); });
+    wrap.append(btn,menu); holder.appendChild(wrap);
+  });
+}
+
+function buildTabsAndGrid(){
+  const tabs = $('#tabs'); tabs.innerHTML='';
+  config.top.forEach((grp,i)=>{
+    const t=document.createElement('button'); t.className='tab'+(i===currentTopTab?' active':'');
+    t.textContent=grp.label; t.addEventListener('click',()=>{currentTopTab=i; buildTabsAndGrid();});
+    tabs.appendChild(t);
+  });
+  const grid = $('#grid'); grid.innerHTML='';
+  const grp = config.top[currentTopTab] || {items:[]};
+  (grp.items||[]).forEach(it=>{
+    const b=document.createElement('button'); b.className = `gridbtn ${it.color||grp.color||'c-slate'}`;
+    b.innerHTML = `${it.icon||'•'} ${it.label}<small>${money(it.price||0)}</small>`;
+    b.addEventListener('click',()=> addArticleFromItem(grp,it));
+    grid.appendChild(b);
+  });
+}
+
+/* ======= Dropdown helpers ======= */
+function toggleDD(el){ const open = el.classList.contains('open'); closeAllDD(); if(!open) el.classList.add('open'); }
+function closeAllDD(){ $$('.dropdown').forEach(d=>d.classList.remove('open')); }
+document.addEventListener('click',(e)=>{ if(!e.target.closest('.dropdown')) closeAllDD(); });
+
+/* ======= Aggiunta articoli ed extra ======= */
+function addArticleFromItem(group, item){
+  const obj = {
+    name: item.label,
+    price: +item.price || 0,
+    qty: 1,
+    color: item.color || group.color || 'c-slate',
+    extras: [],
+    isService: false
+  };
+  items.push(obj);
+  activeIndex = items.length-1;
+  renderTicket();
+}
+function applyModifier(group, item){
+  if(item.applyToOrder){
+    items.push({name:item.label, price:+item.price||0, qty:1, color:item.color||group.color||'c-slate', extras:[], isService:true});
+    activeIndex=items.length-1; renderTicket(); return;
+  }
+  if(items.length===0){ alert('Prima aggiungi un articolo.'); return; }
+  const idx = activeIndex>=0 ? activeIndex : items.length-1;
+  const target = items[idx];
+  const text = (group.label.match(/Più|Senza|Poco|Abbondante/i) ? group.label+' ' : '') + item.label;
+  target.extras.push({text, price:+item.price||0, color:item.color||group.color||'c-slate'});
+  renderTicket();
+}
+
+/* ======= Render ticket ======= */
+function renderTicket(){
+  const box = $('#ticket'); box.innerHTML='';
+  let tot = 0;
+  items.forEach((it,idx)=>{
+    const extrasSum = (it.extras||[]).reduce((s,e)=>s+(+e.price||0),0);
+    const lineTotal = ( (+it.price||0) + extrasSum ) * (it.qty||1);
+    tot += lineTotal;
+
+    const row = document.createElement('div');
+    row.className = 'ticket-item'+(idx===activeIndex?' active':'');
+    row.addEventListener('click',()=>{ activeIndex=idx; renderTicket(); });
+    row.innerHTML = `
+      <div class="line">
+        <div>
+          <strong contenteditable="true" data-edit="name" data-i="${idx}">${it.name}</strong>
+          <span class="small" style="opacity:.7">${it.isService?' (servizio)':''}</span>
+        </div>
+        <div>
+          <button class="qtybtn" data-op="dec" data-i="${idx}">−</button>
+          <span contenteditable="true" class="priceeditable" data-edit="qty" data-i="${idx}">${it.qty}</span>
+          <button class="qtybtn" data-op="inc" data-i="${idx}">+</button>
+          &nbsp;×&nbsp;€ <span contenteditable="true" class="priceeditable" data-edit="price" data-i="${idx}">${(+it.price||0).toFixed(2)}</span>
+          <button class="qtybtn" data-del="${idx}" title="Elimina">🗑️</button>
+        </div>
+      </div>
+      ${(it.extras||[]).map((ex,ei)=>`
+        <div class="extra">
+          <span>
+            • <span contenteditable="true" data-edit="extext" data-i="${idx}" data-e="${ei}">${ex.text}</span>
+          </span>
+          <span class="small">+ € <span contenteditable="true" data-edit="exprice" data-i="${idx}" data-e="${ei}">${(+ex.price||0).toFixed(2)}</span></span>
+          <button class="qtybtn" data-rmex="${idx}-${ei}" title="Rimuovi extra">✖</button>
+        </div>
+      `).join('')}
+      <div class="line"><span class="small" style="opacity:.8">Subtotale</span><strong>${money(lineTotal)}</strong></div>
+    `;
+    box.appendChild(row);
+  });
+  $('#grandTotal').textContent = money(tot);
+}
+
+/* Modifiche inline + pulsanti qty/del */
+$('#ticket').addEventListener('input',(e)=>{
+  const i = +e.target.dataset.i; const edit = e.target.dataset.edit; if(isNaN(i)) return;
+  if(edit==='name') items[i].name = e.target.textContent.trim();
+  if(edit==='price') items[i].price = parseFloat(e.target.textContent.replace(',','.'))||0;
+  if(edit==='qty'){ const q = parseInt(e.target.textContent)||1; items[i].qty = q<1?1:q; }
+  if(edit==='extext'){ const ei=+e.target.dataset.e; items[i].extras[ei].text = e.target.textContent.trim(); }
+  if(edit==='exprice'){ const ei=+e.target.dataset.e; items[i].extras[ei].price = parseFloat(e.target.textContent.replace(',','.'))||0; }
+  renderTicket();
+});
+$('#ticket').addEventListener('click',(e)=>{
+  const t=e.target;
+  if(t.dataset.op){
+    const i=+t.dataset.i; if(t.dataset.op==='inc') items[i].qty++; else items[i].qty=Math.max(1,items[i].qty-1);
+    renderTicket();
+  }
+  if(t.dataset.del){ items.splice(+t.dataset.del,1); activeIndex = Math.min(activeIndex, items.length-1); renderTicket(); }
+  if(t.dataset.rmex){
+    const [i,ei]=t.dataset.rmex.split('-').map(Number);
+    items[i].extras.splice(ei,1); renderTicket();
+  }
+});
+
+/* ======= Impostazioni ======= */
+function openSettings(){
+  const eTop = $('#editTop'); const eBot = $('#editBottom');
+  eTop.innerHTML=''; eBot.innerHTML='';
+
+  const makeSwatches = (current, nameAttr) => `
+    <div class="colorbox">
+      ${PALETTE.map(c=>`<div class="swatch ${c===current?'active':''}" data-color="${c}" data-name="${nameAttr}" style="background:${getClassBg(c)}"></div>`).join('')}
+    </div>`;
+
+  // --- Top (categorie) ---
+  config.top.forEach((grp,gi)=>{
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML = `
+      <div class="row">
+        <label>Icona</label><input data-pos="top" data-gi="${gi}" data-k="icon" value="${grp.icon||''}">
+        <label>Nome</label><input data-pos="top" data-gi="${gi}" data-k="label" value="${grp.label||''}">
+      </div>
+      <div class="row small"><span>Colore gruppo:</span></div>
+      ${makeSwatches(grp.color||'c-slate', `top-${gi}`)}
+      <div class="hr"></div>
+      <div class="small" style="opacity:.8">Articoli</div>
+      ${(grp.items||[]).map((it,ii)=>`
+        <div class="row" style="gap:6px">
+          <input style="width:70px" placeholder="Icona" data-pos="top" data-gi="${gi}" data-ii="${ii}" data-k="item.icon" value="${it.icon||''}">
+          <input style="flex:1" placeholder="Nome" data-pos="top" data-gi="${gi}" data-ii="${ii}" data-k="item.label" value="${it.label||''}">
+          <input style="width:120px" type="number" step="0.01" placeholder="Prezzo" data-pos="top" data-gi="${gi}" data-ii="${ii}" data-k="item.price" value="${it.price||0}">
+          <select style="width:160px" data-pos="top" data-gi="${gi}" data-ii="${ii}" data-k="item.color">
+            ${PALETTE.map(c=>`<option value="${c}" ${c===(it.color||grp.color)?'selected':''}>${c}</option>`).join('')}
+          </select>
+          <button class="btn danger" data-del-item="top-${gi}-${ii}">🗑️</button>
+        </div>
+      `).join('')}
+      <div class="row">
+        <button class="btn" data-add-item="top-${gi}">➕ Aggiungi articolo</button>
+        <div class="grow"></div>
+        <button class="btn danger" data-del-group="top-${gi}">Elimina categoria</button>
+      </div>
+    `;
+    eTop.appendChild(card);
+  });
+
+  // --- Bottom (modificatori) ---
+  config.bottom.forEach((grp,gi)=>{
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML = `
+      <div class="row">
+        <label>Icona</label><input data-pos="bottom" data-gi="${gi}" data-k="icon" value="${grp.icon||''}">
+        <label>Nome</label><input data-pos="bottom" data-gi="${gi}" data-k="label" value="${grp.label||''}">
+      </div>
+      <div class="row small"><span>Colore gruppo:</span></div>
+      ${makeSwatches(grp.color||'c-slate', `bottom-${gi}`)}
+      <div class="hr"></div>
+      <div class="small" style="opacity:.8">Voci / modificatori</div>
+      ${(grp.items||[]).map((it,ii)=>`
+        <div class="row" style="gap:6px">
+          <input style="width:70px" placeholder="Icona" data-pos="bottom" data-gi="${gi}" data-ii="${ii}" data-k="item.icon" value="${it.icon||''}">
+          <input style="flex:1" placeholder="Nome" data-pos="bottom" data-gi="${gi}" data-ii="${ii}" data-k="item.label" value="${it.label||''}">
+          <input style="width:120px" type="number" step="0.01" placeholder="Prezzo" data-pos="bottom" data-gi="${gi}" data-ii="${ii}" data-k="item.price" value="${it.price||0}">
+          <select style="width:160px" data-pos="bottom" data-gi="${gi}" data-ii="${ii}" data-k="item.color">
+            ${PALETTE.map(c=>`<option value="${c}" ${c===(it.color||grp.color)?'selected':''}>${c}</option>`).join('')}
+          </select>
+          <label class="small" style="display:flex;gap:6px;align-items:center">
+            <input type="checkbox" ${it.applyToOrder?'checked':''} data-pos="bottom" data-gi="${gi}" data-ii="${ii}" data-k="item.applyToOrder">
+            Applica all’ordine
+          </label>
+          <button class="btn danger" data-del-item="bottom-${gi}-${ii}">🗑️</button>
+        </div>
+      `).join('')}
+      <div class="row">
+        <button class="btn" data-add-item="bottom-${gi}">➕ Aggiungi voce</button>
+        <div class="grow"></div>
+        <button class="btn danger" data-del-group="bottom-${gi}">Elimina gruppo</button>
+      </div>
+    `;
+    eBot.appendChild(card);
+  });
+
+  // swatch → cambia colore gruppo
+  $$('#dlg .swatch').forEach(sw=>{
+    sw.addEventListener('click',()=>{
+      const [pos,gi] = sw.dataset.name.split('-');
+      config[pos][+gi].color = sw.dataset.color;
+      $$(`#dlg .swatch[data-name="${sw.dataset.name}"]`).forEach(x=>x.classList.remove('active'));
+      sw.classList.add('active');
+    });
+  });
+
+  // inputs auto-bind
+  $$('#dlg [data-k]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const pos=inp.dataset.pos, gi=+inp.dataset.gi, ii=inp.dataset.ii, k=inp.dataset.k;
+      if(k==='icon' || k==='label') config[pos][gi][k]=inp.value;
+      if(k==='item.icon') config[pos][gi].items[ii].icon=inp.value;
+      if(k==='item.label') config[pos][gi].items[ii].label=inp.value;
+      if(k==='item.price') config[pos][gi].items[ii].price=parseFloat(inp.value)||0;
+      if(k==='item.color') config[pos][gi].items[ii].color=inp.value;
+      if(k==='item.applyToOrder') config[pos][gi].items[ii].applyToOrder=inp.checked;
+    });
+  });
+
+  // add/delete item/group
+  $$('#dlg [data-add-item]').forEach(b=> b.addEventListener('click',(e)=>{ e.preventDefault();
+    const [pos,gi]=b.dataset.addItem.split('-'); config[pos][+gi].items.push({icon:'•',label:'Nuovo',price:0,color:config[pos][+gi].color,applyToOrder:false}); openSettings();
+  }));
+  $$('#dlg [data-del-item]').forEach(b=> b.addEventListener('click',(e)=>{ e.preventDefault();
+    const [pos,gi,ii]=b.dataset.delItem.split('-'); config[pos][+gi].items.splice(+ii,1); openSettings();
+  }));
+  $$('#dlg [data-del-group]').forEach(b=> b.addEventListener('click',(e)=>{ e.preventDefault();
+    const [pos,gi]=b.dataset.delGroup.split('-'); config[pos].splice(+gi,1); openSettings();
+  }));
+
+  // add group buttons
+  $('#addTop').onclick=(e)=>{ e.preventDefault(); config.top.push({icon:'🔘',label:'Nuova categoria',color:'c-slate',items:[]}); openSettings(); };
+  $('#addBottom').onclick=(e)=>{ e.preventDefault(); config.bottom.push({icon:'🔘',label:'Nuovo gruppo',color:'c-slate',items:[]}); openSettings(); };
+
+  $('#dlg').showModal();
+}
+
+/* helpers per ottenere il colore da classe */
+function getClassBg(cls){
+  const tmp=document.createElement('div'); tmp.className=cls; document.body.appendChild(tmp);
+  const bg=getComputedStyle(tmp).backgroundColor; document.body.removeChild(tmp); return bg;
+}
+
+$('#saveCfg').addEventListener('click',(e)=>{ e.preventDefault(); saveConfig(); buildTopMenus(); buildBottomMenus(); buildTabsAndGrid(); $('#dlg').close(); });
+$('#resetCfg').addEventListener('click',(e)=>{ e.preventDefault(); if(confirm('Ripristinare configurazione predefinita?')){ config=structuredClone(DEFAULT_CONFIG); saveConfig(); buildTopMenus(); buildBottomMenus(); buildTabsAndGrid(); $('#dlg').close(); }});
+$('#btnSettings').addEventListener('click', openSettings);
+
+/* ======= Condivisione / stampa ======= */
+function orderText(){
+  const lines = items.map((it)=>{
+    const ex = (it.extras||[]).map(e=>`   • ${e.text} ${e.price?`(+${money(e.price)})`:''}`).join('\n');
+    const totEach = (+it.price||0) + (it.extras||[]).reduce((s,e)=>s+(+e.price||0),0);
+    return `${it.qty}× ${it.name} — ${money(totEach)} cad.\n${ex}`;
+  }).join('\n');
+  return `ORDINE\n${lines}\nTotale: ${$('#grandTotal').textContent}\nOra: ${nowFmt()}`;
+}
+$('#btnPrint').onclick=()=>window.print();
+$('#btnCopy').onclick=async()=>{ try{ await navigator.clipboard.writeText(orderText()); alert('Copiato!'); }catch{ alert('Copia non disponibile.'); } };
+$('#btnWA').onclick=()=>{ const t=encodeURIComponent(orderText()); window.open(`https://wa.me/?text=${t}`,'_blank'); };
+$('#btnMail').onclick=()=>{ const s=encodeURIComponent('Nuovo ordine'); const b=encodeURIComponent(orderText()); window.location.href=`mailto:?subject=${s}&body=${b}`; };
+
+/* ======= Orologio ======= */
+function tick(){ $('#now').textContent=nowFmt(); } setInterval(tick,1000); tick();
+
+/* ======= Avvio ======= */
+buildTopMenus(); buildBottomMenus(); buildTabsAndGrid(); renderTicket();
+</script>
+</body>
+</html>
