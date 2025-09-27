@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Gestionale SmartApp — Fase 2a (Impostazioni base)</title>
+<title>Gestionale SmartApp — Fase 1</title>
 <meta name="theme-color" content="#0b1223" />
 <style>
   :root{
@@ -17,6 +17,8 @@
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
     display:flex; flex-direction:column;
   }
+
+  /* App shell */
   header, footer{
     position:fixed; left:0; right:0; z-index:20; display:flex; align-items:center; gap:8px;
     background:rgba(12,20,38,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--ring);
@@ -55,7 +57,7 @@
   .tab{border:1px solid var(--ring); border-radius:10px; padding:6px 10px; cursor:pointer; white-space:nowrap; background:#0e1427}
   .tab.active{outline:2px solid rgba(255,255,255,.18)}
   .searchbox{padding:6px 12px; background:var(--panel); border-bottom:1px solid var(--ring)}
-  .searchbox input{width:90%; padding:8px; border-radius:10px; border:1px solid var(--ring); background:#0b1223; color:#e5e7eb}
+  .searchbox input{width:90%; padding:8px; border-radius:10px; border:1px solid var(--ring); background:#0b1223; color:var(--ink)}
   .grid{flex:1; overflow:auto; padding:12px; display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px}
   .gridbtn{border:none; border-radius:12px; padding:16px 10px; color:#fff; font-weight:700; cursor:pointer; text-shadow:0 1px 1px rgba(0,0,0,.3)}
   .gridbtn small{display:block; opacity:.9; font-weight:600}
@@ -63,31 +65,13 @@
   /* Footer (gruppi modificatori) */
   .quick{border:1px solid var(--ring); border-radius:10px; padding:10px 12px; background:linear-gradient(180deg,#1f2937,#0b1223); color:#fff; cursor:pointer; font-weight:600}
 
-  /* Colori base (semplici) */
+  /* Colori base (puoi espandere) */
   .c-red{background:#ef4444}.c-orange{background:#f97316}.c-yellow{background:#eab308}
   .c-green{background:#22c55e}.c-blue{background:#3b82f6}.c-purple{background:#8b5cf6}
   .c-pink{background:#ec4899}.c-gray{background:#6b7280}.c-slate{background:#475569}
-
-  /* Modal impostazioni (overlay custom, no <dialog> per compatibilità iOS) */
-  .modal{
-    position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center;
-    background:rgba(0,0,0,.55);
-  }
-  .modal.show{display:flex}
-  .panel{
-    width:min(1100px,95vw); max-height:80vh; overflow:auto;
-    background:#0b1223; color:#e5e7eb; border:1px solid var(--ring); border-radius:16px; padding:12px;
-  }
-  .card{border:1px solid var(--ring); border-radius:12px; padding:10px; background:#0e1427}
-  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-  .hr{height:1px; background:var(--ring); margin:8px 0}
-  input[type="text"], input[type="number"]{background:#0b1223; color:#e5e7eb; border:1px solid var(--ring); border-radius:8px; padding:8px}
-  .section{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-  @media (max-width: 900px){ .section{grid-template-columns:1fr} }
-
   /* Stampa */
   @media print{
-    header, footer, .tabs, .searchbox, .grid, .modal{display:none !important}
+    header, footer, .tabs, .searchbox, .grid{display:none !important}
     main{grid-template-columns:1fr}
     aside{border:none}
     body{background:#fff; color:#000}
@@ -111,7 +95,6 @@
     <button class="btn" @click="shareWA" title="WhatsApp">🟢</button>
     <button class="btn" @click="shareEmail" title="Email">✉️</button>
     <button class="btn" @click="copyOrder" title="Copia riepilogo">📋</button>
-    <button class="btn icon" @click="showSettings=true" title="Impostazioni">⚙️</button>
     <button class="btn danger" @click="clearOrder" title="Svuota ordine">🗑️</button>
   </div>
 </header>
@@ -175,7 +158,7 @@
       <template v-if="currentBottomGroup==null">
         <button
           v-for="it in filteredTopItems" :key="it.label"
-          class="gridbtn" :style="bgStyle(it)"
+          class="gridbtn" :class="it.colorClass" :style="bgStyle(it)"
           @click="addItem(it)"
         >
           {{ it.icon }} {{ it.label }} <small>{{ money(it.price) }}</small>
@@ -186,7 +169,7 @@
       <template v-else>
         <button
           v-for="ex in filteredBottomItems" :key="ex.label"
-          class="gridbtn" :style="bgStyle(ex)"
+          class="gridbtn" :class="ex.colorClass" :style="bgStyle(ex)"
           @click="applyModifier(ex)"
         >
           {{ ex.icon }} {{ ex.label }} <small>{{ money(ex.price) }}</small>
@@ -208,158 +191,100 @@
   </div>
 </footer>
 
-<!-- MODAL IMPOSTAZIONI (base) -->
-<div class="modal" v-scope="App" :class="{show: showSettings}" @click.self="showSettings=false">
-  <div class="panel">
-    <div class="line" style="margin-bottom:10px">
-      <strong>Impostazioni (base Fase 2a)</strong>
-      <div class="grow"></div>
-      <button class="btn" @click="applyAndSave">💾 Salva</button>
-      <button class="btn danger" @click="resetConfig">Ripristina</button>
-      <button class="btn" @click="showSettings=false">Chiudi</button>
-    </div>
-
-    <div class="section">
-      <!-- Categorie (Top) -->
-      <div class="card">
-        <h3 style="margin:6px 0">Barra superiore — Categorie</h3>
-        <div class="hr"></div>
-        <div v-for="(g,gi) in editTop" :key="gi" class="card" style="margin-bottom:8px">
-          <div class="row">
-            <label>Icona</label>
-            <input type="text" style="width:80px" v-model="g.icon" />
-            <label>Nome</label>
-            <input type="text" style="flex:1" v-model="g.label" />
-          </div>
-          <div class="hr"></div>
-          <div class="small" style="opacity:.8;margin-bottom:6px">Articoli</div>
-          <div v-for="(it,ii) in g.items" :key="ii" class="row" style="gap:6px;margin-bottom:6px">
-            <input type="text" placeholder="Icona" style="width:80px" v-model="it.icon" />
-            <input type="text" placeholder="Nome" style="flex:1" v-model="it.label" />
-            <input type="number" step="0.01" placeholder="Prezzo" style="width:140px" v-model.number="it.price" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Modificatori (Bottom) -->
-      <div class="card">
-        <h3 style="margin:6px 0">Barra inferiore — Modificatori</h3>
-        <div class="hr"></div>
-        <div v-for="(g,gi) in editBottom" :key="gi" class="card" style="margin-bottom:8px">
-          <div class="row">
-            <label>Icona</label>
-            <input type="text" style="width:80px" v-model="g.icon" />
-            <label>Nome</label>
-            <input type="text" style="flex:1" v-model="g.label" />
-          </div>
-          <div class="hr"></div>
-          <div class="small" style="opacity:.8;margin-bottom:6px">Voci</div>
-          <div v-for="(it,ii) in g.items" :key="ii" class="row" style="gap:6px;margin-bottom:6px">
-            <input type="text" placeholder="Icona" style="width:80px" v-model="it.icon" />
-            <input type="text" placeholder="Nome" style="flex:1" v-model="it.label" />
-            <input type="number" step="0.01" placeholder="Prezzo" style="width:140px" v-model.number="it.price" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <p class="small" style="margin-top:10px;opacity:.8">
-      Suggerimento: in <strong>Fase 2b</strong> aggiungeremo scelta colori e pulsanti Aggiungi/Elimina elementi.
-    </p>
-  </div>
-</div>
-
 <!-- Petite-Vue -->
 <script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.iife.js"></script>
 <script>
 const money = n => (isNaN(n)?0:n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 
-const DEFAULT_CONFIG = {
-  topGroups: [
-    {icon:"🍕", label:"Pizze", color:"#ef4444", items:[
-      {icon:"🍕",label:"Margherita",price:6,color:"#ef4444"},
-      {icon:"🌶️",label:"Diavola",price:7,color:"#ef4444"},
-      {icon:"🍄",label:"Funghi",price:7,color:"#22c55e"},
-      {icon:"🥓",label:"Capricciosa",price:7.5,color:"#ef4444"},
-      {icon:"🕓",label:"Quattro Stagioni",price:7.5,color:"#ef4444"},
-      {icon:"🐃",label:"Bufala",price:8,color:"#ec4899"}
-    ]},
-    {icon:"🥟", label:"Calzoni", color:"#f97316", items:[
-      {icon:"🥟",label:"Classico",price:7,color:"#f97316"},
-      {icon:"🧀",label:"Ripieno",price:8,color:"#f97316"}
-    ]},
-    {icon:"🥪", label:"Panini", color:"#eab308", items:[
-      {icon:"🍔",label:"Hamburger",price:5.5,color:"#eab308"},
-      {icon:"🌭",label:"Hot Dog",price:4.5,color:"#eab308"}
-    ]},
-    {icon:"🍞", label:"Schiacciata grande", color:"#22c55e", items:[
-      {icon:"🍞",label:"Semplice",price:9,color:"#22c55e"}
-    ]},
-    {icon:"📏", label:"Mezzo metro", color:"#3b82f6", items:[
-      {icon:"🥓",label:"Salumi",price:14,color:"#3b82f6"}
-    ]},
-    {icon:"🥤", label:"Bibite", color:"#3b82f6", items:[
-      {icon:"🥤",label:"Cola 33cl",price:2,color:"#3b82f6"},
-      {icon:"💧",label:"Acqua",price:1,color:"#06b6d4"},
-      {icon:"🍺",label:"Birra",price:3,color:"#3b82f6"}
-    ]},
-    {icon:"🧾", label:"Ordini", color:"#475569", items:[]}
-  ],
-  bottomGroups: [
-    {icon:"➕",label:"Più",color:"#22c55e",items:[
-      {icon:"🧀",label:"Mozzarella",price:1,color:"#22c55e"},
-      {icon:"🍄",label:"Funghi",price:1,color:"#22c55e"},
-      {icon:"🥓",label:"Prosciutto",price:1.5,color:"#22c55e"}
-    ]},
-    {icon:"➖",label:"Senza",color:"#6b7280",items:[
-      {icon:"🍅",label:"Pomodoro",price:0,color:"#6b7280"},
-      {icon:"🧅",label:"Cipolla",price:0,color:"#6b7280"}
-    ]},
-    {icon:"🥄",label:"Poco",color:"#eab308",items:[
-      {icon:"🫒",label:"Olio",price:0,color:"#eab308"}
-    ]},
-    {icon:"🍽️",label:"Abbondante",color:"#8b5cf6",items:[
-      {icon:"🧀",label:"Formaggio",price:1,color:"#8b5cf6"},
-      {icon:"🫒",label:"Olive",price:0.5,color:"#8b5cf6"}
-    ]},
-    {icon:"🚚",label:"Consegna a domicilio",color:"#3b82f6",items:[
-      {icon:"🚚",label:"Consegna",price:1.5,color:"#3b82f6",applyToOrder:true}
-    ]},
-    {icon:"🥡",label:"Da asporto",color:"#14b8a6",items:[]},
-    {icon:"🪑",label:"Banco",color:"#71717a",items:[]}
-  ]
-};
-
 function App(){
   return {
-    /* ===== STATO ===== */
+    /* ======== STATO ======== */
     now: new Date().toLocaleString('it-IT', {dateStyle:'short', timeStyle:'short'}),
     search: '',
     activeIndex: -1,
     currentTopIndex: 0,
     currentBottomGroup: null,
-    showSettings: false,
 
-    topGroups: [],
-    bottomGroups: [],
-    cart: [], // {name,price,qty,extras,isService?}
-
-    /* ===== LIFECYCLE ===== */
-    init(){
-      setInterval(()=>{ this.now=new Date().toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) }, 1000);
-      // Config
-      const cfgRaw = localStorage.getItem('smartapp_cfg_v2');
-      if(cfgRaw){ try{ const cfg=JSON.parse(cfgRaw); this.topGroups=cfg.topGroups; this.bottomGroups=cfg.bottomGroups; }catch{ this.resetConfig(true); } }
-      else { this.resetConfig(true); }
-      // Cart
-      const cartRaw = localStorage.getItem('smartapp_cart_v1');
-      if(cartRaw){ try{ this.cart = JSON.parse(cartRaw) || []; }catch{} }
-      // Watchers
-      this.$watch(() => [this.topGroups, this.bottomGroups], () => this.saveConfig(), {deep:true});
-      this.$watch('cart', ()=> localStorage.setItem('smartapp_cart_v1', JSON.stringify(this.cart)), {deep:true});
+    // Palette semplice (puoi estendere)
+    palette: {
+      'c-red':'#ef4444','c-orange':'#f97316','c-yellow':'#eab308',
+      'c-green':'#22c55e','c-blue':'#3b82f6','c-purple':'#8b5cf6',
+      'c-pink':'#ec4899','c-gray':'#6b7280','c-slate':'#475569'
     },
 
-    /* ===== DERIVATI & STYLE ===== */
+    // ==== CONFIG INIZIALE (modificabile a mano in questa fase) ====
+    topGroups: [
+      {icon:"🍕", label:"Pizze", colorClass:"c-red", items:[
+        {icon:"🍕",label:"Margherita",price:6,colorClass:"c-red"},
+        {icon:"🌶️",label:"Diavola",price:7,colorClass:"c-red"},
+        {icon:"🍄",label:"Funghi",price:7,colorClass:"c-green"},
+        {icon:"🥓",label:"Capricciosa",price:7.5,colorClass:"c-red"},
+        {icon:"🕓",label:"Quattro Stagioni",price:7.5,colorClass:"c-red"},
+        {icon:"🐃",label:"Bufala",price:8,colorClass:"c-pink"}
+      ]},
+      {icon:"🥟", label:"Calzoni", colorClass:"c-orange", items:[
+        {icon:"🥟",label:"Classico",price:7,colorClass:"c-orange"},
+        {icon:"🧀",label:"Ripieno",price:8,colorClass:"c-orange"}
+      ]},
+      {icon:"🥪", label:"Panini", colorClass:"c-yellow", items:[
+        {icon:"🍔",label:"Hamburger",price:5.5,colorClass:"c-yellow"},
+        {icon:"🌭",label:"Hot Dog",price:4.5,colorClass:"c-yellow"}
+      ]},
+      {icon:"🍞", label:"Schiacciata grande", colorClass:"c-green", items:[
+        {icon:"🍞",label:"Semplice",price:9,colorClass:"c-green"}
+      ]},
+      {icon:"📏", label:"Mezzo metro", colorClass:"c-blue", items:[
+        {icon:"🥓",label:"Salumi",price:14,colorClass:"c-blue"}
+      ]},
+      {icon:"🥤", label:"Bibite", colorClass:"c-blue", items:[
+        {icon:"🥤",label:"Cola 33cl",price:2,colorClass:"c-blue"},
+        {icon:"💧",label:"Acqua",price:1,colorClass:"c-blue"},
+        {icon:"🍺",label:"Birra",price:3,colorClass:"c-blue"}
+      ]},
+      {icon:"🧾", label:"Ordini", colorClass:"c-slate", items:[]}
+    ],
+    bottomGroups: [
+      {icon:"➕",label:"Più",colorClass:"c-green",items:[
+        {icon:"🧀",label:"Mozzarella",price:1,colorClass:"c-green"},
+        {icon:"🍄",label:"Funghi",price:1,colorClass:"c-green"},
+        {icon:"🥓",label:"Prosciutto",price:1.5,colorClass:"c-green"}
+      ]},
+      {icon:"➖",label:"Senza",colorClass:"c-gray",items:[
+        {icon:"🍅",label:"Pomodoro",price:0,colorClass:"c-gray"},
+        {icon:"🧅",label:"Cipolla",price:0,colorClass:"c-gray"}
+      ]},
+      {icon:"🥄",label:"Poco",colorClass:"c-yellow",items:[
+        {icon:"🫒",label:"Olio",price:0,colorClass:"c-yellow"}
+      ]},
+      {icon:"🍽️",label:"Abbondante",colorClass:"c-purple",items:[
+        {icon:"🧀",label:"Formaggio",price:1,colorClass:"c-purple"},
+        {icon:"🫒",label:"Olive",price:0.5,colorClass:"c-purple"}
+      ]},
+      {icon:"🚚",label:"Consegna a domicilio",colorClass:"c-blue",items:[
+        {icon:"🚚",label:"Consegna",price:1.5,colorClass:"c-blue",applyToOrder:true}
+      ]},
+      {icon:"🥡",label:"Da asporto",colorClass:"c-orange",items:[]},
+      {icon:"🪑",label:"Banco",colorClass:"c-gray",items:[]}
+    ],
+
+    cart: [], // {name, price, qty, extras:[{text, price}], isService?}
+
+    /* ======== LIFECYCLE ======== */
+    init(){
+      // Aggiorna orologio
+      setInterval(()=>{ this.now=new Date().toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) }, 1000);
+      // Carica carrello
+      const raw = localStorage.getItem('smartapp_cart_v1');
+      if(raw){ try{ this.cart = JSON.parse(raw) || []; }catch{} }
+      // Salva carrello on-change (osservatore semplice)
+      const save = ()=> localStorage.setItem('smartapp_cart_v1', JSON.stringify(this.cart));
+      // Hook rudimentale: sovrascrivo push/splice modifiche (semplice e sufficiente qui)
+      const origPush = this.cart.push.bind(this.cart);
+      this.cart.push = (...args)=>{ const r=origPush(...args); save(); return r; };
+      this.$watch('cart', save, {deep:true});
+    },
+
+    /* ======== DERIVATI ======== */
     get topItems(){ return (this.topGroups[this.currentTopIndex]?.items)||[]; },
     get filteredTopItems(){
       const q=this.search.toLowerCase();
@@ -373,16 +298,20 @@ function App(){
     get grandTotal(){
       return this.cart.reduce((sum,it)=> sum + this.lineTotal(it), 0);
     },
-    bgStyle(obj){ return {background: obj.color || '#6b7280'}; },
-    money,
 
-    /* ===== AZIONI GRIGLIA ===== */
+    /* ======== FORMATTING / STYLE ======== */
+    money, // global formatter
+    colorHex(cls){ return this.palette[cls] || '#6b7280'; },
+    bgStyle(obj){ const hex=this.colorHex(obj.colorClass); return {background: hex}; },
+
+    /* ======== AZIONI GRIGLIA ======== */
     selectBottomGroup(g){ this.currentBottomGroup=g; this.search=''; },
     addItem(p){
       this.cart.push({name:p.label, price:+p.price||0, qty:1, extras:[], isService:false});
       this.activeIndex=this.cart.length-1;
     },
     applyModifier(ex){
+      // Se è un servizio d'ordine (applyToOrder), aggiungi riga separata
       if(ex.applyToOrder){
         this.cart.push({name:ex.label, price:+ex.price||0, qty:1, extras:[], isService:true});
         this.activeIndex=this.cart.length-1;
@@ -391,13 +320,14 @@ function App(){
       if(!this.cart.length){ alert('Aggiungi prima un articolo.'); return; }
       const idx = this.activeIndex>=0 ? this.activeIndex : this.cart.length-1;
       const target = this.cart[idx];
+      // Prefisso auto (Più/Senza/Poco/Abbondante) dal nome gruppo
       const gname = this.currentBottomGroup?.label || '';
       const prefixNeeded = /Più|Senza|Poco|Abbondante/i.test(gname) ? (gname+' ') : '';
       target.extras.push({text: prefixNeeded + ex.label, price:+ex.price||0});
-      this.activeIndex = idx;
+      this.activeIndex = idx; // mantieni selezione
     },
 
-    /* ===== TICKET ===== */
+    /* ======== TICKET ======== */
     lineTotal(it){
       const extras = (it.extras||[]).reduce((s,e)=> s + (+e.price||0), 0);
       return ((+it.price||0) + extras) * (it.qty||1);
@@ -407,6 +337,7 @@ function App(){
     removeItem(i){ this.cart.splice(i,1); if(this.activeIndex>=this.cart.length) this.activeIndex=this.cart.length-1; },
     removeExtra(i,ei){ this.cart[i].extras.splice(ei,1); },
 
+    // Edit in-line
     editName(i,e){ this.cart[i].name = e.target.textContent.trim(); },
     editQty(i,e){ const n=parseInt(e.target.textContent)||1; this.cart[i].qty = Math.max(1,n); },
     editPrice(i,e){ const n=parseFloat(e.target.textContent.replace(',','.'))||0; this.cart[i].price = n; },
@@ -415,7 +346,7 @@ function App(){
 
     clearOrder(){ if(confirm('Svuotare l’ordine?')){ this.cart.splice(0); this.activeIndex=-1; } },
 
-    /* ===== Condivisione ===== */
+    /* ======== CONDIVISIONE ======== */
     orderText(){
       const lines = this.cart.map(it=>{
         const cad = (+it.price||0) + (it.extras||[]).reduce((s,e)=>s+(+e.price||0),0);
@@ -425,37 +356,18 @@ function App(){
       return `ORDINE\n${lines}\nTotale: ${money(this.grandTotal)}\nOra: ${this.now}`;
     },
     printOrder(){ window.print(); },
-    async copyOrder(){ try{ await navigator.clipboard.writeText(this.orderText()); alert('Riepilogo copiato!'); }catch{ alert('Copia non disponibile.'); } },
-    shareWA(){ const t=encodeURIComponent(this.orderText()); window.open(`https://wa.me/?text=${t}`,'_blank'); },
-    shareEmail(){ const s=encodeURIComponent('Nuovo ordine'); const b=encodeURIComponent(this.orderText()); location.href=`mailto:?subject=${s}&body=${b}`; },
-
-    /* ===== Impostazioni (BASE) ===== */
-    editTop: [],   // copie di lavoro
-    editBottom: [],
-    openSettings(){
-      // Copie profonde per lavorare “in bozza”
-      this.editTop = JSON.parse(JSON.stringify(this.topGroups));
-      this.editBottom = JSON.parse(JSON.stringify(this.bottomGroups));
-      this.showSettings = true;
+    async copyOrder(){
+      try{ await navigator.clipboard.writeText(this.orderText()); alert('Riepilogo copiato!'); }
+      catch{ alert('Copia non disponibile su questo dispositivo.'); }
     },
-    applyAndSave(){
-      // Applica le modifiche di base (label, icon, price)
-      this.topGroups = JSON.parse(JSON.stringify(this.editTop));
-      this.bottomGroups = JSON.parse(JSON.stringify(this.editBottom));
-      this.saveConfig();
-      this.showSettings = false;
-      // Se ero su un gruppo bottom cancellato (in 2a non si può), o cambiato nome, nessun problema
-      alert('Impostazioni salvate!');
+    shareWA(){
+      const t = encodeURIComponent(this.orderText());
+      window.open(`https://wa.me/?text=${t}`,'_blank');
     },
-    saveConfig(){
-      const cfg = { topGroups: this.topGroups, bottomGroups: this.bottomGroups };
-      localStorage.setItem('smartapp_cfg_v2', JSON.stringify(cfg));
-    },
-    resetConfig(quiet=false){
-      this.topGroups = JSON.parse(JSON.stringify(DEFAULT_CONFIG.topGroups));
-      this.bottomGroups = JSON.parse(JSON.stringify(DEFAULT_CONFIG.bottomGroups));
-      this.saveConfig();
-      if(!quiet) alert('Configurazione ripristinata.');
+    shareEmail(){
+      const s = encodeURIComponent('Nuovo ordine');
+      const b = encodeURIComponent(this.orderText());
+      location.href = `mailto:?subject=${s}&body=${b}`;
     }
   }
 }
