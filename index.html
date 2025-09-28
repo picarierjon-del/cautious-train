@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Gestionale SmartApp — Fase 2b (Impostazioni avanzate)</title>
+<title>Gestionale SmartApp — Fase 2b (Impostazioni avanzate – Fix)</title>
 <meta name="theme-color" content="#0b1223" />
 <style>
   :root{
@@ -93,10 +93,11 @@
   }
 </style>
 </head>
-<body>
+
+<body v-scope="App" @vue:mounted="init()">
 <header>
   <div class="brand">🧾 Gestionale SmartApp</div>
-  <div class="tabs" id="topTabs" v-scope="App" @vue:mounted="init()">
+  <div class="tabs" id="topTabs">
     <!-- Tabs categorie -->
     <button
       v-for="(g,i) in topGroups" :key="g._uid"
@@ -105,7 +106,7 @@
     >{{ g.icon }} {{ g.label }}</button>
   </div>
   <div class="grow"></div>
-  <div class="toolbar" v-scope="App">
+  <div class="toolbar">
     <button class="btn" @click="printOrder" title="Stampa / PDF">🖨️</button>
     <button class="btn" @click="shareWA" title="WhatsApp">🟢</button>
     <button class="btn" @click="shareEmail" title="Email">✉️</button>
@@ -117,7 +118,7 @@
 
 <main>
   <!-- Ticket -->
-  <aside v-scope="App">
+  <aside>
     <div class="line" style="margin-bottom:6px">
       <strong>Ordine</strong>
       <span class="small">{{ now }}</span>
@@ -164,7 +165,7 @@
   </aside>
 
   <!-- Stage -->
-  <section class="stage" v-scope="App">
+  <section class="stage">
     <div class="searchbox">
       🔍 <input type="text" v-model.trim="search" placeholder="Cerca..." />
     </div>
@@ -195,7 +196,7 @@
   </section>
 </main>
 
-<footer v-scope="App">
+<footer>
   <div style="display:flex;gap:6px;flex-wrap:wrap;overflow-x:auto;width:100%">
     <button
       v-for="g in bottomGroups" :key="g._uid"
@@ -208,7 +209,7 @@
 </footer>
 
 <!-- MODAL IMPOSTAZIONI (avanzate) -->
-<div class="modal" v-scope="App" :class="{show: showSettings}" @click.self="showSettings=false">
+<div class="modal" :class="{show: showSettings}" @click.self="showSettings=false">
   <div class="panel">
     <div class="line" style="margin-bottom:10px">
       <strong>Impostazioni avanzate</strong>
@@ -330,6 +331,15 @@
 <script>
 const money = n => (isNaN(n)?0:n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const uid = () => Math.random().toString(36).slice(2,9);
+function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
+function ensureUidList(arr){
+  if(!arr) return;
+  arr.forEach(g=>{
+    if (g._uid == null) g._uid = uid();
+    var its = g.items || [];
+    its.forEach(it=>{ if (it._uid == null) it._uid = uid(); });
+  });
+}
 
 const DEFAULT_CONFIG = {
   topGroups: [
@@ -387,8 +397,6 @@ const DEFAULT_CONFIG = {
   ]
 };
 
-function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
-
 function App(){
   return {
     /* ===== STATO ===== */
@@ -408,36 +416,47 @@ function App(){
 
     /* ===== LIFECYCLE ===== */
     init(){
-      setInterval(()=>{ this.now=new Date().toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) }, 1000);
+      var self=this;
+      setInterval(function(){ self.now=new Date().toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) }, 1000);
+
       // Config
-      const cfgRaw = localStorage.getItem('smartapp_cfg_v3');
-      if(cfgRaw){ 
-        try{ 
-          const cfg=JSON.parse(cfgRaw);
-          // assicurati che ogni elemento abbia _uid
-          const assignUidList = (arr)=>arr.forEach(g=>{ g._uid ||= uid(); (g.items||[]).forEach(it=>it._uid ||= uid()); });
-          assignUidList(cfg.topGroups); assignUidList(cfg.bottomGroups);
-          this.topGroups=cfg.topGroups; this.bottomGroups=cfg.bottomGroups; 
-        }catch{ this.resetConfig(true); } 
-      } else { this.resetConfig(true); }
+      var cfgRaw = localStorage.getItem('smartapp_cfg_v3');
+      if(cfgRaw){
+        try{
+          var cfg = JSON.parse(cfgRaw);
+          ensureUidList(cfg.topGroups);
+          ensureUidList(cfg.bottomGroups);
+          this.topGroups = cfg.topGroups || [];
+          this.bottomGroups = cfg.bottomGroups || [];
+        }catch(e){
+          this.resetConfig(true);
+        }
+      }else{
+        this.resetConfig(true);
+      }
+
       // Cart
-      const cartRaw = localStorage.getItem('smartapp_cart_v1');
-      if(cartRaw){ try{ this.cart = JSON.parse(cartRaw) || []; }catch{} }
+      var cartRaw = localStorage.getItem('smartapp_cart_v1');
+      if(cartRaw){ try{ this.cart = JSON.parse(cartRaw) || []; }catch(e){} }
+
       // Watchers
       this.$watch(()=>[this.topGroups,this.bottomGroups], ()=> this.saveConfig(), {deep:true});
       this.$watch('cart', ()=> localStorage.setItem('smartapp_cart_v1', JSON.stringify(this.cart)), {deep:true});
     },
 
     /* ===== DERIVATI & STYLE ===== */
-    get topItems(){ return (this.topGroups[this.currentTopIndex]?.items)||[]; },
+    get topItems(){
+      var g = this.topGroups[this.currentTopIndex];
+      return (g && g.items) ? g.items : [];
+    },
     get filteredTopItems(){
-      const q=this.search.toLowerCase();
-      return this.topItems.filter(p=>`${p.icon||''} ${p.label}`.toLowerCase().includes(q));
+      var q=this.search.toLowerCase();
+      return this.topItems.filter(p=> ( (p.icon||'') + ' ' + p.label ).toLowerCase().includes(q));
     },
     get filteredBottomItems(){
-      const q=this.search.toLowerCase();
-      const list=(this.currentBottomGroup?.items)||[];
-      return list.filter(p=>`${p.icon||''} ${p.label}`.toLowerCase().includes(q));
+      var q=this.search.toLowerCase();
+      var list = (this.currentBottomGroup && this.currentBottomGroup.items) ? this.currentBottomGroup.items : [];
+      return list.filter(p=> ( (p.icon||'') + ' ' + p.label ).toLowerCase().includes(q));
     },
     get grandTotal(){ return this.cart.reduce((sum,it)=> sum + this.lineTotal(it), 0); },
     bgStyle(obj){ return {background: obj.color || '#6b7280'}; },
@@ -456,17 +475,17 @@ function App(){
         return;
       }
       if(!this.cart.length){ alert('Aggiungi prima un articolo.'); return; }
-      const idx = this.activeIndex>=0 ? this.activeIndex : this.cart.length-1;
-      const target = this.cart[idx];
-      const gname = this.currentBottomGroup?.label || '';
-      const prefixNeeded = /Più|Senza|Poco|Abbondante/i.test(gname) ? (gname+' ') : '';
+      var idx = this.activeIndex>=0 ? this.activeIndex : this.cart.length-1;
+      var target = this.cart[idx];
+      var gname = this.currentBottomGroup ? (this.currentBottomGroup.label || '') : '';
+      var prefixNeeded = /Più|Senza|Poco|Abbondante/i.test(gname) ? (gname+' ') : '';
       target.extras.push({text: prefixNeeded + ex.label, price:+ex.price||0});
       this.activeIndex = idx;
     },
 
     /* ===== TICKET ===== */
     lineTotal(it){
-      const extras = (it.extras||[]).reduce((s,e)=> s + (+e.price||0), 0);
+      var extras = (it.extras||[]).reduce((s,e)=> s + (+e.price||0), 0);
       return ((+it.price||0) + extras) * (it.qty||1);
     },
     incQty(i){ this.cart[i].qty = (this.cart[i].qty||1)+1; },
@@ -475,10 +494,10 @@ function App(){
     removeExtra(i,ei){ this.cart[i].extras.splice(ei,1); },
 
     editName(i,e){ this.cart[i].name = e.target.textContent.trim(); },
-    editQty(i,e){ const n=parseInt(e.target.textContent)||1; this.cart[i].qty = Math.max(1,n); },
-    editPrice(i,e){ const n=parseFloat(e.target.textContent.replace(',','.'))||0; this.cart[i].price = n; },
+    editQty(i,e){ var n=parseInt(e.target.textContent)||1; this.cart[i].qty = Math.max(1,n); },
+    editPrice(i,e){ var n=parseFloat(e.target.textContent.replace(',','.'))||0; this.cart[i].price = n; },
     editExText(i,ei,e){ this.cart[i].extras[ei].text = e.target.textContent.trim(); },
-    editExPrice(i,ei,e){ const n=parseFloat(e.target.textContent.replace(',','.'))||0; this.cart[i].extras[ei].price = n; },
+    editExPrice(i,ei,e){ var n=parseFloat(e.target.textContent.replace(',','.'))||0; this.cart[i].extras[ei].price = n; },
 
     clearOrder(){ if(confirm('Svuotare l’ordine?')){ this.cart.splice(0); this.activeIndex=-1; } },
 
@@ -504,15 +523,21 @@ function App(){
       // clona come bozza
       this.editTop = deepClone(this.topGroups);
       this.editBottom = deepClone(this.bottomGroups);
-      // garantisci uid per sicurezza
-      this.editTop.forEach(g=>{ g._uid ||= uid(); (g.items||[]).forEach(it=> it._uid ||= uid()); });
-      this.editBottom.forEach(g=>{ g._uid ||= uid(); (g.items||[]).forEach(it=> it._uid ||= uid()); });
+      // garantisci uid per sicurezza (compat Safari)
+      ensureUidList(this.editTop);
+      ensureUidList(this.editBottom);
       this.showSettings = true;
     },
     applyAndSave(){
       // valida minimo: etichette non vuote
-      this.editTop.forEach(g=>{ g.label=g.label?.trim()||'Senza nome'; (g.items||[]).forEach(it=> it.label=it.label?.trim()||'Voce'); });
-      this.editBottom.forEach(g=>{ g.label=g.label?.trim()||'Senza nome'; (g.items||[]).forEach(it=> it.label=it.label?.trim()||'Voce'); });
+      this.editTop.forEach(g=>{
+        g.label = (g.label && g.label.trim()) || 'Senza nome';
+        (g.items||[]).forEach(it=> it.label = (it.label && it.label.trim()) || 'Voce');
+      });
+      this.editBottom.forEach(g=>{
+        g.label = (g.label && g.label.trim()) || 'Senza nome';
+        (g.items||[]).forEach(it=> it.label = (it.label && it.label.trim()) || 'Voce');
+      });
 
       // applica
       this.topGroups = deepClone(this.editTop);
@@ -521,7 +546,7 @@ function App(){
       // correggi indici/puntatori se necessari
       if(this.currentTopIndex >= this.topGroups.length) this.currentTopIndex = 0;
       if(this.currentBottomGroup){
-        const found = this.bottomGroups.find(g=>g._uid===this.currentBottomGroup._uid);
+        var found = this.bottomGroups.find(g=>g._uid===this.currentBottomGroup._uid);
         this.currentBottomGroup = found || null;
       }
 
@@ -550,7 +575,8 @@ function App(){
       this.editTop.splice(gi,1);
     },
     addTopItem(gi){
-      this.editTop[gi].items.push({icon:"•",label:"Nuovo articolo",price:0,color:this.editTop[gi].color,_uid:uid()});
+      const color = this.editTop[gi].color || this.PALETTE[0];
+      this.editTop[gi].items.push({icon:"•",label:"Nuovo articolo",price:0,color:color,_uid:uid()});
     },
     removeTopItem(gi,ii){
       this.editTop[gi].items.splice(ii,1);
@@ -565,7 +591,8 @@ function App(){
       this.editBottom.splice(gi,1);
     },
     addBottomItem(gi){
-      this.editBottom[gi].items.push({icon:"•",label:"Nuova voce",price:0,color:this.editBottom[gi].color,applyToOrder:false,_uid:uid()});
+      const color = this.editBottom[gi].color || this.PALETTE[2];
+      this.editBottom[gi].items.push({icon:"•",label:"Nuova voce",price:0,color:color,applyToOrder:false,_uid:uid()});
     },
     removeBottomItem(gi,ii){
       this.editBottom[gi].items.splice(ii,1);
