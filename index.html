@@ -1,296 +1,627 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Ordini Pizzeria</title>
-    <style>
-        /* Stili CSS di base */
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
-        .container { max-width: 800px; margin: 20px auto; background: white; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
-        .grid-pulsanti {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .pulsante {
-            padding: 20px 10px;
-            text-align: center;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: background-color 0.2s;
-        }
-        .pulsante:hover { opacity: 0.9; }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SmartBiz Pro (Mobile)</title>
 
-        /* Colori pulsanti superiori (Menu Prodotti) */
-        .rosso { background-color: #c9302c; }
-        .giallo { background-color: #f0ad4e; color: black; }
-        .blu-scuro { background-color: #337ab7; }
-        .blu-chiaro { background-color: #5bc0de; }
-        .verde-lime { background-color: #5cb85c; }
-        .marrone { background-color: #a0522d; }
-        .viola { background-color: #8a2be2; }
-        .verde-scuro { background-color: #4CAF50; }
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 
-        /* Stili Footer (Azioni Ordine) */
-        .footer-azioni {
-            display: flex;
-            justify-content: space-around;
-            padding-top: 20px;
-            border-top: 1px solid #ccc;
-        }
-        .azione-pulsante {
-            padding: 15px 10px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: bold;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-            flex-grow: 1;
-            margin: 0 5px;
-        }
-        .arancio { background-color: #ff6347; }
-        .verde-chiaro { background-color: #62c462; }
-        .grigio { background-color: #ccc; color: black; }
+<style>
+/* CSS Ottimizzato per iOS/Mobile */
+:root{
+  --bg:#0b0c10;--card:#12141a;--text:#f2f5ff;--accent:#007aff; /* Blu iOS */
+  --ok:#34c759; /* Verde iOS */--bad:#ff3b30; /* Rosso iOS */--muted:#8e8e93; /* Grigio iOS */
+  --ios-btn-bg: #1c1c1e;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,sans-serif;
+  min-height:100vh;
+  /* Per un'esperienza fullscreen "app-like" su iOS */
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+header{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;
+  padding:14px;background:#0b0c10ee;backdrop-filter:blur(10px);border-bottom:1px solid #1c1c1e;}
+header h1{font-size:20px;margin:0;font-weight:600;}
+.btn{padding:8px 14px;border:1px solid var(--ios-btn-bg);border-radius:10px;background:var(--ios-btn-bg);color:#fff;cursor:pointer;font-weight:500;font-size:14px}
+.btn.primary{background:var(--accent);border:none;padding:10px 14px;}
+.btn.bad{background:var(--bad);border:none;}
+.card{background:var(--card);border-radius:14px;margin:14px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+label{display:block;margin:8px 0 4px;font-size:13px;color:var(--muted)}
+input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid #333;background:var(--ios-btn-bg);color:var(--text);font-size:16px;}
+table{width:100%;border-collapse:collapse}th,td{padding:10px 4px;border-bottom:1px solid #222;vertical-align:middle;font-size:13px;}
+th{font-weight:600;color:var(--muted);text-align:left;}
+td:last-child{text-align:right;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--ios-btn-bg);border-radius:10px;padding:12px;text-align:center;}
+.kpi h3{margin:0 0 4px;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:500;}
+.money{font-weight:700;font-size:20px;}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+canvas{width:100%;height:240px;background:var(--ios-btn-bg);border-radius:12px;padding:10px}
+.badge{display:inline-block;background:var(--ios-btn-bg);border:1px solid #2a3346;padding:4px 8px;border-radius:999px;font-size:12px;color:#cbd2e2}
 
-        /* Stili Modali (Popup) */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 10px;
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close:hover, .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .modal-content input, .modal-content select {
-            width: 95%;
-            padding: 10px;
-            margin: 5px 0 15px 0;
-            display: inline-block;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-    </style>
+/* Menu compatto - Uso un popover più "iOS-style" */
+.tools-menu{position:absolute;top:58px;right:10px;background:var(--card);border:1px solid #2a3344;border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.45);padding:8px;z-index:60;display:none;width:min(280px,92vw)}
+.tools-menu.show{display:block}
+.tools-menu button{display:block;width:100%;text-align:left;margin:4px 0;padding:10px;border-radius:10px;
+  background:var(--ios-btn-bg);border:1px solid #2a3344;color:#e6ebff;cursor:pointer;font-size:16px;}
+.tools-menu button.primary{background:var(--accent);border:none;color:#fff}
+
+/* Layout */
+main{padding-bottom:100px} /* Spazio per barra nav e FAB */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.muted{color:var(--muted);font-size:12px}
+
+/* Barra inferiore per iPhone */
+.bottom-nav{
+  position:fixed;
+  bottom:0; left:0; right:0;
+  background:#0b0c10ee;
+  backdrop-filter:blur(10px);
+  display:flex;
+  justify-content:space-around;
+  border-top:1px solid #222;
+  z-index:50;
+  padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); /* Aggiunge padding per safe areas */
+}
+.bottom-nav button{
+  flex:1;
+  padding:12px 6px; /* Aumentato padding */
+  background:none;
+  border:none;
+  color:var(--muted);
+  font-size:11px;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.bottom-nav button i{font-size:22px;margin-bottom:2px;} /* Icone non definite, ma pronte */
+.bottom-nav button.active{color:var(--accent);font-weight:600;}
+
+/* Floating Action Button (FAB) */
+#fabAdd{
+  position:fixed;
+  right:20px;
+  bottom:70px; /* Sopra la barra di navigazione */
+  z-index:55;
+  width:56px;height:56px;
+  border-radius:50%;
+  background:var(--accent);
+  color:white;
+  font-size:30px;
+  border:none;
+  box-shadow:0 4px 12px rgba(0,0,0,.3);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+
+/* Messaggi di feedback temporanei */
+#feedback-message{
+  position:fixed;
+  bottom:120px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,0.7);
+  color:white;
+  padding:10px 20px;
+  border-radius:20px;
+  opacity:0;
+  transition:opacity 0.3s ease;
+  z-index:100;
+  font-size:14px;
+}
+</style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Cassa e Ordini</h2>
-    <div class="grid-pulsanti">
-        <button class="pulsante rosso">PIZZE A-M</button>
-        <button class="pulsante rosso">PIZZE N-Z</button>
-        <button class="pulsante giallo">BABY</button>
-        <button class="pulsante arancio">CALZONE</button>
-        <button class="pulsante blu-scuro">PANINI</button>
-        <button class="pulsante blu-chiaro">SCHIACCIATA</button>
-        <button class="pulsante verde-lime">1/2 METRI</button>
-        <button class="pulsante blu-chiaro">SCHIACCIATA GRANDE</button>
-        <button class="pulsante marrone">PORZ PATATINE</button>
-        <button class="pulsante blu-scuro">BIBITE</button>
-        <button class="pulsante arancio">MENU 17 GOURMET</button>
-        <button class="pulsante viola">PIZZE BABY</button>
-        <button class="pulsante marrone">BANCO RAPIDO</button>
-        <button class="pulsante verde-scuro">TUTTE TAGLIATE</button>
-    </div>
+<header>
+  <h1>SmartBiz Pro</h1>
+  <div class="row">
+    <span id="ivaReminder" class="badge"></span>
+    <button class="btn" id="menuBtn" aria-label="Strumenti">⋯</button>
+  </div>
+  <div id="menuPanel" class="tools-menu" role="menu" aria-hidden="true">
+    <button id="mSummary">📊 Riepilogo Completo</button>
+    <button id="mSup">🏷️ Fornitori & Categorie</button>
+    <button id="mDead">⏰ Scadenze</button>
+    <hr style="border:none;border-top:1px solid #2a3344;margin:6px 0">
+    <button id="mImp">⬆️ Importa JSON</button>
+    <button id="mExpCsv">⬇️ Export CSV</button>
+    <button id="mExpJson">⬇️ Export JSON</button>
+    <button id="mPdf">🧾 Report PDF</button>
+    <input type="file" id="fileImport" accept="application/json" hidden>
+  </div>
+</header>
 
-    <h3>Dettaglio Ordine</h3>
-    <div style="border: 1px solid #ccc; padding: 10px; min-height: 100px; margin-bottom: 20px;">
-        *Nessun articolo selezionato*
-    </div>
+<main id="content"></main>
 
-    <div class="footer-azioni" style="flex-wrap: wrap;">
-        <button class="azione-pulsante grigio">Termina Combo</button>
-        <button class="azione-pulsante grigio">Modifica Combo</button>
-        <button class="azione-pulsante grigio">Annulla Combo</button>
-        <button class="azione-pulsante verde-lime">POCO</button>
-        <button class="azione-pulsante verde-scuro">ABB</button>
-        
-        <button class="azione-pulsante verde-lime" style="flex-grow: 0; width: 40px; margin-right: 0;">+</button>
-        <button class="azione-pulsante verde-lime" style="flex-grow: 0; width: 40px; margin-left: 0;">-</button>
-        <button class="azione-pulsante verde-lime">ALTRE</button>
-        <button class="azione-pulsante verde-lime">VARIANTE LIBERA</button>
-        <button class="azione-pulsante verde-lime">Pagamenti</button>
-        <button class="azione-pulsante arancio" onclick="openModal('domicilio')">Crea DOMICILIO 🛵</button>
-        <button class="azione-pulsante arancio" onclick="openModal('asporto')">Crea ASPORTO 🥡</button>
-        <button class="azione-pulsante arancio" onclick="openModal('banco')">Crea BANCO 🍴</button>
-        <button class="azione-pulsante viola" onclick="alert('Funzione Modifica Ordine')">Modifica Ordine 📝</button>
-        <button class="azione-pulsante blu-scuro" onclick="openModal('impostazioni')" style="margin-top: 10px;">IMPOSTAZIONI ⚙️</button>
-    </div>
+<button id="fabAdd" aria-label="Nuovo movimento">+</button>
 
-</div>
+<nav class="bottom-nav">
+  <button id="tabMov" class="active">
+    <i class="icon">📜</i>
+    <span>Movimenti</span>
+  </button>
+  <button id="tabForn">
+    <i class="icon">🏷️</i>
+    <span>Fornitori</span>
+  </button>
+</nav>
 
-<div id="modalDomicilio" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal('domicilio')">&times;</span>
-        <h3>Crea Ordine a Domicilio</h3>
-        <label for="dom-cognome">Cognome:</label>
-        <input type="text" id="dom-cognome" placeholder="Cognome">
-        
-        <label for="dom-indirizzo">Indirizzo:</label>
-        <input type="text" id="dom-indirizzo" placeholder="Via/Piazza">
-        
-        <label for="dom-civico">Numero Civico:</label>
-        <input type="text" id="dom-civico" placeholder="N°">
-        
-        <label for="dom-telefono">Numero di Telefono:</label>
-        <input type="tel" id="dom-telefono" placeholder="+39">
-        
-        <label for="dom-paese">Paese:</label>
-        <input type="text" id="dom-paese" placeholder="Paese">
-        
-        <label for="dom-zona">Zona (prezzo specifico):</label>
-        <select id="dom-zona">
-            <option value="zonaA">Zona A (€2.00)</option>
-            <option value="zonaB">Zona B (€3.50)</option>
-            <option value="zonaC">Zona C (€5.00)</option>
-        </select>
-        
-        <label for="dom-ora">Ora di Consegna:</label>
-        <input type="time" id="dom-ora">
-        
-        <label>Vuole Tagliate:</label><br>
-        <input type="radio" id="dom-tagliate-si" name="dom-tagliate" value="si"> <label for="dom-tagliate-si">Sì</label>
-        <input type="radio" id="dom-tagliate-no" name="dom-tagliate" value="no" checked> <label for="dom-tagliate-no">No</label>
-        
-        <button class="azione-pulsante verde-scuro" style="width: 100%; margin-top: 15px;">Conferma Ordine Domicilio</button>
-    </div>
-</div>
-
-<div id="modalAsporto" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal('asporto')">&times;</span>
-        <h3>Crea Ordine da Asporto</h3>
-        <label for="asp-cognome">Cognome:</label>
-        <input type="text" id="asp-cognome" placeholder="Cognome">
-        
-        <label for="asp-telefono">Numero di Telefono:</label>
-        <input type="tel" id="asp-telefono" placeholder="+39">
-        
-        <label for="asp-ora">Ora di Ritiro:</label>
-        <input type="time" id="asp-ora">
-        
-        <label>Vuole Tagliate:</label><br>
-        <input type="radio" id="asp-tagliate-si" name="asp-tagliate" value="si"> <label for="asp-tagliate-si">Sì</label>
-        <input type="radio" id="asp-tagliate-no" name="asp-tagliate" value="no" checked> <label for="asp-tagliate-no">No</label>
-        
-        <button class="azione-pulsante verde-scuro" style="width: 100%; margin-top: 15px;">Conferma Ordine Asporto</button>
-    </div>
-</div>
-
-<div id="modalBanco" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal('banco')">&times;</span>
-        <h3>Crea Ordine al Banco</h3>
-        <label for="banco-cognome">Cognome (opzionale):</label>
-        <input type="text" id="banco-cognome" placeholder="Cognome">
-        
-        <label for="banco-ora">Ora (opzionale):</label>
-        <input type="time" id="banco-ora">
-        
-        <label>Vuole Tagliate:</label><br>
-        <input type="radio" id="banco-tagliate-si" name="banco-tagliate" value="si"> <label for="banco-tagliate-si">Sì</label>
-        <input type="radio" id="banco-tagliate-no" name="banco-tagliate" value="no" checked> <label for="banco-tagliate-no">No</label>
-        
-        <button class="azione-pulsante verde-scuro" style="width: 100%; margin-top: 15px;">Conferma Ordine Banco</button>
-    </div>
-</div>
-
-<div id="modalImpostazioni" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal('impostazioni')">&times;</span>
-        <h3>Impostazioni Articoli e Prezzi</h3>
-        <p>Questa è una simulazione. Per rendere queste modifiche effettive e permanenti servirebbe un database.</p>
-        
-        <h4>Modifica Articolo (Esempio)</h4>
-        <label for="imp-articolo">Seleziona Articolo:</label>
-        <select id="imp-articolo">
-            <option value="pizzaam">PIZZE A-M</option>
-            <option value="calzone">CALZONE</option>
-            </select>
-        
-        <label for="imp-prezzo">Modifica Prezzo (Esempio Calzone):</label>
-        <input type="number" id="imp-prezzo" value="7.50" step="0.01">
-        
-        <label for="imp-nuovo">Aggiungi Nuovo Articolo:</label>
-        <input type="text" id="imp-nuovo" placeholder="Nome Nuovo Articolo">
-        <button class="azione-pulsante verde-scuro" style="width: 100%; margin-top: 5px;">Aggiungi</button>
-
-        <h4 style="margin-top: 20px;">Gestione Zone Domicilio (Esempio)</h4>
-        <label for="imp-zona-a">Prezzo Zona A:</label>
-        <input type="number" id="imp-zona-a" value="2.00" step="0.01">
-        
-        <button class="azione-pulsante blu-scuro" style="width: 100%; margin-top: 15px;">Salva Impostazioni (Simulazione)</button>
-    </div>
-</div>
+<div id="feedback-message" aria-live="polite"></div>
 
 <script>
-    // Logica JavaScript per aprire e chiudere le Modali
-    function openModal(type) {
-        let modalId;
-        if (type === 'domicilio') {
-            modalId = 'modalDomicilio';
-        } else if (type === 'asporto') {
-            modalId = 'modalAsporto';
-        } else if (type === 'banco') {
-            modalId = 'modalBanco';
-        } else if (type === 'impostazioni') {
-            modalId = 'modalImpostazioni';
-        }
-        document.getElementById(modalId).style.display = 'block';
-    }
+/* ===== Helpers & stato ===== */
+const cur=new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'});
+const $=s=>document.querySelector(s);
+const LS='smartbiz_store_v1';
+let store;
+try{store=JSON.parse(localStorage.getItem(LS))||{};}catch{store={};}
+if(!Array.isArray(store.movimenti)) store.movimenti=[];
+if(!Array.isArray(store.fornitori)) store.fornitori=[];
+if(!Array.isArray(store.categorie)) store.categorie=['Vendita prodotti','Servizi','Affitto','Utenze','Marketing','Spesa','Altro'];
+if(!Array.isArray(store.scadenze)) store.scadenze=[];
+function save(){localStorage.setItem(LS,JSON.stringify(store));}
+function uid(){return (crypto.randomUUID&&crypto.randomUUID())||(Date.now().toString(36)+Math.random().toString(36).slice(2));}
+function view(h){$('#content').innerHTML=h;}
+function menu(show){const p=$('#menuPanel');p.classList.toggle('show',show);p.setAttribute('aria-hidden',show?'false':'true');}
+function showFeedback(msg){
+    const fm=$('#feedback-message');
+    fm.textContent=msg;
+    fm.style.opacity=1;
+    setTimeout(()=>fm.style.opacity=0, 2000);
+}
 
-    function closeModal(type) {
-        let modalId;
-        if (type === 'domicilio') {
-            modalId = 'modalDomicilio';
-        } else if (type === 'asporto') {
-            modalId = 'modalAsporto';
-        } else if (type === 'banco') {
-            modalId = 'modalBanco';
-        } else if (type === 'impostazioni') {
-            modalId = 'modalImpostazioni';
-        }
-        document.getElementById(modalId).style.display = 'none';
-    }
+/* ===== Menu ===== */
+$('#menuBtn').onclick=(e)=>{e.stopPropagation();menu(!$('#menuPanel').classList.contains('show'));};
+document.addEventListener('click',e=>{const p=$('#menuPanel');if(p.classList.contains('show')&&!p.contains(e.target)&&e.target.id!=='menuBtn'){menu(false);}});
 
-    // Chiude la modale se l'utente clicca fuori
-    window.onclick = function(event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.style.display = "none";
-        }
+/* ===== Pagine ===== */
+function pageAdd(mov){
+  const m = mov || { d:new Date().toISOString().slice(0,10), type:'entrata', method:'Contanti', cat:store.categorie[0]||'Altro', sup:'', desc:'', imp:'', iva:'22', tags:[], doc_ref:'' };
+  setActive($('#fabAdd'));
+
+  view(`
+  <div class="card">
+    <h2>${mov?'Modifica':'Nuovo'} movimento</h2>
+    <div class="grid">
+      <div><label>Data <input type="date" id="d" value="${m.d}"></label></div>
+      <div><label>Tipo <select id="t"><option ${m.type==='entrata'?'selected':''}>entrata</option><option ${m.type==='uscita'?'selected':''}>uscita</option></select></label></div>
+      <div><label>Metodo <select id="me">
+          ${['Contanti','Bancomat','Carta','Bonifico'].map(v=>`<option ${v===m.method?'selected':''}>${v}</option>`).join('')}
+      </select></label></div>
+      <div><label>IVA % <select id="iva">${[0,4,5,10,22].map(v=>`<option ${v==m.ivaPerc?'selected':''}>${v}</option>`).join('')}</select></label></div>
+      <div><label>Imponibile (€) <input type="number" id="imp" step="0.01" value="${m.imp}"></label></div>
+      <div><label>Categoria <select id="c">${store.categorie.map(x=>`<option ${x===m.cat?'selected':''}>${x}</option>`).join('')}</select></label></div>
+      <div><label>Fornitore <select id="s"><option></option>${store.fornitori.map(x=>`<option ${x===m.sup?'selected':''}>${x}</option>`).join('')}</select></label></div>
+      <div><label>Tag (virgola) <input id="tg" value="${(m.tags||[]).join(', ')}"></label></div>
+      <div style="grid-column:1/-1"><label>Descrizione <input id="desc" value="${m.desc}"></label></div>
+      <div style="grid-column:1/-1"><label>Rif. Documento/Foto <input id="doc_ref" placeholder="Es. Fattura N. 123 o link a foto" value="${m.doc_ref||''}"></label></div>
+      
+      <div style="grid-column:1/-1;margin-top:10px;"><button class="btn primary" id="saveBtn">💾 Salva Movimento</button></div>
+    </div>
+  </div>`);
+
+  $('#saveBtn').onclick = ()=>{
+    const rec={
+      id: m.id || uid(),
+      d: $('#d').value,
+      type: $('#t').value,
+      method: $('#me').value,
+      cat: $('#c').value,
+      sup: $('#s').value,
+      desc: $('#desc').value,
+      imp: parseFloat($('#imp').value)||0,
+      ivaPerc: parseFloat($('#iva').value),
+      tags: ($('#tg').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+      doc_ref: $('#doc_ref').value.trim() // Nuovo campo
+    };
+    rec.iva = rec.imp * (rec.ivaPerc||0) / 100;
+    rec.tot = rec.imp + rec.iva;
+
+    if(!rec.d || !(rec.imp>0)){ showFeedback('⚠️ Inserisci data e imponibile.'); return; }
+
+    if(m.id){
+      store.movimenti = store.movimenti.map(x=> x.id===m.id ? rec : x);
+      showFeedback('✅ Movimento modificato!');
+    }else{
+      store.movimenti.push(rec);
+      showFeedback('✅ Movimento salvato!');
     }
+    save(); pageList();
+  };
+}
+
+function pageList(){
+  setActive($('#tabMov'));
+  const arr = [...store.movimenti].sort((a,b)=>b.d.localeCompare(a.d));
+  view(`
+  <div class="card">
+    <h2>Lista Movimenti</h2>
+    <div class="row" style="gap:10px;margin:6px 0 12px;display:block">
+      <label>Cerca (Descrizione/Tag) <input type="text" id="fSearch" placeholder="Es. Utenze o Progetto X"></label>
+      <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:8px">
+        <label>Dal <input type="date" id="fFrom"></label>
+        <label>Al <input type="date" id="fTo"></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label>Tipo 
+          <select id="fTipo">
+            <option value="">Tutti</option>
+            <option value="entrata">Vendite (Entrate)</option>
+            <option value="uscita">Acquisti (Uscite)</option>
+          </select>
+        </label>
+        <label>Fornitore 
+          <select id="fSup">
+            <option value="">Tutti</option>
+            ${store.fornitori.map(n=>`<option>${n}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div class="row" style="margin-top:10px;justify-content:space-between">
+        <button class="btn primary" id="fApplica">Applica Filtri</button>
+        <button class="btn" id="fReset">Reset Filtri</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Data</th><th>Descrizione</th><th>Totale</th><th></th></tr>
+      </thead>
+      <tbody id="listBody"></tbody>
+    </table>
+  </div>`);
+
+  function apply(){
+    const from=$('#fFrom').value, to=$('#fTo').value, tipo=$('#fTipo').value, fs=$('#fSup').value, search=$('#fSearch').value.toLowerCase();
+    
+    const filt = arr.filter(m=>{
+      const d=new Date(m.d);
+      if(from && m.d < from) return false;
+      if(to && m.d > to) return false;
+      if(tipo && m.type!==tipo) return false;
+      if(fs && (m.sup||'')!==fs) return false;
+      if(search && !(m.desc||'').toLowerCase().includes(search) && !(m.tags||[]).join(' ').toLowerCase().includes(search)) return false;
+      return true;
+    });
+    
+    const tb=$('#listBody'); tb.innerHTML='';
+    filt.forEach(m=>{
+      const tr=document.createElement('tr');
+      const totClass = m.type === 'entrata' ? 'ok' : 'bad';
+      tr.innerHTML = `<td>${m.d.slice(5)}</td>
+      <td>${m.desc||m.cat||'—'} <div class="muted">${m.cat} (${m.method})</div></td>
+      <td class="${totClass}">${cur.format(m.tot||0)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn" data-edit="${m.id}">Mod.</button>
+      </td>`;
+      tb.appendChild(tr);
+    });
+    // bind
+    tb.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=> {
+        const mov=store.movimenti.find(x=>x.id===b.dataset.edit);
+        if(mov){ pageAdd(mov); } else { showFeedback('Movimento non trovato!'); }
+    });
+  }
+
+  $('#fApplica').onclick=apply;
+  $('#fReset').onclick=()=>{ $('#fFrom').value=''; $('#fTo').value=''; $('#fTipo').value=''; $('#fSup').value=''; $('#fSearch').value=''; apply(); };
+  $('#fSearch').oninput=apply; // Filtro per ricerca dinamico
+  apply();
+}
+
+function pageSummary(){
+  setActive(null);
+  const list=[...store.movimenti];
+  const totalEntr=list.filter(m=>m.type==='entrata').reduce((a,b)=>a+(b.tot||0),0);
+  const totalUsc =list.filter(m=>m.type==='uscita').reduce((a,b)=>a+(b.tot||0),0);
+  const totalDeb =list.filter(m=>m.type==='entrata').reduce((a,b)=>a+(b.iva||0),0);
+  const totalCred=list.filter(m=>m.type==='uscita').reduce((a,b)=>a+(b.iva||0),0);
+
+  // Calcolo Mese Corrente
+  const now = new Date();
+  const currentMonth = now.toISOString().slice(0, 7);
+  const currentMonthList = list.filter(m => (m.d || '').slice(0, 7) === currentMonth);
+  const monthEntr = currentMonthList.filter(m => m.type === 'entrata').reduce((a, b) => a + (b.tot || 0), 0);
+  const monthUsc = currentMonthList.filter(m => m.type === 'uscita').reduce((a, b) => a + (b.tot || 0), 0);
+  const monthDeb = currentMonthList.filter(m => m.type === 'entrata').reduce((a, b) => a + (b.iva || 0), 0);
+  const monthCred = currentMonthList.filter(m => m.type === 'uscita').reduce((a, b) => a + (b.iva || 0), 0);
+
+
+  view(`<div class="card">
+    <h2>Riepilogo Mese Corrente (${currentMonth})</h2>
+    <div class="kpi-grid">
+      <div class="kpi"><h3>Entrate</h3><div class="money ok">${cur.format(monthEntr)}</div></div>
+      <div class="kpi"><h3>Uscite</h3><div class="money bad">${cur.format(monthUsc)}</div></div>
+      <div class="kpi"><h3>Saldo Mensile</h3><div class="money">${cur.format(monthEntr-monthUsc)}</div></div>
+    </div>
+    <div class="kpi-grid" style="margin-top:10px">
+        <div class="kpi"><h3>IVA Debito</h3><div class="money">${cur.format(monthDeb)}</div></div>
+        <div class="kpi"><h3>IVA Credito</h3><div class="money">${cur.format(monthCred)}</div></div>
+        <div class="kpi"><h3>Δ IVA Mese</h3><div class="money">${cur.format(monthDeb-monthCred)}</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Riepilogo Totale (Sempre)</h2>
+    <div class="kpi-grid">
+      <div class="kpi"><h3>Entrate Tot.</h3><div class="money ok">${cur.format(totalEntr)}</div></div>
+      <div class="kpi"><h3>Uscite Tot.</h3><div class="money bad">${cur.format(totalUsc)}</div></div>
+      <div class="kpi"><h3>Saldo Totale</h3><div class="money">${cur.format(totalEntr-totalUsc)}</div></div>
+    </div>
+    <div class="kpi-grid" style="margin-top:10px">
+        <div class="kpi"><h3>Δ IVA Tot.</h3><div class="money">${cur.format(totalDeb-totalCred)}</div></div>
+    </div>
+    <canvas id="chart" style="margin-top:15px"></canvas>
+  </div>
+  `);
+
+  const byMonth={};
+  list.forEach(m=>{ const k=(m.d||'').slice(0,7); if(!k) return; byMonth[k]=(byMonth[k]||0)+(m.type==='entrata'?(m.tot||0):-(m.tot||0)); });
+  const labels=Object.keys(byMonth).sort();
+  const dataVals=labels.map(k=>byMonth[k]);
+  const ctx=document.getElementById('chart').getContext('2d');
+  if(window._chart) window._chart.destroy();
+  window._chart=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{label:'Saldo mensile',data:dataVals,backgroundColor:dataVals.map(v=>v>=0?'#34c759':'#ff3b30')}]},
+    options:{
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins:{
+            legend:{display:false},
+            tooltip: {
+                callbacks: {
+                    label: function(context) { return 'Saldo: ' + cur.format(context.parsed.y); }
+                }
+            }
+        },
+        scales:{x:{grid:{display:false}, ticks:{color:'var(--muted)'}},y:{grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'var(--muted)'}}}
+    }
+  });
+}
+
+/* ===== Fornitori & categorie / Scadenze ===== */
+function pageSup(){
+  setActive($('#tabForn'));
+  view(`<div class="card">
+    <h2>Fornitori & Categorie</h2>
+    <div class="grid">
+      <div class="card" style="margin:0;padding:10px;background:var(--bg)">
+        <h3>Fornitori</h3>
+        <div class="row" style="gap:8px;margin:8px 0;flex-wrap:nowrap">
+          <input id="newSup" placeholder="Es. Molino Rossi"><button class="btn primary" id="addSup">➕</button>
+        </div>
+        <table><thead><tr><th>Nome</th><th></th></tr></thead><tbody id="supBody"></tbody></table>
+      </div>
+      <div class="card" style="margin:0;padding:10px;background:var(--bg)">
+        <h3>Categorie</h3>
+        <div class="row" style="gap:8px;margin:8px 0;flex-wrap:nowrap">
+          <input id="newCat" placeholder="Nuova categoria"><button class="btn primary" id="addCat">➕</button>
+        </div>
+        <table><thead><tr><th>Nome</th><th></th></tr></thead><tbody id="catBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Scadenze ⏰</h2>
+    <div class="row" style="gap:8px;margin:8px 0;flex-wrap:nowrap">
+      <input id="scTit" placeholder="INPS, IMU, F24…">
+      <input id="scDat" type="date">
+      <button class="btn primary" id="scAdd">➕</button>
+    </div>
+    <table><thead><tr><th>Data</th><th>Titolo</th><th></th></tr></thead><tbody id="scBody"></tbody></table>
+    <p class="muted">Ricevi notifica per scadenze entro 3 giorni.</p>
+  </div>`);
+
+  function renderLists(){
+    // Fornitori
+    const sb=$('#supBody'); sb.innerHTML='';
+    store.fornitori.forEach((n,i)=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${n}</td><td style="text-align:right"><button class="btn bad" data-i="${i}">✖</button></td>`;
+      sb.appendChild(tr);
+    });
+    sb.onclick=(e)=>{
+      const i=e.target.dataset.i; if(i===undefined) return;
+      if(confirm('Eliminare fornitore?')){ store.fornitori.splice(i,1); save(); renderLists(); }
+    };
+
+    // Categorie
+    const cb=$('#catBody'); cb.innerHTML='';
+    store.categorie.forEach((n,i)=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${n}</td><td style="text-align:right"><button class="btn bad" data-i="${i}">✖</button></td>`;
+      cb.appendChild(tr);
+    });
+    cb.onclick=(e)=>{
+      const i=e.target.dataset.i; if(i===undefined) return;
+      if(confirm('Eliminare categoria? I movimenti passeranno a "Altro".')){
+        const name=store.categorie[i];
+        store.categorie.splice(i,1);
+        store.movimenti = store.movimenti.map(m=> m.cat===name ? {...m, cat:'Altro'} : m );
+        save(); renderLists();
+      }
+    };
+    
+    // Scadenze
+    const tb=$('#scBody'); tb.innerHTML='';
+    store.scadenze.sort((a,b)=>a.data.localeCompare(b.data)).forEach(s=>{
+      const diff=Math.ceil((new Date(s.data)-new Date())/86400000);
+      const diffText = diff >= 0 ? ` (${diff}g)` : '';
+      const style = diff <= 3 && diff >= 0 ? 'color:var(--bad);font-weight:700;' : '';
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="${style}">${s.data}${diffText}</td><td>${s.titolo}</td><td style="text-align:right"><button class="btn bad" data-id="${s.id}">✖</button></td>`;
+      tb.appendChild(tr);
+    });
+    tb.onclick=(e)=>{
+      const id=e.target.dataset.id; if(!id) return;
+      if(confirm('Eliminare questa scadenza?')){ store.scadenze = store.scadenze.filter(x=>x.id!==id); save(); renderLists(); showFeedback('Scadenza eliminata.'); }
+    };
+  }
+  renderLists();
+
+  $('#addSup').onclick=()=>{ const v=$('#newSup').value.trim(); if(!v) return; if(!store.fornitori.includes(v)) store.fornitori.push(v); save(); $('#newSup').value=''; renderLists(); showFeedback('Fornitore aggiunto.'); };
+  $('#addCat').onclick=()=>{ const v=$('#newCat').value.trim(); if(!v) return; if(!store.categorie.includes(v)) store.categorie.push(v); save(); $('#newCat').value=''; renderLists(); showFeedback('Categoria aggiunta.'); };
+  
+  $('#scAdd').onclick=()=>{
+    const t=$('#scTit').value.trim(), d=$('#scDat').value;
+    if(!t||!d) { showFeedback('Inserisci titolo e data!'); return; }
+    store.scadenze.push({id:uid(), titolo:t, data:d});
+    save(); $('#scTit').value=''; $('#scDat').value=''; renderLists(); showFeedback('Scadenza aggiunta.');
+    ivaReminder(); // Aggiorna promemoria
+  };
+}
+
+
+/* ===== Import / Export / PDF (Logica invariata per semplicità) ===== */
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(store,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='smartbiz.json'; a.click(); URL.revokeObjectURL(a.href);
+  showFeedback('Export JSON completato.');
+}
+function exportCSV(){
+  const rows=[['Data','Tipo','Metodo','Categoria','Fornitore','Descrizione','Imponibile','IVA','Totale']];
+  store.movimenti.forEach(m=> rows.push([m.d,m.type,m.method,m.cat,m.sup,m.desc,(m.imp||0),(m.iva||0),(m.tot||0)]));
+  const csv=rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='smartbiz_movimenti.csv'; a.click(); URL.revokeObjectURL(a.href);
+  showFeedback('Export CSV completato.');
+}
+function importJSON(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const obj=JSON.parse(r.result);
+      if(obj.movimenti || obj.fornitori || obj.categorie || obj.scadenze){
+        store = { 
+          movimenti: Array.isArray(obj.movimenti)?obj.movimenti:store.movimenti,
+          fornitori: Array.isArray(obj.fornitori)?obj.fornitori:store.fornitori,
+          categorie: Array.isArray(obj.categorie)&&obj.categorie.length?obj.categorie:store.categorie,
+          scadenze: Array.isArray(obj.scadenze)?obj.scadenze:store.scadenze
+        };
+      }else if(Array.isArray(obj)){ 
+        store.movimenti = obj;
+      }
+      save(); showFeedback('Importazione completata!'); pageList();
+    }catch(err){ showFeedback('⚠️ File JSON non valido.'); }
+    e.target.value='';
+  };
+  r.readAsText(f);
+}
+function reportPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'a4'});
+  const eTot=store.movimenti.filter(m=>m.type==='entrata').reduce((a,b)=>a+(b.tot||0),0);
+  const uTot=store.movimenti.filter(m=>m.type==='uscita').reduce((a,b)=>a+(b.tot||0),0);
+  const deb=store.movimenti.filter(m=>m.type==='entrata').reduce((a,b)=>a+(b.iva||0),0);
+  const cred=store.movimenti.filter(m=>m.type==='uscita').reduce((a,b)=>a+(b.iva||0),0);
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Report SmartBiz Pro',40,40);
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.text(`Generato: ${new Date().toLocaleDateString('it-IT')}`,40,60);
+
+  doc.setFont('helvetica','bold'); doc.text('Riepilogo',40,90);
+  doc.autoTable({startY:100, head:[['Voce','Valore']], body:[
+    ['Entrate',cur.format(eTot)],['Uscite',cur.format(uTot)],['Saldo',cur.format(eTot-uTot)],
+    ['IVA Debito',cur.format(deb)],['IVA Credito',cur.format(cred)],['Δ IVA',cur.format(deb-cred)]
+  ], styles:{fontSize:10}, theme:'grid'});
+
+  const rows=store.movimenti
+    .sort((a,b)=>a.d.localeCompare(b.d))
+    .map(m=>[m.d,m.type,m.method,m.cat,m.sup,m.desc,(m.imp||0).toFixed(2),(m.iva||0).toFixed(2),(m.tot||0).toFixed(2)]);
+  doc.addPage();
+  doc.setFont('helvetica','bold'); doc.text('Dettaglio movimenti',40,40);
+  doc.autoTable({startY:50, head:[['Data','Tipo','Metodo','Cat','Fornitore','Descrizione','Imp.','IVA','Tot.']], body:rows, styles:{fontSize:8,cellPadding:2}, headStyles:{fillColor:[59,130,246]}, theme:'striped'});
+
+  doc.save('report_smartbiz.pdf');
+  showFeedback('PDF creato e scaricato.');
+}
+
+/* ===== IVA / Scadenze reminder (Unito per coerenza) ===== */
+function ivaReminder(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const y=now.getFullYear();
+  
+  // Scadenze IVA (16 Mag, 20 Ago, 16 Nov, 16 Mar anno succ.)
+  const scadIva=[ new Date(y,4,16), new Date(y,7,20), new Date(y,10,16), new Date(y+1,2,16) ];
+  let nextIva=scadIva.find(d=>d>=now) || scadIva[0];
+  const diffIva=Math.ceil((nextIva-now)/86400000);
+  
+  // Scadenze Custom
+  const nextCustomScad = store.scadenze
+    .filter(s => new Date(s.data) >= now)
+    .sort((a, b) => a.data.localeCompare(b.data))[0];
+    
+  let badgeText = '';
+  let urgentAlerts = [];
+
+  if (diffIva <= 3 && diffIva >= 0) {
+      urgentAlerts.push(`IVA scade tra ${diffIva} giorni!`);
+      badgeText = `IVA: ${diffIva}g ⚠️`;
+      $('#ivaReminder').style.backgroundColor = 'var(--bad)';
+  } else {
+      badgeText = `IVA: ${nextIva.toLocaleDateString('it-IT').slice(0,5)} • ${diffIva}g`;
+      $('#ivaReminder').style.backgroundColor = 'var(--ios-btn-bg)';
+  }
+
+  if (nextCustomScad) {
+      const diffCustom = Math.ceil((new Date(nextCustomScad.data) - now) / 86400000);
+      if (diffCustom <= 3 && diffCustom >= 0) {
+          urgentAlerts.push(`Scadenza "${nextCustomScad.titolo}" tra ${diffCustom} giorni!`);
+      }
+      
+      // Se la scadenza custom è più vicina dell'IVA e non è già urgente
+      if(diffCustom < diffIva && diffCustom >= 0 && diffCustom > 3){
+          badgeText = `Scad.: ${new Date(nextCustomScad.data).toLocaleDateString('it-IT').slice(0,5)} • ${diffCustom}g`;
+          $('#ivaReminder').style.backgroundColor = 'var(--ios-btn-bg)';
+      }
+  }
+
+  $('#ivaReminder').textContent = badgeText;
+  
+  // Mostra alert solo una volta per sessione (se non è già stato mostrato)
+  if(urgentAlerts.length > 0 && !sessionStorage.getItem('urgent_alert_shown')){
+      alert(`🚨 Promemoria Urgente:\n${urgentAlerts.join('\n')}`);
+      sessionStorage.setItem('urgent_alert_shown', 'true');
+  }
+}
+
+/* ===== Bind menu e Navigazione ===== */
+$('#mSummary').onclick=()=>{ menu(false); pageSummary(); };
+$('#mSup').onclick   = ()=>{ menu(false); pageSup(); };
+$('#mDead').onclick  = ()=>{ menu(false); pageSup(); }; // Scadenze gestite nella pagina Fornitori/Cat
+$('#mExpJson').onclick=()=>{ menu(false); exportJSON(); };
+$('#mExpCsv').onclick =()=>{ menu(false); exportCSV(); };
+$('#mPdf').onclick    =()=>{ menu(false); reportPDF(); };
+$('#mImp').onclick    =()=>{ menu(false); $('#fileImport').click(); };
+$('#fileImport').onchange = importJSON;
+$('#fabAdd').onclick = ()=> pageAdd(); // FAB
+
+const tMov  = document.getElementById('tabMov');
+const tForn = document.getElementById('tabForn');
+
+function setActive(btn){
+  document.querySelectorAll('.bottom-nav button, #fabAdd')
+    .forEach(b=>{
+        if(b.id === 'fabAdd'){
+            b.classList.toggle('active', b === btn);
+        } else {
+            b.classList.toggle('active', b === btn);
+        }
+    });
+}
+tMov.onclick  = ()=>{ setActive(tMov); pageList();   };
+tForn.onclick = ()=>{ setActive(tForn); pageSup();    };
+
+/* ===== Avvio ===== */
+ivaReminder();
+pageList();
 </script>
-
 </body>
 </html>
