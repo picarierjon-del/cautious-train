@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pizzeria Smart Order - Gemini App</title>
-    <!-- Carica Tailwind CSS per uno styling moderno e responsive -->
+    <title>Pizzeria Smart Order - Configurazione Avanzata</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         /* Stile personalizzato per assicurare l'altezza massima su mobile */
         body {
@@ -29,292 +29,694 @@
             -ms-overflow-style: none;  /* IE and Edge */
             scrollbar-width: none;  /* Firefox */
         }
+        
+        /* Stile attivo per i modificatori Più/Meno/Poco/Abbondante */
+        .modifier-active {
+            box-shadow: 0 0 0 4px rgba(255, 0, 0, 0.5); /* Anello rosso intorno al pulsante attivo */
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
 
-    <!-- 1. BARRA DI NAVIGAZIONE SUPERIORE (CATEGORIE) -->
+    <script>
+        // --- Dati di Esempio (let per permettere la modifica) ---
+        let menuData = [
+            { id: 101, name: 'Margherita Classica', category: 'Pizze', price: 7.50, description: 'Pomodoro, Mozzarella, Basilico fresco, Olio EVO.' },
+            { id: 102, name: 'Pizza Salamino', category: 'Pizze', price: 9.00, description: 'Pomodoro, Mozzarella, Salame Piccante.' },
+            { id: 201, name: 'Mini Margherita', category: 'Baby', price: 5.00, description: 'Formato ridotto, facile da mangiare.' },
+            { id: 301, name: 'Calzone Farcito', category: 'Calzoni', price: 9.00, description: 'Prosciutto Cotto, Mozzarella, Ricotta.' },
+            { id: 401, name: 'Coca Cola 33cl', category: 'Bibite', price: 2.50, description: 'Lattina fredda.' },
+        ];
+        
+        // Struttura per le Opzioni Aggiuntive/Rimosse
+        let optionGroups = {
+            'Più': [
+                { name: 'Mozzarella di bufala', price: 2.00, type: 'Più' },
+                { name: 'Prosciutto Cotto', price: 1.50, type: 'Più' },
+            ],
+            'Meno': [
+                { name: 'Senza Sale', price: 0.00, type: 'Meno' },
+                { name: 'Senza Mozzarella', price: -0.50, type: 'Meno' }, 
+            ],
+            'Categorie': ['Pizze', 'Baby', 'Calzoni', 'Panini', 'Mezzo Metro', 'Bibite', 'Menù 17', 'Gourmet']
+        };
+        // ID univoco per i nuovi articoli
+        let nextItemId = 1000; 
+
+        // Modalità d'ordine (Rese non interattive)
+        const orderModes = [
+            { name: 'A Domicilio', icon: '🏠', color: 'bg-indigo-600', id: 'domicilio' },
+            { name: 'Asporto', icon: '🛍️', color: 'bg-pink-600', id: 'asporto' },
+            { name: 'Banco', icon: '🍽️', color: 'bg-teal-600', id: 'banco' }
+        ];
+
+        // Stato Globale dell'applicazione
+        let state = {
+            selectedCategory: 'Pizze',
+            selectedArticle: menuData[0], 
+            selectedOrderMode: 'domicilio',
+            activeModifiers: {
+                Più: [], Meno: [], Poco: false, Abbondante: false, 
+            },
+            cart: [], 
+            total: 0.00
+        };
+    </script>
+    
     <header id="top-nav" class="fixed-bar fixed top-0 left-0 right-0 z-50 bg-white/90">
-        <div class="flex overflow-x-auto hide-scrollbar p-2 space-x-2 border-b border-gray-200">
-            <!-- Array dei pulsanti superiori -->
-            <script>
-                const categories = ['Pizze', 'Baby', 'Calzoni', 'Panini', 'Mezzo Metro', 'Bibite', 'Menù 17', 'Gourmet'];
-                const topNav = document.getElementById('top-nav').querySelector('div');
+        <div class="flex items-center">
+             <button onclick="showSettingsModal()" class="flex-shrink-0 bg-gray-200 text-gray-700 p-3 rounded-full font-bold shadow-sm hover:bg-gray-300 transition duration-150 m-2">
+                <span class="text-xl">🔧</span>
+            </button>
 
-                categories.forEach((cat, index) => {
-                    const button = document.createElement('button');
-                    button.textContent = cat;
-                    button.className = `px-4 py-2 text-sm font-semibold rounded-full whitespace-nowrap transition duration-150 ease-in-out ${index === 0 ? 'bg-red-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-red-100'}`;
-                    button.onclick = () => selectCategory(cat);
-                    topNav.appendChild(button);
-                });
-
-                function selectCategory(category) {
-                    console.log(`Categoria selezionata: ${category}`);
-                    // Logica per caricare i prodotti della categoria qui (es. caricare le pizze)
-                    document.getElementById('current-item-name').textContent = category === 'Pizze' ? 'Margherita Classica' : `Primo Articolo di ${category}`;
-                    document.getElementById('item-price').textContent = '€ 7.50';
-                }
-
-                // Simula la selezione iniziale
-                document.addEventListener('DOMContentLoaded', () => {
-                    selectCategory('Pizze');
-                });
-            </script>
+            <div id="category-list" class="flex overflow-x-auto hide-scrollbar p-2 space-x-2 border-b border-gray-200 flex-grow">
+                </div>
         </div>
     </header>
 
-    <!-- 2. CONTENUTO PRINCIPALE SCORREVOLE -->
     <main class="flex-grow p-4 space-y-6">
 
-        <!-- Blocco Esempio Articolo Selezionato (Simulazione) -->
         <section class="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
-            <h2 id="current-item-name" class="text-2xl font-extrabold text-gray-800">Margherita Classica</h2>
-            <p id="item-price" class="text-3xl font-bold text-red-600 my-2">€ 7.50</p>
-            <p class="text-sm text-gray-500 mb-4">Pomodoro, Mozzarella, Basilico fresco, Olio EVO.</p>
+            <h2 id="current-item-name" class="text-2xl font-extrabold text-gray-800"></h2>
+            <p id="item-price" class="text-3xl font-bold text-red-600 my-2"></p>
+            <p id="item-description" class="text-sm text-gray-500 mb-4"></p>
 
-            <!-- Placeholder per Aggiunte/Modifiche Correnti -->
             <div id="current-modifiers" class="space-y-2 text-sm">
-                <p class="font-semibold text-gray-700">Modifiche Attuali:</p>
+                <p class="font-semibold text-gray-700">Modifiche Attive (sul prossimo articolo aggiunto):</p>
                 <ul id="modifiers-list" class="list-disc list-inside text-gray-600">
-                    <li>Nessuna modifica selezionata.</li>
+                    <li>Nessuna modifica attiva.</li>
                 </ul>
             </div>
         </section>
 
-        <!-- Blocco Aggiunte/Modifiche con i quattro pulsanti -->
         <section class="mt-8">
             <h3 class="text-xl font-bold text-gray-800 mb-4">Aggiunte e Modifiche Speciali</h3>
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <button onclick="showModifierModal('Più', 'Aggiungi Ingredienti')"
-                        class="modifier-btn bg-green-500 text-white p-4 rounded-xl shadow-md hover:bg-green-600 transition duration-200 transform hover:scale-105 font-bold text-lg">
+                <button id="btn-Più" onclick="showModifierModal('Più', 'Aggiungi Ingredienti')"
+                        class="modifier-btn bg-green-500 text-white p-4 rounded-xl shadow-md hover:bg-green-600 transition duration-200 transform font-bold text-lg">
                     Più (+)
                 </button>
-                <button onclick="showModifierModal('Meno', 'Rimuovi Ingredienti')"
-                        class="modifier-btn bg-yellow-500 text-white p-4 rounded-xl shadow-md hover:bg-yellow-600 transition duration-200 transform hover:scale-105 font-bold text-lg">
+                <button id="btn-Meno" onclick="showModifierModal('Meno', 'Rimuovi Ingredienti')"
+                        class="modifier-btn bg-yellow-500 text-white p-4 rounded-xl shadow-md hover:bg-yellow-600 transition duration-200 transform font-bold text-lg">
                     Meno (-)
                 </button>
-                <button onclick="showModifierModal('Poco', 'Quantità Ridotta')"
-                        class="modifier-btn bg-blue-500 text-white p-4 rounded-xl shadow-md hover:bg-blue-600 transition duration-200 transform hover:scale-105 font-bold text-lg">
+                <button id="btn-Poco" onclick="toggleQuickModifier('Poco')"
+                        class="modifier-btn bg-blue-500 text-white p-4 rounded-xl shadow-md hover:bg-blue-600 transition duration-200 transform font-bold text-lg">
                     Poco
                 </button>
-                <button onclick="showModifierModal('Abbondante', 'Quantità Maggiorata')"
-                        class="modifier-btn bg-red-500 text-white p-4 rounded-xl shadow-md hover:bg-red-600 transition duration-200 transform hover:scale-105 font-bold text-lg">
+                <button id="btn-Abbondante" onclick="toggleQuickModifier('Abbondante')"
+                        class="modifier-btn bg-red-500 text-white p-4 rounded-xl shadow-md hover:bg-red-600 transition duration-200 transform font-bold text-lg">
                     Abbondante
                 </button>
             </div>
         </section>
 
-        <!-- Area per la lista degli articoli (qui andrebbe la lista delle Pizze, Calzoni, etc.) -->
         <section class="mt-8 pt-4 border-t border-gray-200">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Lista Articoli (Esempio)</h3>
-            <div class="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
-                <p class="text-gray-600">Clicca un pulsante in alto per cambiare categoria, poi usa i pulsanti Più/Meno/Poco/Abbondante per personalizzare l'articolo in evidenza.</p>
-                <button class="w-full mt-3 bg-red-100 text-red-700 py-3 rounded-lg font-semibold hover:bg-red-200">Aggiungi al carrello</button>
-            </div>
+            <h3 id="product-list-title" class="text-xl font-bold text-gray-800 mb-4">Lista Articoli (Pizze)</h3>
+            <div id="product-list" class="space-y-3">
+                </div>
         </section>
 
     </main>
 
-    <!-- 3. BARRA DI NAVIGAZIONE INFERIORE (MODALITÀ ORDINE) -->
     <footer id="bottom-nav" class="fixed-bar fixed bottom-0 left-0 right-0 z-50 bg-white/90 p-3">
-        <div class="flex justify-around space-x-2">
-            <!-- Array dei pulsanti inferiori -->
-            <script>
-                const orderModes = [
-                    { name: 'A Domicilio', icon: '🏠', color: 'bg-indigo-600' },
-                    { name: 'Asporto', icon: '🛍️', color: 'bg-pink-600' },
-                    { name: 'Banco', icon: '🍽️', color: 'bg-teal-600' }
-                ];
-                const bottomNav = document.getElementById('bottom-nav').querySelector('div');
+        <div id="order-mode-selector" class="flex justify-around space-x-2 mb-3">
+            </div>
 
-                orderModes.forEach((mode, index) => {
-                    const button = document.createElement('button');
-                    button.innerHTML = `<span class="text-xl">${mode.icon}</span> ${mode.name}`;
-                    button.className = `flex-1 flex flex-col items-center justify-center p-2 rounded-xl text-xs font-semibold text-white transition duration-150 ease-in-out ${mode.color} shadow-lg hover:opacity-90`;
-                    button.onclick = () => selectOrderMode(mode.name);
-                    bottomNav.appendChild(button);
-                });
+        <div class="flex items-center justify-between bg-gray-100 p-3 rounded-xl shadow-inner">
+            <div class="flex flex-col">
+                <span class="text-sm font-semibold text-gray-500">Totale:</span>
+                <span id="cart-total-footer" class="text-2xl font-bold text-red-600">€ 0.00</span>
+            </div>
 
-                function selectOrderMode(mode) {
-                    // Logica per selezionare la modalità di ordine
-                    console.log(`Modalità ordine selezionata: ${mode}`);
-                    alertSmart(`Modalità Ordine Impostata: ${mode}`);
-                }
-            </script>
+            <button onclick="showOrderModal()" class="bg-blue-600 text-white p-3 rounded-lg font-bold shadow-md hover:bg-blue-700 transition duration-150">
+                Ordina (<span id="cart-item-count">0</span>)
+            </button>
         </div>
     </footer>
 
-    <!-- 4. MODAL PER AGGIUNTE E MODIFICHE (Il "menù a tendina" dinamico) -->
     <div id="modifier-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-end justify-center z-[100] hidden transition-opacity duration-300 opacity-0" onclick="closeModifierModal(event)">
-        <div id="modal-content" class="bg-white w-full rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 p-6 space-y-4" onclick="event.stopPropagation()">
+        <div id="modal-content" class="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 p-6 space-y-4" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center border-b pb-3 mb-2">
-                <h3 id="modal-title" class="text-2xl font-extrabold text-gray-800">Aggiungi Ingredienti</h3>
+                <h3 id="modal-title" class="text-2xl font-extrabold text-gray-800"></h3>
                 <button onclick="closeModifierModal()" class="text-gray-500 hover:text-gray-800 text-2xl font-light">&times;</button>
             </div>
-
-            <p id="modal-subtitle" class="text-sm text-gray-500">Seleziona le aggiunte per l'articolo Margherita Classica.</p>
-
-            <!-- Lista Dinamica delle Opzioni -->
+            <p id="modal-subtitle" class="text-sm text-gray-500"></p>
             <div id="options-list" class="space-y-3 max-h-80 overflow-y-auto hide-scrollbar">
-                <!-- Verrà popolato da JS -->
-            </div>
-
+                </div>
             <button onclick="applyModifiers()" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 transition duration-200">
-                Conferma Aggiunte
+                Conferma Scelte
             </button>
         </div>
     </div>
 
-    <!-- 5. Funzione Sostitutiva di alert() (Mostra un messaggio personalizzato) -->
+    <div id="order-details-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-end justify-center z-[100] hidden transition-opacity duration-300 opacity-0" onclick="closeOrderModal(event)">
+        <div id="order-modal-content" class="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 p-6 space-y-4" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b pb-3 mb-2">
+                <h3 id="order-modal-title" class="text-2xl font-extrabold text-gray-800">Dettagli Ordine</h3>
+                <button onclick="closeOrderModal()" class="text-gray-500 hover:text-gray-800 text-2xl font-light">&times;</button>
+            </div>
+
+            <form id="order-form" class="space-y-4">
+                <p id="order-modal-subtitle" class="text-sm text-gray-500"></p>
+                
+                <input type="text" id="client-name" placeholder="Nome e Cognome" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
+                <input type="tel" id="client-phone" placeholder="Telefono (es. 333XXXXXXX)" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
+                
+                <div id="address-field-container" class="hidden">
+                    <input type="text" id="client-address" placeholder="Indirizzo e Numero Civico" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
+                </div>
+
+                <textarea id="client-notes" placeholder="Note per l'ordine (es. Citofono, allergie)" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"></textarea>
+
+                <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-green-700 transition duration-200">
+                    Conferma Ordine e Invia
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="settings-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-end justify-center z-[150] hidden transition-opacity duration-300 opacity-0" onclick="closeSettingsModal(event)">
+        <div id="settings-modal-content" class="bg-white w-full max-w-2xl h-[90vh] rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 p-6 space-y-6 flex flex-col" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b pb-3 mb-2 flex-shrink-0">
+                <h3 class="text-2xl font-extrabold text-gray-800">🔧 Gestione Menù (Admin)</h3>
+                <button onclick="closeSettingsModal()" class="text-gray-500 hover:text-gray-800 text-2xl font-light">&times;</button>
+            </div>
+            
+            <div class="overflow-y-auto flex-grow space-y-6 hide-scrollbar">
+                
+                <section>
+                    <h4 class="text-xl font-bold mb-3 text-gray-800">1. Gestione Categorie</h4>
+                    <div class="flex space-x-2 mb-3">
+                        <input type="text" id="new-category-name" placeholder="Nome nuova categoria" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <button onclick="addCategory()" class="bg-green-500 text-white p-2 rounded-lg font-semibold hover:bg-green-600">Aggiungi</button>
+                    </div>
+                    <div id="category-settings-list" class="flex flex-wrap gap-2 mb-4">
+                        </div>
+                </section>
+                
+                <hr class="border-gray-200">
+
+                <section>
+                    <h4 class="text-xl font-bold mb-3 text-gray-800">2. Articoli nel Menù</h4>
+                    
+                    <div class="mb-4">
+                        <label for="settings-category-select" class="block text-sm font-medium text-gray-700 mb-2">Seleziona Categoria da Modificare:</label>
+                        <select id="settings-category-select" onchange="renderSettingsArticles()" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+                            </select>
+                    </div>
+
+                    <div id="article-settings-list" class="space-y-4 p-3 bg-gray-100 rounded-lg shadow-inner">
+                        </div>
+                    
+                    <h5 class="font-semibold text-lg text-gray-700 mt-6 mb-3">Aggiungi Nuovo Articolo</h5>
+                    <div class="p-4 border border-blue-200 rounded-lg bg-blue-50 space-y-2">
+                        <input type="text" id="new-article-name" placeholder="Nome Articolo" required class="w-full p-2 border rounded-lg text-sm">
+                        <div class="flex space-x-2">
+                            <input type="number" step="0.50" id="new-article-price" placeholder="Prezzo (€ 7.50)" required class="w-1/2 p-2 border rounded-lg text-sm">
+                            <input type="text" id="new-article-desc" placeholder="Descrizione breve" required class="w-1/2 p-2 border rounded-lg text-sm">
+                        </div>
+                        <button onclick="addArticle()" class="w-full bg-blue-600 text-white p-2 rounded-lg font-semibold hover:bg-blue-700">Aggiungi Articolo</button>
+                    </div>
+
+                </section>
+
+                <hr class="border-gray-200">
+                
+                <section>
+                    <h4 class="text-xl font-bold mb-3 text-gray-800">3. Opzioni Aggiunta/Rimozione</h4>
+                    <div id="modifier-settings-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        </div>
+                </section>
+            </div>
+
+            <div class="flex-shrink-0 pt-3 border-t border-gray-200">
+                <button onclick="closeSettingsModal()" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 transition duration-200">
+                    Salva e Torna al Menù
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <div id="custom-alert" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-xl opacity-0 transition-opacity duration-300 z-[200]" style="pointer-events: none;">
         Messaggio di prova
     </div>
 
-    <!-- LOGICA JAVASCRIPT -->
     <script>
-        // Array globale per tenere traccia delle modifiche attuali
-        let activeModifiers = [];
+        // Riferimenti DOM
+        const categoryListEl = document.getElementById('category-list');
+        const orderModeSelectorEl = document.getElementById('order-mode-selector');
+        const modifiersListEl = document.getElementById('modifiers-list');
+        const cartItemCountEl = document.getElementById('cart-item-count');
+        const cartTotalFooterEl = document.getElementById('cart-total-footer');
+        
+        const settingsModal = document.getElementById('settings-modal');
+        const modifierSettingsContainer = document.getElementById('modifier-settings-container');
+        const categorySettingsList = document.getElementById('category-settings-list');
+        const settingsCategorySelect = document.getElementById('settings-category-select');
+        const articleSettingsList = document.getElementById('article-settings-list');
+        
 
-        // Dati di esempio per le aggiunte (simula il menù a tendina)
-        const additionOptions = [
-            { name: 'Mozzarella di bufala', price: 2.00, type: 'Più' },
-            { name: 'Prosciutto Cotto', price: 1.50, type: 'Più' },
-            { name: 'Sale Piccante', price: 0.50, type: 'Più' },
-            { name: 'Crostacei', price: 5.00, type: 'Più' },
-            { name: 'Funghi Porcini', price: 2.50, type: 'Più' },
-            { name: 'Basilico Extra', price: 0.50, type: 'Abbondante' },
-            { name: 'Meno Pomodoro', price: 0.00, type: 'Meno' },
-            { name: 'Poco Olio EVO', price: 0.00, type: 'Poco' },
-        ];
+        // --- FUNZIONI DI GESTIONE STATO E UTILITÀ ---
 
-        // Riferimenti agli elementi DOM
-        const modal = document.getElementById('modifier-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalSubtitle = document.getElementById('modal-subtitle');
-        const optionsList = document.getElementById('options-list');
-        const currentModifiersList = document.getElementById('modifiers-list');
-
-        let currentModifierType = ''; // Tiene traccia del tipo di modifica (+, -, Poco, Abbondante)
-
-        /**
-         * Funzione per mostrare la modale delle aggiunte.
-         * Viene chiamata quando si clicca uno dei 4 pulsanti (Più, Meno, Poco, Abbondante).
-         * @param {string} type - Il tipo di modifica ('Più', 'Meno', 'Poco', 'Abbondante')
-         * @param {string} title - Titolo da mostrare nella modale
-         */
-        function showModifierModal(type, title) {
-            currentModifierType = type;
-            const itemName = document.getElementById('current-item-name').textContent;
-
-            // 1. Aggiorna i testi della modale
-            modalTitle.textContent = title + ` (${type})`;
-            modalSubtitle.textContent = `Seleziona le modifiche di tipo "${type}" per l'articolo ${itemName}.`;
-
-            // 2. Filtra le opzioni in base al tipo di modifica
-            const filteredOptions = additionOptions.filter(opt => opt.type === type);
-
-            // 3. Popola la lista delle opzioni
-            optionsList.innerHTML = ''; // Pulisce le opzioni precedenti
-            if (filteredOptions.length === 0) {
-                optionsList.innerHTML = `<p class="text-gray-500 italic">Nessuna opzione di tipo "${type}" disponibile per questo articolo.</p>`;
-                return;
-            }
-
-            filteredOptions.forEach(option => {
-                const isChecked = activeModifiers.some(mod => mod.name === option.name);
-                const item = document.createElement('div');
-                item.className = 'flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition duration-150';
-
-                item.innerHTML = `
-                    <label class="flex items-center space-x-3 w-full cursor-pointer">
-                        <input type="checkbox" data-name="${option.name}" data-price="${option.price}" data-type="${option.type}"
-                               class="h-5 w-5 text-red-600 rounded focus:ring-red-500" ${isChecked ? 'checked' : ''} onchange="toggleModifier(this)">
-                        <span class="text-base font-medium text-gray-700">${option.name}</span>
-                    </label>
-                    <span class="text-sm font-semibold text-red-500">+€ ${option.price.toFixed(2)}</span>
-                `;
-                optionsList.appendChild(item);
-            });
-
-            // 4. Mostra la modale con animazione
-            modal.classList.remove('hidden', 'opacity-0');
-            modal.classList.add('flex');
-            setTimeout(() => {
-                modal.classList.add('opacity-100');
-                document.getElementById('modal-content').classList.remove('translate-y-full');
-            }, 10); // Piccolo ritardo per l'animazione CSS
-        }
-
-        /** Gestisce l'aggiunta/rimozione della modifica al click della checkbox */
-        function toggleModifier(checkbox) {
-            const { name, price, type } = checkbox.dataset;
-            const newModifier = { name, price: parseFloat(price), type };
-
-            if (checkbox.checked) {
-                // Aggiungi se non esiste già
-                if (!activeModifiers.some(mod => mod.name === name)) {
-                    activeModifiers.push(newModifier);
-                }
-            } else {
-                // Rimuovi
-                activeModifiers = activeModifiers.filter(mod => mod.name !== name);
-            }
-            console.log("Modifiche temporanee:", activeModifiers);
-        }
-
-        /** Applicare le modifiche e chiudere la modale */
-        function applyModifiers() {
-            updateModifiersDisplay();
-            closeModifierModal();
-            alertSmart("Modifiche aggiunte con successo!");
-        }
-
-        /** Funzione per chiudere la modale */
-        function closeModifierModal(event) {
-            // Chiudi solo se l'evento è un click sullo sfondo (modal overlay) o sul pulsante 'x'
-            if (event && event.target.id !== 'modifier-modal' && event.target.id !== 'close-btn') {
-                return;
-            }
-            // Rimuove l'animazione di entrata e chiude la modale
-            document.getElementById('modal-content').classList.add('translate-y-full');
-            modal.classList.remove('opacity-100');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, 300); // Abbina la durata della transizione CSS
-        }
-
-        /** Aggiorna la lista delle modifiche nell'area di contenuto principale */
-        function updateModifiersDisplay() {
-            currentModifiersList.innerHTML = '';
-            if (activeModifiers.length === 0) {
-                currentModifiersList.innerHTML = '<li>Nessuna modifica selezionata.</li>';
-                return;
-            }
-            activeModifiers.forEach(mod => {
-                const li = document.createElement('li');
-                let costText = mod.price > 0 ? ` (+€ ${mod.price.toFixed(2)})` : '';
-                li.innerHTML = `[${mod.type}] ${mod.name}${costText}`;
-                currentModifiersList.appendChild(li);
-            });
-        }
-
-        /** Sostituzione di alert() con un messaggio toast per mobile */
+        /** Funzione sostitutiva di alert() (Toast) */
         function alertSmart(message) {
             const alertDiv = document.getElementById('custom-alert');
             alertDiv.textContent = message;
-
-            // Mostra
             alertDiv.classList.add('opacity-100');
-
-            // Nascondi dopo 3 secondi
             setTimeout(() => {
                 alertDiv.classList.remove('opacity-100');
             }, 3000);
         }
 
+        /** Funzione per selezionare l'articolo e resettare le modifiche */
+        function selectArticle(article) {
+            state.selectedArticle = article;
+            state.activeModifiers = { Più: [], Meno: [], Poco: false, Abbondante: false }; 
+            renderSelectedArticle();
+            renderQuickModifiers();
+        }
+
+        /** Logica per selezionare la categoria */
+        window.selectCategory = (category) => {
+            state.selectedCategory = category;
+            renderCategoryList();
+            renderProductList();
+            
+            // Trova il primo articolo della nuova categoria, altrimenti usa il primo del menù
+            const firstArticle = menuData.find(item => item.category === category) || menuData[0];
+            if (firstArticle) {
+                selectArticle(firstArticle);
+            }
+        };
+
+        // --- FUNZIONI MODALE IMPOSTAZIONI (Admin) ---
+
+        /** Apertura Modale Impostazioni */
+        window.showSettingsModal = () => {
+            // Inizializza tutte le sezioni
+            renderSettingsCategories();
+            renderSettingsModifiers();
+            renderSettingsCategorySelector(); // Carica il selettore Articoli/Categoria
+            renderSettingsArticles();
+
+            settingsModal.classList.remove('hidden', 'opacity-0');
+            settingsModal.classList.add('flex');
+            setTimeout(() => {
+                settingsModal.classList.add('opacity-100');
+                document.getElementById('settings-modal-content').classList.remove('translate-y-full');
+            }, 10);
+        }
+
+        /** Chiusura Modale Impostazioni */
+        function closeSettingsModal(event) {
+            if (event && event.target.id !== 'settings-modal') return;
+            document.getElementById('settings-modal-content').classList.add('translate-y-full');
+            settingsModal.classList.remove('opacity-100');
+            
+            // Ricarica la UI dopo le modifiche alla configurazione
+            setTimeout(() => {
+                settingsModal.classList.add('hidden');
+                settingsModal.classList.remove('flex');
+                
+                // Ricarica la categoria corrente, se ancora esiste
+                const currentCat = state.selectedCategory;
+                if (optionGroups.Categorie.includes(currentCat)) {
+                    selectCategory(currentCat);
+                } else if (optionGroups.Categorie.length > 0) {
+                    // Se la categoria è stata cancellata, passa alla prima disponibile
+                    selectCategory(optionGroups.Categorie[0]);
+                } else {
+                    // Nessuna categoria rimasta
+                    categoryListEl.innerHTML = '<p class="text-sm text-gray-500 p-2">Nessuna categoria.</p>';
+                }
+                alertSmart("Configurazione menù salvata e ricaricata.");
+            }, 300);
+        }
+
+        // RENDER: Lista Categorie nelle Impostazioni
+        function renderSettingsCategories() {
+            categorySettingsList.innerHTML = optionGroups.Categorie.map((cat, index) => `
+                <div class="flex items-center bg-red-100 text-red-700 p-2 rounded-full text-sm font-semibold">
+                    <span>${cat}</span>
+                    <button onclick="removeCategory('${cat}')" class="ml-2 bg-red-500 text-white h-5 w-5 flex items-center justify-center rounded-full text-xs font-bold leading-none">&times;</button>
+                </div>
+            `).join('');
+        }
+        
+        /** Aggiunge una nuova categoria */
+        window.addCategory = () => {
+            const input = document.getElementById('new-category-name');
+            const newCat = input.value.trim();
+            if (newCat && !optionGroups.Categorie.includes(newCat)) {
+                optionGroups.Categorie.push(newCat);
+                input.value = '';
+                renderSettingsCategories();
+                renderSettingsCategorySelector(); // Aggiorna anche il selettore Articoli
+            } else if (optionGroups.Categorie.includes(newCat)) {
+                alertSmart("Categoria già esistente.");
+            } else {
+                 alertSmart("Nome categoria non valido.");
+            }
+        }
+
+        /** Rimuove una categoria */
+        window.removeCategory = (categoryName) => {
+            if (menuData.some(item => item.category === categoryName)) {
+                alertSmart(`Impossibile eliminare: elimina prima tutti gli articoli associati a "${categoryName}".`);
+                return;
+            }
+            optionGroups.Categorie = optionGroups.Categorie.filter(cat => cat !== categoryName);
+            renderSettingsCategories();
+            renderSettingsCategorySelector();
+        }
+        
+        // RENDER: Selettore Categoria Articoli nelle Impostazioni
+        function renderSettingsCategorySelector() {
+             settingsCategorySelect.innerHTML = optionGroups.Categorie.map(cat => `
+                <option value="${cat}">${cat}</option>
+            `).join('');
+            // Seleziona la categoria attualmente attiva nel menù
+             settingsCategorySelect.value = state.selectedCategory;
+        }
+
+        // RENDER: Lista Articoli per Categoria nelle Impostazioni
+        function renderSettingsArticles() {
+            const selectedCat = settingsCategorySelect.value;
+            if (!selectedCat) {
+                articleSettingsList.innerHTML = `<p class="text-gray-500">Seleziona una categoria per visualizzare e gestire gli articoli.</p>`;
+                return;
+            }
+            
+            const articles = menuData.filter(item => item.category === selectedCat);
+            
+            if (articles.length === 0) {
+                 articleSettingsList.innerHTML = `<p class="text-gray-500">Nessun articolo in questa categoria. Aggiungine uno qui sotto!</p>`;
+                 return;
+            }
+
+            articleSettingsList.innerHTML = articles.map((item, index) => `
+                <div class="flex justify-between items-center p-2 border-b border-gray-200 last:border-b-0 bg-white rounded-md shadow-sm">
+                    <div class="flex-grow">
+                        <span class="font-semibold text-gray-800">${item.name}</span>
+                        <span class="text-sm text-red-600 ml-2">€ ${item.price.toFixed(2)}</span>
+                        <p class="text-xs text-gray-500 truncate">${item.description}</p>
+                    </div>
+                    <button onclick="removeArticle(${item.id})" class="text-red-600 hover:text-red-800 font-bold ml-4 text-xl leading-none">&times;</button>
+                </div>
+            `).join('');
+        }
+        
+        /** Aggiunge un nuovo articolo alla categoria selezionata */
+        window.addArticle = () => {
+            const selectedCat = settingsCategorySelect.value;
+            const name = document.getElementById('new-article-name').value.trim();
+            const price = parseFloat(document.getElementById('new-article-price').value);
+            const description = document.getElementById('new-article-desc').value.trim();
+            
+            if (!selectedCat) return alertSmart("Seleziona una categoria.");
+            if (!name || isNaN(price) || !description) return alertSmart("Completa tutti i campi (Nome, Prezzo, Descrizione).");
+
+            const newArticle = {
+                id: nextItemId++,
+                name: name,
+                category: selectedCat,
+                price: price,
+                description: description
+            };
+            
+            menuData.push(newArticle);
+            
+            // Pulisci i campi
+            document.getElementById('new-article-name').value = '';
+            document.getElementById('new-article-price').value = '';
+            document.getElementById('new-article-desc').value = '';
+
+            renderSettingsArticles();
+            alertSmart(`Articolo "${name}" aggiunto a ${selectedCat}.`);
+        }
+        
+        /** Rimuove un articolo dal menù tramite ID */
+        window.removeArticle = (id) => {
+            menuData = menuData.filter(item => item.id !== id);
+            renderSettingsArticles();
+        }
+
+        // RENDER: Liste Modificatori nelle Impostazioni (Logica invariata)
+        function renderSettingsModifiers() {
+            modifierSettingsContainer.innerHTML = '';
+            ['Più', 'Meno'].forEach(type => {
+                // ... (Logica per renderSettingsModifiers come nel codice precedente) ...
+                 const title = type === 'Più' ? 'Aggiunte (+)' : 'Rimozioni (-)';
+                const container = document.createElement('div');
+                container.className = 'bg-gray-100 p-3 rounded-lg shadow-inner space-y-3';
+                container.innerHTML = `<h5 class="font-semibold text-lg text-gray-700">${title}</h5>`;
+                
+                // Lista elementi esistenti
+                const ul = document.createElement('ul');
+                ul.className = 'space-y-2 max-h-40 overflow-y-auto pr-2';
+                optionGroups[type].forEach((mod, index) => {
+                    const li = document.createElement('li');
+                    const priceText = mod.price > 0 ? `+€${mod.price.toFixed(2)}` : (mod.price < 0 ? `-€${Math.abs(mod.price).toFixed(2)}` : 'Gratis');
+                    li.className = 'flex justify-between items-center text-sm border-b pb-1 last:border-b-0';
+                    li.innerHTML = `
+                        <span>${mod.name} <span class="text-red-500 font-medium">(${priceText})</span></span>
+                        <button onclick="removeModifierItem('${type}', ${index})" class="text-red-600 hover:text-red-800 font-bold ml-2 text-base leading-none">&times;</button>
+                    `;
+                    ul.appendChild(li);
+                });
+                container.appendChild(ul);
+                
+                // Form per aggiungere nuovo
+                container.innerHTML += `
+                    <div class="flex space-x-2 pt-2 border-t border-gray-300">
+                        <input type="text" id="new-mod-name-${type}" placeholder="Nome (es. Mozzarella)" class="w-2/4 p-2 border rounded-lg text-sm">
+                        <input type="number" step="0.50" id="new-mod-price-${type}" placeholder="Prezzo (€ 1.50)" class="w-1/4 p-2 border rounded-lg text-sm">
+                        <button onclick="addModifierItem('${type}')" class="w-1/4 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600">Aggiungi</button>
+                    </div>
+                `;
+
+                modifierSettingsContainer.appendChild(container);
+            });
+        }
+        
+        /** Aggiunge un nuovo elemento modificatore (Più/Meno) */
+        window.addModifierItem = (type) => {
+            const nameInput = document.getElementById(`new-mod-name-${type}`);
+            const priceInput = document.getElementById(`new-mod-price-${type}`);
+            const name = nameInput.value.trim();
+            const price = parseFloat(priceInput.value);
+
+            if (name && !isNaN(price)) {
+                optionGroups[type].push({ name, price, type });
+                nameInput.value = '';
+                priceInput.value = '';
+                renderSettingsModifiers();
+            } else {
+                alertSmart("Nome o prezzo non validi per l'aggiunta.");
+            }
+        }
+        
+        /** Rimuove un elemento modificatore (Più/Meno) */
+        window.removeModifierItem = (type, index) => {
+            optionGroups[type].splice(index, 1);
+            renderSettingsModifiers();
+        }
+
+
+        // --- FUNZIONI DI ORDINE E CHECKOUT ---
+        
+        /** Logica per selezionare la modalità d'ordine (Disabilitata) */
+        window.selectOrderMode = (modeId) => {
+            alertSmart("La selezione della modalità d'ordine è disabilitata. Clicca 'Ordina' per procedere al checkout.");
+        };
+
+        // ... (resto delle funzioni di rendering UI e Carrello, assicurando che siano corrette) ...
+
+        function calculateFinalPrice(basePrice, modifiers) {
+            let extraCost = 0;
+            modifiers.Più.forEach(mod => extraCost += mod.price);
+            modifiers.Meno.forEach(mod => extraCost += mod.price);
+            return basePrice + extraCost;
+        }
+
+        window.showOrderModal = () => {
+            if (state.cart.length === 0) {
+                alertSmart("Il carrello è vuoto! Aggiungi prima degli articoli.");
+                return;
+            }
+            
+            const mode = orderModes.find(m => m.id === state.selectedOrderMode);
+            document.getElementById('order-modal-title').textContent = `Conferma Ordine: ${mode.name} (Predefinito)`;
+            document.getElementById('order-modal-subtitle').textContent = `Inserisci i tuoi dati per procedere con il totale di € ${state.total.toFixed(2)}.`;
+            
+            document.getElementById('address-field-container').classList.remove('hidden');
+            document.getElementById('client-address').required = true;
+
+            document.getElementById('order-details-modal').classList.remove('hidden', 'opacity-0');
+            document.getElementById('order-details-modal').classList.add('flex');
+            setTimeout(() => {
+                document.getElementById('order-details-modal').classList.add('opacity-100');
+                document.getElementById('order-modal-content').classList.remove('translate-y-full');
+            }, 10);
+        }
+
+        document.getElementById('order-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const clientData = {
+                name: document.getElementById('client-name').value,
+                phone: document.getElementById('client-phone').value,
+                address: document.getElementById('client-address').value,
+                notes: document.getElementById('client-notes').value,
+            };
+            
+            const orderExample = {
+                mode: state.selectedOrderMode,
+                client: clientData,
+                items: state.cart,
+                total: state.total.toFixed(2),
+                timestamp: new Date().toLocaleString('it-IT')
+            };
+
+            console.log("Ordine Inviato (Esempio Completo):", orderExample);
+            
+            alertSmart(`ORDINE INVIATO! Totale: € ${orderExample.total}. Consulta la console per i dettagli.`);
+            
+            state.cart = [];
+            state.total = 0.00;
+            renderCartSummary();
+            
+            document.getElementById('order-modal-content').classList.add('translate-y-full');
+            document.getElementById('order-details-modal').classList.remove('opacity-100');
+            setTimeout(() => {
+                document.getElementById('order-details-modal').classList.add('hidden');
+                document.getElementById('order-details-modal').classList.remove('flex');
+            }, 300);
+        });
+
+        function renderSelectedArticle() {
+            const currentItemNameEl = document.getElementById('current-item-name');
+            const itemPriceEl = document.getElementById('item-price');
+            const itemDescriptionEl = document.getElementById('item-description');
+            
+            if (state.selectedArticle) {
+                const finalPrice = calculateFinalPrice(state.selectedArticle.price, state.activeModifiers);
+                const priceDelta = finalPrice - state.selectedArticle.price;
+                
+                currentItemNameEl.textContent = state.selectedArticle.name;
+                itemDescriptionEl.textContent = state.selectedArticle.description;
+                
+                itemPriceEl.innerHTML = `
+                    € ${state.selectedArticle.price.toFixed(2)}
+                    ${priceDelta !== 0 ? `<span class="text-xl font-medium text-gray-500 ml-2">(${priceDelta > 0 ? '+' : ''}€ ${priceDelta.toFixed(2)})</span>` : ''}
+                `;
+            }
+        }
+        
+        function renderQuickModifiers() {
+            document.getElementById(`btn-Poco`).classList.toggle('modifier-active', state.activeModifiers.Poco);
+            document.getElementById(`btn-Abbondante`).classList.toggle('modifier-active', state.activeModifiers.Abbondante);
+            
+            const allActiveModifiers = [
+                ...state.activeModifiers.Più.map(m => ({display: `[+${m.type}] ${m.name} (+€ ${m.price.toFixed(2)})`})),
+                ...state.activeModifiers.Meno.map(m => ({display: `[-${m.type}] ${m.name} (${m.price < 0 ? `-€ ${Math.abs(m.price).toFixed(2)}` : 'Gratis'})`}))
+            ];
+
+            if (state.activeModifiers.Poco) allActiveModifiers.push({ display: '**[Poco]** ingrediente base' });
+            if (state.activeModifiers.Abbondante) allActiveModifiers.push({ display: '**[Abbondante]** ingrediente base' });
+
+            if (allActiveModifiers.length === 0) {
+                modifiersListEl.innerHTML = '<li>Nessuna modifica attiva.</li>';
+            } else {
+                modifiersListEl.innerHTML = allActiveModifiers.map(mod => `<li>${mod.display}</li>`).join('');
+            }
+        }
+
+        function renderProductList() {
+            const productListTitleEl = document.getElementById('product-list-title');
+            const productListEl = document.getElementById('product-list');
+            
+            productListTitleEl.textContent = `Lista Articoli (${state.selectedCategory})`;
+            
+            const filteredProducts = menuData.filter(item => item.category === state.selectedCategory);
+            
+            if (filteredProducts.length === 0) {
+                 productListEl.innerHTML = `<p class="p-4 text-gray-500 italic">Nessun articolo trovato per questa categoria.</p>`;
+                 return;
+            }
+
+            productListEl.innerHTML = filteredProducts.map(item => `
+                <div class="bg-white p-3 rounded-xl shadow-md flex justify-between items-center border border-gray-100 cursor-pointer hover:shadow-lg transition duration-150" 
+                    onclick="selectArticle({id: ${item.id}, name: '${item.name}', category: '${item.category}', price: ${item.price}, description: '${item.description}'})">
+                    
+                    <div>
+                        <h4 class="text-base font-semibold text-gray-800">${item.name}</h4>
+                        <p class="text-sm text-gray-500">${item.description.substring(0, 30)}...</p>
+                    </div>
+                    <span class="text-lg font-bold text-red-600">€ ${item.price.toFixed(2)}</span>
+                </div>
+            `).join('');
+
+            productListEl.innerHTML += `
+                <button onclick="addToCart(state.selectedArticle)" class="w-full mt-4 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition duration-150 shadow-xl">
+                    Aggiungi ${state.selectedArticle.name} al Carrello
+                </button>
+            `;
+        }
+
+        function renderCategoryList() {
+            const dynamicCategories = optionGroups.Categorie;
+            categoryListEl.innerHTML = dynamicCategories.map(cat => {
+                const isActive = state.selectedCategory === cat;
+                const baseClasses = "flex-shrink-0 px-4 py-2 text-sm font-semibold rounded-full whitespace-nowrap transition duration-150 ease-in-out";
+                const activeClasses = 'bg-red-600 text-white shadow-lg';
+                const inactiveClasses = 'bg-gray-100 text-gray-700 hover:bg-red-100';
+
+                return `
+                    <button onclick="selectCategory('${cat}')" class="${baseClasses} ${isActive ? activeClasses : inactiveClasses}">
+                        ${cat}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderOrderModeSelector() {
+            orderModeSelectorEl.innerHTML = orderModes.map(mode => {
+                const baseClasses = "flex-1 flex flex-col items-center justify-center p-2 rounded-xl text-xs font-semibold transition duration-150 ease-in-out shadow-md opacity-50 cursor-not-allowed";
+                const inactiveClasses = 'bg-gray-100 text-gray-700';
+
+                return `
+                    <button onclick="selectOrderMode('${mode.id}')" class="${baseClasses} ${inactiveClasses}">
+                        <span class="text-xl">${mode.icon}</span> ${mode.name}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderCartSummary() {
+            cartItemCountEl.textContent = state.cart.length;
+            cartTotalFooterEl.textContent = `€ ${state.total.toFixed(2)}`;
+        }
+
+        // --- INIZIALIZZAZIONE ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCategoryList();
+            renderOrderModeSelector();
+            
+            const initialCategory = optionGroups.Categorie[0];
+            if (initialCategory) {
+                 state.selectedCategory = initialCategory;
+                 state.selectedArticle = menuData.find(item => item.category === initialCategory) || menuData[0];
+            }
+
+            if (state.selectedArticle) {
+                selectArticle(state.selectedArticle); 
+            }
+            renderCartSummary();
+        });
     </script>
 </body>
 </html>
-
