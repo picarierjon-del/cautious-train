@@ -3,311 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Smart - Versione Integrata</title>
+    <title>Gestionale Ordini Pizzeria</title>
     <style>
-        /*
-        ===================================
-        CSS: Stili e Grafica
-        ===================================
-        */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f0f2f5;
-            color: #333;
+        /* Stili CSS di base */
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: 20px auto; background: white; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        .grid-pulsanti {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
         }
-
-        .container {
-            max-width: 900px;
-            margin: 20px auto;
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            color: #007bff;
+        .pulsante {
+            padding: 20px 10px;
             text-align: center;
-            margin-bottom: 25px;
-            font-weight: 300;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.2s;
         }
+        .pulsante:hover { opacity: 0.9; }
 
-        h2 {
-            font-size: 1.5em;
-            color: #555;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 8px;
-            margin-top: 30px;
-        }
+        /* Colori pulsanti superiori (Menu Prodotti) */
+        .rosso { background-color: #c9302c; }
+        .giallo { background-color: #f0ad4e; color: black; }
+        .blu-scuro { background-color: #337ab7; }
+        .blu-chiaro { background-color: #5bc0de; }
+        .verde-lime { background-color: #5cb85c; }
+        .marrone { background-color: #a0522d; }
+        .viola { background-color: #8a2be2; }
+        .verde-scuro { background-color: #4CAF50; }
 
-        /* Opzioni di Servizio (Consegna/Asporto/Banco) */
-        #servizio-options {
+        /* Stili Footer (Azioni Ordine) */
+        .footer-azioni {
             display: flex;
             justify-content: space-around;
-            gap: 15px;
-            margin-bottom: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
         }
-
-        .servizio-btn {
-            flex: 1;
+        .azione-pulsante {
             padding: 15px 10px;
-            border: 2px solid #ccc;
-            border-radius: 10px;
-            background-color: #fff;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: all 0.2s;
             text-align: center;
-        }
-
-        .servizio-btn.attivo {
-            background-color: #007bff;
+            font-size: 14px;
+            font-weight: bold;
             color: white;
-            border-color: #0056b3;
-            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
-        }
-
-        /* Lista Prodotti */
-        .prodotto-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 15px;
-            margin-bottom: 8px;
-            background-color: #fafafa;
-            border-radius: 8px;
-            border: 1px solid #eee;
+            border: none;
             cursor: pointer;
-            transition: background-color 0.2s, border-color 0.2s;
+            border-radius: 5px;
+            flex-grow: 1;
+            margin: 0 5px;
         }
+        .arancio { background-color: #ff6347; }
+        .verde-chiaro { background-color: #62c462; }
+        .grigio { background-color: #ccc; color: black; }
 
-        .prodotto-item.selezionato {
-            background-color: #e6f3ff;
-            border-color: #007bff;
-            font-weight: 600;
+        /* Stili Modali (Popup) */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
         }
-
-        /* Modificatori Rapidi (Più, Senza, Poco, Abbondante) */
-        #quick-modifiers-container {
-            margin: 25px 0;
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
             padding: 20px;
-            border: 2px dashed #ff9800;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
             border-radius: 10px;
-            background-color: #fff8e1;
         }
-
-        .pulsanti-modificatori {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .modificatore-btn {
-            flex: 1;
-            padding: 12px 5px;
-            border: none;
-            border-radius: 5px;
-            font-size: 1em;
-            font-weight: 700;
-            cursor: pointer;
-            color: white;
-            text-align: center;
-        }
-
-        .modificatore-btn[data-azione="piu"] { background-color: #28a745; }
-        .modificatore-btn[data-azione="senza"] { background-color: #dc3545; }
-        .modificatore-btn[data-azione="poco"] { background-color: #ffc107; color: #333; }
-        .modificatore-btn[data-azione="abbondante"] { background-color: #007bff; }
-
-        .modificatore-btn .icona {
-            display: block;
-            font-size: 1.5em;
-            margin-bottom: 3px;
-        }
-        
-        #btn-impostazioni-avanzate {
-            background-color: #6c757d;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .close {
+            color: #aaa;
             float: right;
-            margin-top: -5px;
-            font-size: 0.9em;
+            font-size: 28px;
+            font-weight: bold;
         }
-
-        #riepilogo-ordine {
-            min-height: 80px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            background-color: #f9f9f9;
-            border-radius: 8px;
-            margin-top: 20px;
+        .close:hover, .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-content input, .modal-content select {
+            width: 95%;
+            padding: 10px;
+            margin: 5px 0 15px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <button id="btn-impostazioni-avanzate">⚙️ Modifica Avanzata (1400 Righe)</button>
-        <h1>Web App Super Smart</h1>
-
-        <h2>1. Modalità di Servizio</h2>
-        <div id="servizio-options">
-            <button class="servizio-btn attivo" data-mode="domicilio">Consegna a Domicilio</button>
-            <button class="servizio-btn" data-mode="asporto">Asporto</button>
-            <button class="servizio-btn" data-mode="banco">Banco</button>
-        </div>
-
-        <h2>2. Seleziona il Prodotto</h2>
-        <div id="lista-prodotti">
-            <div class="prodotto-item" data-id="1" data-nome="Pizza Margherita">
-                <span>Pizza Margherita</span><span>€ 8.00</span>
-            </div>
-            <div class="prodotto-item" data-id="2" data-nome="Panino Ghiottone">
-                <span>Panino Ghiottone</span><span>€ 6.50</span>
-            </div>
-            <div class="prodotto-item" data-id="3" data-nome="Bevanda Coca Cola">
-                <span>Bevanda Coca Cola</span><span>€ 3.00</span>
-            </div>
-        </div>
-        
-        <div id="quick-modifiers-container">
-            <h3>3. Modifiche Rapide Ingredienti</h3>
-            <p>Sostituisce il pulsante "Aggiunte": seleziona un ingrediente **dopo** aver scelto la modifica.</p>
-            <div class="pulsanti-modificatori">
-                
-                <button class="modificatore-btn" data-azione="piu">
-                    <span class="icona">➕</span>Più
-                </button>
-
-                <button class="modificatore-btn" data-azione="senza">
-                    <span class="icona">❌</span>Senza
-                </button>
-
-                <button class="modificatore-btn" data-azione="poco">
-                    <span class="icona">⬇️</span>Poco
-                </button>
-
-                <button class="modificatore-btn" data-azione="abbondante">
-                    <span class="icona">👑</span>Abbondante
-                </button>
-            </div>
-        </div>
-
-        <h2>4. Riepilogo Ordine e Dettagli</h2>
-        <div id="riepilogo-ordine">
-            <p>In attesa di selezione...</p>
-        </div>
+<div class="container">
+    <h2>Cassa e Ordini</h2>
+    <div class="grid-pulsanti">
+        <button class="pulsante rosso">PIZZE A-M</button>
+        <button class="pulsante rosso">PIZZE N-Z</button>
+        <button class="pulsante giallo">BABY</button>
+        <button class="pulsante arancio">CALZONE</button>
+        <button class="pulsante blu-scuro">PANINI</button>
+        <button class="pulsante blu-chiaro">SCHIACCIATA</button>
+        <button class="pulsante verde-lime">1/2 METRI</button>
+        <button class="pulsante blu-chiaro">SCHIACCIATA GRANDE</button>
+        <button class="pulsante marrone">PORZ PATATINE</button>
+        <button class="pulsante blu-scuro">BIBITE</button>
+        <button class="pulsante arancio">MENU 17 GOURMET</button>
+        <button class="pulsante viola">PIZZE BABY</button>
+        <button class="pulsante marrone">BANCO RAPIDO</button>
+        <button class="pulsante verde-scuro">TUTTE TAGLIATE</button>
     </div>
 
-    <script>
-        /*
-        ===================================
-        JAVASCRIPT: Logica di Funzionamento
-        ===================================
-        */
-        document.addEventListener('DOMContentLoaded', () => {
-            let articoloSelezionato = null;
-            let servizioAttivo = 'domicilio'; // Default
-            const riepilogoOrdine = document.getElementById('riepilogo-ordine');
-            const listaProdotti = document.getElementById('lista-prodotti');
-            const servizioOptions = document.querySelectorAll('.servizio-btn');
-            const modificatoriBtns = document.querySelectorAll('.modificatore-btn');
+    <h3>Dettaglio Ordine</h3>
+    <div style="border: 1px solid #ccc; padding: 10px; min-height: 100px; margin-bottom: 20px;">
+        *Nessun articolo selezionato*
+    </div>
 
-            // --- FUNZIONE DI AGGIORNAMENTO RIEPILOGO ---
-            function aggiornaRiepilogo() {
-                let modificheHtml = '';
-                if (articoloSelezionato) {
-                    const modificheList = Object.entries(articoloSelezionato.modifiche)
-                        .map(([ing, mod]) => `<li>**${mod.toUpperCase()}** di ${ing}</li>`)
-                        .join('');
-                    
-                    if (modificheList) {
-                        modificheHtml = `
-                            <p><strong>Articolo:</strong> ${articoloSelezionato.nome}</p>
-                            <p><strong>Modifiche Rapide:</strong></p>
-                            <ul>${modificheList}</ul>
-                        `;
-                    } else {
-                        modificheHtml = `<p><strong>Articolo:</strong> ${articoloSelezionato.nome} (Nessuna modifica rapida applicata)</p>`;
-                    }
-                }
+    <div class="footer-azioni" style="flex-wrap: wrap;">
+        <button class="azione-pulsante grigio">Termina Combo</button>
+        <button class="azione-pulsante grigio">Modifica Combo</button>
+        <button class="azione-pulsante grigio">Annulla Combo</button>
+        <button class="azione-pulsante verde-lime">POCO</button>
+        <button class="azione-pulsante verde-scuro">ABB</button>
+        
+        <button class="azione-pulsante verde-lime" style="flex-grow: 0; width: 40px; margin-right: 0;">+</button>
+        <button class="azione-pulsante verde-lime" style="flex-grow: 0; width: 40px; margin-left: 0;">-</button>
+        <button class="azione-pulsante verde-lime">ALTRE</button>
+        <button class="azione-pulsante verde-lime">VARIANTE LIBERA</button>
+        <button class="azione-pulsante verde-lime">Pagamenti</button>
+        <button class="azione-pulsante arancio" onclick="openModal('domicilio')">Crea DOMICILIO 🛵</button>
+        <button class="azione-pulsante arancio" onclick="openModal('asporto')">Crea ASPORTO 🥡</button>
+        <button class="azione-pulsante arancio" onclick="openModal('banco')">Crea BANCO 🍴</button>
+        <button class="azione-pulsante viola" onclick="alert('Funzione Modifica Ordine')">Modifica Ordine 📝</button>
+        <button class="azione-pulsante blu-scuro" onclick="openModal('impostazioni')" style="margin-top: 10px;">IMPOSTAZIONI ⚙️</button>
+    </div>
 
-                riepilogoOrdine.innerHTML = `
-                    <p>Modalità di servizio: **${servizioAttivo.toUpperCase().replace('-', ' ')}**</p>
-                    ${modificheHtml || '<p>Seleziona un prodotto e una modalità di servizio.</p>'}
-                `;
-            }
+</div>
 
-            // --- GESTIONE SCELTA SERVIZIO ---
-            servizioOptions.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    servizioOptions.forEach(b => b.classList.remove('attivo'));
-                    e.currentTarget.classList.add('attivo');
-                    servizioAttivo = e.currentTarget.getAttribute('data-mode');
-                    aggiornaRiepilogo();
-                });
-            });
+<div id="modalDomicilio" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('domicilio')">&times;</span>
+        <h3>Crea Ordine a Domicilio</h3>
+        <label for="dom-cognome">Cognome:</label>
+        <input type="text" id="dom-cognome" placeholder="Cognome">
+        
+        <label for="dom-indirizzo">Indirizzo:</label>
+        <input type="text" id="dom-indirizzo" placeholder="Via/Piazza">
+        
+        <label for="dom-civico">Numero Civico:</label>
+        <input type="text" id="dom-civico" placeholder="N°">
+        
+        <label for="dom-telefono">Numero di Telefono:</label>
+        <input type="tel" id="dom-telefono" placeholder="+39">
+        
+        <label for="dom-paese">Paese:</label>
+        <input type="text" id="dom-paese" placeholder="Paese">
+        
+        <label for="dom-zona">Zona (prezzo specifico):</label>
+        <select id="dom-zona">
+            <option value="zonaA">Zona A (€2.00)</option>
+            <option value="zonaB">Zona B (€3.50)</option>
+            <option value="zonaC">Zona C (€5.00)</option>
+        </select>
+        
+        <label for="dom-ora">Ora di Consegna:</label>
+        <input type="time" id="dom-ora">
+        
+        <label>Vuole Tagliate:</label><br>
+        <input type="radio" id="dom-tagliate-si" name="dom-tagliate" value="si"> <label for="dom-tagliate-si">Sì</label>
+        <input type="radio" id="dom-tagliate-no" name="dom-tagliate" value="no" checked> <label for="dom-tagliate-no">No</label>
+        
+        <button class="azione-pulsante verde-scuro" style="width: 100%; margin-top: 15px;">Conferma Ordine Domicilio</button>
+    </div>
+</div>
 
-            // --- GESTIONE SELEZIONE PRODOTTO ---
-            listaProdotti.querySelectorAll('.prodotto-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    listaProdotti.querySelectorAll('.prodotto-item').forEach(p => p.classList.remove('selezionato'));
-                    item.classList.add('selezionato');
-                    
-                    // Inizializza l'oggetto articoloSelezionato
-                    articoloSelezionato = {
-                        id: item.getAttribute('data-id'),
-                        nome: item.getAttribute('data-nome'),
-                        modifiche: {} // Oggetto per tenere traccia delle modifiche
-                    };
-                    
-                    aggiornaRiepilogo();
-                });
-            });
+<div id="modalAsporto" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('asporto')">&times;</span>
+        <h3>Crea Ordine da Asporto</h3>
+        <label for="asp-cognome">Cognome:</label>
+        <input type="text" id="asp-cognome" placeholder="Cognome">
+        
+        <label for="asp-telefono">Numero di Telefono:</label>
+        <input type="tel" id="asp-telefono" placeholder="+39">
+        
+        <label for="asp-ora">Ora di Ritiro:</label>
+        <input type="time" id="asp-ora">
+        
+        <label>Vuole Tagliate:</label><br>
+        <input type="radio" id="asp-tagliate-si" name="asp-tagliate" value="si"> <label for="asp-tagliate-si">Sì</label>
+        <input type="radio" id="asp-tagliate-no" name="asp-tagliate" value="no" checked> <label for="asp-tagliate-no">No</label>
+        
+        <button class="azione-pulsante verde-scuro" style="width: 100%; margin-top: 15px;">Conferma Ordine Asporto</button>
+    </div>
+</div>
 
-            // --- GESTIONE PULSANTI MODIFICATORI RAPIDI ---
-            modificatoriBtns.forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const azione = event.currentTarget.getAttribute('data-azione');
-                    const azioneTesto = event.currentTarget.textContent.trim();
+<div id="modalBanco" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('banco')">&times;</span>
+        <h3>Crea Ordine al Banco</h3>
+        <label for="banco-cognome">Cognome (opzionale):</label>
+        <input type="text" id="banco-cognome" placeholder="Cognome">
+        
+        <label for="banco-ora">Ora (opzionale):</label>
+        <input type="time" id="banco-ora">
+        
+        <label>Vuole Tagliate:</label><br>
+        <input type="radio" id="banco-tagliate-si" name="banco-tagliate" value="si"> <label for="banco-tagliate-si">Sì</label>
+        <input type="radio" id="banco-tagliate-no" name="banco-tagliate" value="no" checked> <label for="banco-tagliate-no">No</label>
+        
+        <button class="azione-pulsante verde-scuro" style="width: 100%; margin-top: 15px;">Conferma Ordine Banco</button>
+    </div>
+</div>
 
-                    if (!articoloSelezionato) {
-                        alert('ERRORE: Devi PRIMA selezionare un prodotto al punto 2.');
-                        return;
-                    }
+<div id="modalImpostazioni" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('impostazioni')">&times;</span>
+        <h3>Impostazioni Articoli e Prezzi</h3>
+        <p>Questa è una simulazione. Per rendere queste modifiche effettive e permanenti servirebbe un database.</p>
+        
+        <h4>Modifica Articolo (Esempio)</h4>
+        <label for="imp-articolo">Seleziona Articolo:</label>
+        <select id="imp-articolo">
+            <option value="pizzaam">PIZZE A-M</option>
+            <option value="calzone">CALZONE</option>
+            </select>
+        
+        <label for="imp-prezzo">Modifica Prezzo (Esempio Calzone):</label>
+        <input type="number" id="imp-prezzo" value="7.50" step="0.01">
+        
+        <label for="imp-nuovo">Aggiungi Nuovo Articolo:</label>
+        <input type="text" id="imp-nuovo" placeholder="Nome Nuovo Articolo">
+        <button class="azione-pulsante verde-scuro" style="width: 100%; margin-top: 5px;">Aggiungi</button>
 
-                    // Chiediamo all'utente l'ingrediente su cui applicare la modifica
-                    const ingredienteScelto = prompt(`Azione "${azioneTesto.toUpperCase()}" selezionata. Inserisci l'ingrediente da modificare (es. "mozzarella"):`);
+        <h4 style="margin-top: 20px;">Gestione Zone Domicilio (Esempio)</h4>
+        <label for="imp-zona-a">Prezzo Zona A:</label>
+        <input type="number" id="imp-zona-a" value="2.00" step="0.01">
+        
+        <button class="azione-pulsante blu-scuro" style="width: 100%; margin-top: 15px;">Salva Impostazioni (Simulazione)</button>
+    </div>
+</div>
 
-                    if (ingredienteScelto && ingredienteScelto.trim() !== '') {
-                        articoloSelezionato.modifiche[ingredienteScelto.trim().toLowerCase()] = azione; 
-                        aggiornaRiepilogo();
-                    } else if (ingredienteScelto !== null) {
-                         alert('Operazione annullata. Riprova.');
-                    }
-                });
-            });
+<script>
+    // Logica JavaScript per aprire e chiudere le Modali
+    function openModal(type) {
+        let modalId;
+        if (type === 'domicilio') {
+            modalId = 'modalDomicilio';
+        } else if (type === 'asporto') {
+            modalId = 'modalAsporto';
+        } else if (type === 'banco') {
+            modalId = 'modalBanco';
+        } else if (type === 'impostazioni') {
+            modalId = 'modalImpostazioni';
+        }
+        document.getElementById(modalId).style.display = 'block';
+    }
 
-            // --- GESTIONE IMPOSTAZIONI AVANZATE (Le 1400 Righe) ---
-            document.getElementById('btn-impostazioni-avanzate').addEventListener('click', () => {
-                alert(
-                    'FUNZIONE DI MODIFICA AVANZATA (1400 RIGHE):\n\n' +
-                    'Questa interfaccia permette di modificare ogni aggiunta nella sua versione più completa ' +
-                    '(il dataset avanzato).'
-                );
-            });
+    function closeModal(type) {
+        let modalId;
+        if (type === 'domicilio') {
+            modalId = 'modalDomicilio';
+        } else if (type === 'asporto') {
+            modalId = 'modalAsporto';
+        } else if (type === 'banco') {
+            modalId = 'modalBanco';
+        } else if (type === 'impostazioni') {
+            modalId = 'modalImpostazioni';
+        }
+        document.getElementById(modalId).style.display = 'none';
+    }
 
-            // Inizializza il riepilogo
-            aggiornaRiepilogo();
-        });
-    </script>
+    // Chiude la modale se l'utente clicca fuori
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
+        }
+    }
+</script>
 
 </body>
 </html>
