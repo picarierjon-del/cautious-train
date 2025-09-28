@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v7 - Categorie Separate)</title>
+    <title>Gestionale Pizzeria Avanzato (v8 - Modificatori Estesi)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -145,6 +145,11 @@
             flex-basis: calc(50% - 5px); /* Due pulsanti per riga */
             margin-bottom: 5px;
         }
+        /* Regola la larghezza per le 7 categorie in due righe */
+        .category-menu button {
+            flex-basis: calc(33.333% - 5px); /* Tre pulsanti per riga */
+            margin-bottom: 5px;
+        }
 
         .category-menu button, .delivery-mode-selection button {
             flex-grow: 1;
@@ -180,7 +185,7 @@
             font-size: 0.9em;
         }
         
-        /* Stili per le aggiunte nella modal secondaria */
+        /* Stili per le aggiunte/ingredienti nella modal secondaria */
         #addons-list-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -244,7 +249,7 @@
             font-size: 0.7em;
             width: auto;
             margin: 2px 0;
-            background-color: #17a2b8; /* Blu di default */
+            /* Colori Modificatori */
         }
         
         .delete-mod-btn {
@@ -252,7 +257,6 @@
             padding: 5px 5px;
         }
         
-        /* Colori Modificatori */
         .modifier-btn[data-mod="Più"] { background-color: #28a745; }
         .modifier-btn[data-mod="Meno"] { background-color: #6c757d; }
         .modifier-btn[data-mod="Poco"] { background-color: #ffc107; color: #333; }
@@ -415,7 +419,7 @@
         <div id="settings-section" class="hidden">
             <h2><i class="fas fa-cog"></i> Impostazioni e Modifica</h2>
             
-            <h3>Gestione Menu</h3>
+            <h3>Gestione Menu Prodotti</h3>
             <form id="add-product-form">
                 <select id="product-type-select">
                     <option value="pizze">Pizza</option>
@@ -433,6 +437,15 @@
 
             <div id="current-menu-display">
                 <h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>
+                </div>
+            
+            <h3>Gestione Ingredienti Modificabili (Senza Prezzo)</h3>
+            <form id="add-ingredient-form">
+                <input type="text" id="ingredient-name" placeholder="Nome Ingrediente/Modificatore (es. Prosciutto, Basilico, Cornicione)" required>
+                <button type="submit" style="background-color: #007bff;">Aggiungi Ingrediente</button>
+            </form>
+            <div id="current-ingredients-display">
+                <h4>Ingredienti Modificabili (solo per Più/Meno/Poco/Abb.)</h4>
                 </div>
 
             <h3>Gestione Fattorini</h3>
@@ -478,7 +491,7 @@
 
     <div id="addons-selection-modal" class="modal hidden">
         <div id="addons-selection-content">
-            <h3>Seleziona l'Aggiunta da Modificare</h3>
+            <h3>Seleziona Ingrediente o Aggiunta da Modificare</h3>
             <div id="addons-list-container">
                 </div>
             <button id="cancel-addon-selection" style="background-color: #6c757d; margin-top: 15px;">Annulla</button>
@@ -499,7 +512,6 @@
                 { nome: "Diavola", prezzo: 7.50 },
                 { nome: "Capricciosa", prezzo: 8.00 }
             ],
-            // NUOVE CATEGORIE RICHIESTE COME PULSANTI SEPARATI
             baby: [
                 { nome: "Baby Margherita", prezzo: 4.00 },
                 { nome: "Baby Wurstel", prezzo: 5.00 }
@@ -525,6 +537,12 @@
                 { nome: "Patatine", prezzo: 2.00 }
             ]
         };
+        
+        // NUOVO ELENCO DI INGREDIENTI MODIFICABILI (senza prezzo)
+        let ingredients = [
+            "Mozzarella", "Pomodoro", "Basilico", "Olio", "Sale", "Cornicione", "Salamino Piccante"
+        ];
+
 
         let fattorini = ["Mario Rossi", "Giulia Verdi"];
         let currentOrder = [];
@@ -542,17 +560,20 @@
         function loadData() {
             const savedMenu = localStorage.getItem('pizzeriaMenu');
             if (savedMenu) {
-                // Sovrascrivo solo i contenuti, ma mantengo la struttura delle categorie (inclusi i nuovi)
                 const loadedMenu = JSON.parse(savedMenu);
                 menuCategories.forEach(cat => {
                     if (loadedMenu[cat]) {
                         menu[cat] = loadedMenu[cat];
                     } else if (!menu[cat]) {
-                        // Se una categoria è stata aggiunta dopo l'ultimo salvataggio (come le nuove qui) la inizializzo vuota se non c'era
                         menu[cat] = [];
                     }
                 });
             }
+            
+            // Carica gli ingredienti modificabili
+            const savedIngredients = localStorage.getItem('pizzeriaIngredients');
+            if (savedIngredients) ingredients = JSON.parse(savedIngredients);
+
 
             const savedFattorini = localStorage.getItem('pizzeriaFattorini');
             if (savedFattorini) fattorini = JSON.parse(savedFattorini);
@@ -567,6 +588,7 @@
 
         function saveData() {
             localStorage.setItem('pizzeriaMenu', JSON.stringify(menu));
+            localStorage.setItem('pizzeriaIngredients', JSON.stringify(ingredients)); // Salva gli ingredienti
             localStorage.setItem('pizzeriaFattorini', JSON.stringify(fattorini));
             localStorage.setItem('pizzeriaActiveOrders', JSON.stringify(activeOrders));
         }
@@ -596,21 +618,18 @@
             });
         }
 
+        // AGGIORNATA per includere sia le Aggiunte (con prezzo) che gli Ingredienti (senza prezzo)
         function renderAddonsForSelection() {
             const list = document.getElementById('addons-list-container');
             list.innerHTML = '';
             
-            if (!menu.aggiunte || menu.aggiunte.length === 0) {
-                 list.innerHTML = `<p style="text-align:center;">Nessuna aggiunta disponibile nelle impostazioni.</p>`;
-                 return;
-            }
-
-            menu.aggiunte.forEach(item => {
+            // 1. Aggiunge gli ingredienti modificabili
+            ingredients.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'addon-item';
-                div.dataset.addonName = item.nome;
-                div.dataset.addonPrice = item.prezzo;
-                div.textContent = item.nome;
+                div.dataset.addonName = item;
+                div.dataset.addonPrice = 0.00; // Prezzo fisso a zero per gli ingredienti base
+                div.textContent = item.toUpperCase(); // In maiuscolo come nell'immagine
                 
                 div.addEventListener('click', (e) => {
                     const addonName = e.currentTarget.dataset.addonName;
@@ -619,6 +638,28 @@
                 });
                 list.appendChild(div);
             });
+            
+            // 2. Aggiunge le aggiunte con prezzo (dalla categoria aggiunte)
+            if (menu.aggiunte && menu.aggiunte.length > 0) {
+                menu.aggiunte.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'addon-item';
+                    div.dataset.addonName = item.nome;
+                    div.dataset.addonPrice = item.prezzo;
+                    div.innerHTML = `${item.nome.toUpperCase()} <span style="font-weight:bold; color:#e31b23;">(€${item.prezzo.toFixed(2)})</span>`;
+                    
+                    div.addEventListener('click', (e) => {
+                        const addonName = e.currentTarget.dataset.addonName;
+                        const addonPrice = parseFloat(e.currentTarget.dataset.addonPrice);
+                        applyAddonModifier(addonName, addonPrice);
+                    });
+                    list.appendChild(div);
+                });
+            }
+            
+            if (list.innerHTML === '') {
+                 list.innerHTML = `<p style="text-align:center;">Nessun ingrediente o aggiunta gestito nelle Impostazioni.</p>`;
+            }
         }
 
 
@@ -634,24 +675,44 @@
                 li.style.borderBottom = '1px dotted #eee';
                 
                 if (allowModification) {
-                    const modifierText = item.modifier ? ` (${item.modifier}: ${item.addonName})` : "";
+                    let modifierText = "";
+                    
+                    // Raggruppa i modificatori per la visualizzazione
+                    if (item.modifiers && item.modifiers.length > 0) {
+                        modifierText = item.modifiers.map(mod => 
+                            `${mod.modifier.replace('Meno', 'SENZA')}: ${mod.addonName}`
+                        ).join(', ');
+                        modifierText = `<span class="modifier-text">${modifierText}</span>`;
+                    }
+
 
                     li.className = 'modification-row';
                     li.innerHTML = `
-                        <span>${item.nome} <span class="modifier-text">${modifierText}</span></span>
+                        <span>${item.nome} ${modifierText}</span>
                         <button class="modifier-btn" data-index="${index}" data-mod="Più"><i class="fas fa-plus-circle"></i> Più</button>
-                        <button class="modifier-btn" data-index="${index}" data-mod="Meno"><i class="fas fa-minus-circle"></i> Meno</button>
+                        <button class="modifier-btn" data-index="${index}" data-mod="Meno"><i class="fas fa-minus-circle"></i> Senza</button>
                         <button class="modifier-btn" data-index="${index}" data-mod="Poco"><i class="fas fa-pepper-hot"></i> Poco</button>
-                        <button class="modifier-btn" data-index="${index}" data-mod="Abbondante"><i class="fas fa-pizza-slice"></i> Abbondante</button>
+                        <button class="modifier-btn" data-index="${index}" data-mod="Abbondante"><i class="fas fa-pizza-slice"></i> Abb.</button>
                         <button class="delete-mod-btn" data-index="${index}" data-mod="Elimina"><i class="fas fa-trash-alt"></i></button>
                     `;
                 } else {
-                    const modifierText = item.modifier ? ` (${item.modifier}: ${item.addonName})` : "";
+                    let modifierDisplay = "";
+                    if (item.modifiers && item.modifiers.length > 0) {
+                        modifierDisplay = item.modifiers.map(mod => 
+                            `<li>${mod.modifier.replace('Meno', 'SENZA').toUpperCase()} ${mod.addonName.toUpperCase()} ${mod.price > 0 ? `(€${mod.price.toFixed(2)})` : ''}</li>`
+                        ).join('');
+                        modifierDisplay = `<ul style="list-style:none; padding: 0; margin: 0; font-size: 0.8em; color: #555;">${modifierDisplay}</ul>`;
+                    }
+
 
                     li.innerHTML = `
-                        <span>${item.nome}${modifierText}</span>
-                        <span>€${item.prezzo.toFixed(2)} 
-                            <button class="remove-item-btn" data-index="${index}"><i class="fas fa-times-circle"></i></button>
+                        <div style="flex-grow: 1;">
+                            <strong>${item.nome}</strong>
+                            ${modifierDisplay}
+                        </div>
+                        <span style="display:flex; align-items:center;">
+                            €${item.prezzo.toFixed(2)} 
+                            <button class="remove-item-btn" data-index="${index}" style="margin-left: 5px;"><i class="fas fa-times-circle"></i></button>
                         </span>
                     `;
                 }
@@ -748,17 +809,39 @@
                 }
 
                 const itemsList = order.items.map(item => {
-                    const modifierText = item.modifier ? ` (${item.modifier}: ${item.addonName})` : "";
-                    return `<li>${item.nome}${modifierText} - €${item.prezzo.toFixed(2)}</li>`;
+                    let modifierDisplay = "";
+                    let itemPrice = item.prezzo;
+                    
+                    if (item.modifiers && item.modifiers.length > 0) {
+                        modifierDisplay = item.modifiers.map(mod => {
+                             // Aggiunge il prezzo solo se > 0 (Aggiunta a pagamento)
+                             const priceText = mod.price > 0 ? ` (€${mod.price.toFixed(2)})` : '';
+                             itemPrice += mod.price;
+                             return `<li>${mod.modifier.replace('Meno', 'SENZA').toUpperCase()} ${mod.addonName.toUpperCase()}${priceText}</li>`;
+                        }).join('');
+                        modifierDisplay = `<ul style="list-style:none; padding: 0 0 0 10px; margin: 0; font-size: 0.8em; color: #555;">${modifierDisplay}</ul>`;
+                    }
+
+                    return `<li><strong>${item.nome}</strong> - €${itemPrice.toFixed(2)}${modifierDisplay}</li>`;
                 }).join('');
+                
+                // Ricalcola il totale della card per includere i prezzi degli add-on modificati
+                const totalWithModifiers = order.items.reduce((sum, item) => {
+                    let itemTotal = item.prezzo;
+                    if (item.modifiers) {
+                        itemTotal += item.modifiers.reduce((modSum, mod) => modSum + mod.price, 0);
+                    }
+                    return sum + itemTotal;
+                }, 0);
+
 
                 card.innerHTML = `
                     <h4>Ordine #${order.id} - ${order.mode.toUpperCase()} (${clientName})</h4>
-                    <p><strong>Totale: €${order.total.toFixed(2)}</strong></p>
+                    <p><strong>Totale: €${totalWithModifiers.toFixed(2)}</strong></p>
                     <p>${details}</p>
                     ${notes}
                     ${fattorinoControl}
-                    <ul>${itemsList}</ul>
+                    <ul style="list-style: none; padding-left: 0;">${itemsList}</ul>
                     <p>Stato: <strong>${order.status}</strong></p>
                     <button class="modify-btn" data-id="${order.id}" style="background-color: #ffc107; color: #333;"><i class="fas fa-edit"></i> Modifica Ordine</button>
                     ${order.status !== 'Completato' ? 
@@ -804,10 +887,12 @@
         function renderSettings() {
             const menuDisplay = document.getElementById('current-menu-display');
             const driversDisplay = document.getElementById('current-drivers-display');
+            const ingredientsDisplay = document.getElementById('current-ingredients-display');
+            
             menuDisplay.innerHTML = '<h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>';
             driversDisplay.innerHTML = '<h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>';
+            ingredientsDisplay.innerHTML = '<h4>Ingredienti Modificabili (solo per Più/Meno/Poco/Abb.)</h4>';
 
-            // Mappa per visualizzare i nomi in modo leggibile (Capitalized)
             const displayNames = {
                 pizze: 'PIZZE',
                 baby: 'BABY',
@@ -818,6 +903,7 @@
                 aggiunte: 'AGGIUNTE'
             };
             
+            // Render Prodotti
             menuCategories.forEach(category => {
                 menuDisplay.innerHTML += `<h5>**${displayNames[category] || category.toUpperCase()}**</h5>`;
                 if (menu[category]) {
@@ -834,6 +920,17 @@
                 }
             });
 
+            // Render Ingredienti
+            ingredients.forEach((ing, index) => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <span>${ing}</span>
+                    <span class="delete-item-btn" data-type="ingredient" data-index="${index}"><i class="fas fa-times-circle"></i></span>
+                `;
+                ingredientsDisplay.appendChild(div);
+            });
+
+            // Render Fattorini
             fattorini.forEach((driver, index) => {
                 const div = document.createElement('div');
                 div.innerHTML = `
@@ -848,6 +945,8 @@
                     const index = parseInt(e.currentTarget.dataset.index);
                     if (e.currentTarget.dataset.type === 'fattorino') {
                         deleteFattorino(index);
+                    } else if (e.currentTarget.dataset.type === 'ingredient') {
+                        deleteIngredient(index);
                     } else {
                         deleteMenuItem(e.currentTarget.dataset.category, index);
                     }
@@ -864,7 +963,8 @@
         // ---------------------- Funzioni di Logica ----------------------
 
         function addItemToOrder(name, price) {
-            currentOrder.push({ nome: name, prezzo: parseFloat(price), modifier: "", addonName: "" });
+            // Aggiunge un array vuoto per i modificatori
+            currentOrder.push({ nome: name, prezzo: parseFloat(price), modifiers: [] });
             renderMainOrder();
         }
 
@@ -881,7 +981,7 @@
             saveData();
         }
 
-        // Gestisce la pressione dei pulsanti di modifica (APRE IL MODAL AGGIUNTE)
+        // Gestisce la pressione dei pulsanti di modifica (APRE IL MODAL AGGIUNTE/INGREDIENTI)
         function handleModificationItemChange(index, action) {
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
             if (orderIndex === -1) return;
@@ -891,12 +991,18 @@
             if (action === 'Elimina') {
                 if (confirm(`Vuoi eliminare definitivamente l'articolo "${orderItems[index].nome}"?`)) {
                     orderItems.splice(index, 1);
-                    activeOrders[orderIndex].total = orderItems.reduce((sum, item) => sum + item.prezzo, 0);
-                    saveData(); // Salvataggio dopo l'eliminazione
+                    // Ricalcola il totale includendo i modificatori rimanenti
+                    activeOrders[orderIndex].total = orderItems.reduce((sum, item) => {
+                        let itemTotal = item.prezzo;
+                        if (item.modifiers) {
+                            itemTotal += item.modifiers.reduce((modSum, mod) => modSum + mod.price, 0);
+                        }
+                        return sum + itemTotal;
+                    }, 0);
+                    saveData();
                     renderModificationOrder();
                 }
             } else {
-                // Modificatore: apriamo la tendina delle aggiunte
                 targetItemIndex = index;
                 pendingModifier = action;
                 
@@ -905,27 +1011,54 @@
             }
         }
         
-        // Applica il modificatore dopo la selezione dell'aggiunta nel modal secondario
+        // Applica il modificatore dopo la selezione dell'aggiunta/ingrediente nel modal secondario
         function applyAddonModifier(addonName, addonPrice) {
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
             if (orderIndex === -1 || targetItemIndex === -1) return;
             
             const item = activeOrders[orderIndex].items[targetItemIndex];
             
-            // Se il modificatore è già applicato su questa aggiunta, lo resetto
-            if (item.modifier === pendingModifier && item.addonName === addonName) {
-                item.modifier = "";
-                item.addonName = "";
+            // Assicurati che l'array modificatori esista
+            if (!item.modifiers) {
+                item.modifiers = [];
+            }
+            
+            // Cerca un modificatore esistente per questo ingrediente e tipo
+            const existingIndex = item.modifiers.findIndex(m => m.addonName === addonName);
+
+            // Se è un'aggiunta (con prezzo > 0), il modificatore è sempre "Più" (indipendentemente da cosa ha premuto l'utente)
+            const modifierToApply = (addonPrice > 0 && pendingModifier === "Più") ? "Aggiunta" : pendingModifier;
+            
+            if (existingIndex !== -1) {
+                // Se lo stesso elemento viene cliccato con lo stesso modificatore, lo rimuoviamo (toggle off)
+                 if (item.modifiers[existingIndex].modifier === modifierToApply) {
+                    item.modifiers.splice(existingIndex, 1);
+                 } else {
+                    // Altrimenti, sostituisci il modificatore esistente con quello nuovo
+                    item.modifiers[existingIndex].modifier = modifierToApply;
+                    item.modifiers[existingIndex].price = addonPrice; // Aggiorna il prezzo in caso di cambio
+                 }
             } else {
-                item.modifier = pendingModifier;
-                item.addonName = addonName; 
+                // Aggiungi un nuovo modificatore/aggiunta
+                item.modifiers.push({ 
+                    modifier: modifierToApply, 
+                    addonName: addonName, 
+                    price: addonPrice 
+                });
             }
 
-            // Ricacalcola il totale
-            activeOrders[orderIndex].total = activeOrders[orderIndex].items.reduce((sum, item) => sum + item.prezzo, 0);
-            saveData(); // Salvataggio dopo la modifica
+            // Ricalcola il totale dell'ordine (base + modificatori a pagamento)
+            activeOrders[orderIndex].total = activeOrders[orderIndex].items.reduce((sum, currentItem) => {
+                let itemTotal = currentItem.prezzo;
+                if (currentItem.modifiers) {
+                    itemTotal += currentItem.modifiers.reduce((modSum, mod) => modSum + mod.price, 0);
+                }
+                return sum + itemTotal;
+            }, 0);
+            
+            saveData();
 
-            // Chiudi entrambi i modal e aggiorna l'ordine di modifica
+            // Chiudi i modal e aggiorna l'ordine di modifica
             document.getElementById('addons-selection-modal').classList.add('hidden');
             targetItemIndex = -1;
             pendingModifier = '';
@@ -933,6 +1066,27 @@
             renderModificationOrder();
         }
 
+        function addIngredient(name) {
+            const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+            if (name && !ingredients.includes(capitalizedName)) {
+                ingredients.push(capitalizedName);
+                saveData();
+                renderSettings();
+                alert(`Ingrediente "${capitalizedName}" aggiunto.`);
+            }
+        }
+        
+        function deleteIngredient(index) {
+            if (confirm(`Sei sicuro di voler eliminare l'ingrediente "${ingredients[index]}" dalla lista dei modificabili?`)) {
+                ingredients.splice(index, 1);
+                saveData();
+                renderSettings();
+                
+                if (document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
+                    renderAddonsForSelection();
+                }
+            }
+        }
 
         function switchSection(sectionId) {
             document.querySelectorAll('#main-content > div').forEach(sec => sec.classList.add('hidden'));
@@ -978,6 +1132,8 @@
                 menu[type].push({ nome: name, prezzo: parseFloat(price) });
                 saveData();
                 renderSettings();
+                
+                // Se stiamo aggiungendo un'aggiunta a pagamento, aggiorniamo il modal modificatori
                 if (type === 'aggiunte' && document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
                     renderAddonsForSelection();
                 }
@@ -991,6 +1147,7 @@
                 saveData();
                 renderSettings();
 
+                // Se stiamo eliminando un'aggiunta a pagamento, aggiorniamo il modal modificatori
                 if (category === 'aggiunte' && document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
                     renderAddonsForSelection();
                 }
@@ -1043,8 +1200,18 @@
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
             if (orderIndex === -1) return;
 
-            activeOrders[orderIndex].items.push({ nome: name, prezzo: parseFloat(price), modifier: "", addonName: "" });
-            activeOrders[orderIndex].total = activeOrders[orderIndex].items.reduce((sum, item) => sum + item.prezzo, 0);
+            // Aggiunge un array vuoto per i modificatori
+            activeOrders[orderIndex].items.push({ nome: name, prezzo: parseFloat(price), modifiers: [] });
+            
+            // Ricalcola il totale (senza modificatori in questo punto)
+            activeOrders[orderIndex].total = activeOrders[orderIndex].items.reduce((sum, item) => {
+                let itemTotal = item.prezzo;
+                if (item.modifiers) {
+                    itemTotal += item.modifiers.reduce((modSum, mod) => modSum + mod.price, 0);
+                }
+                return sum + itemTotal;
+            }, 0);
+            
             saveData(); 
 
             renderModificationOrder();
@@ -1126,7 +1293,6 @@
                 document.getElementById('order-details-section').classList.remove('hidden');
                 document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden')); 
                 
-                // Clicca automaticamente su 'Consegna' all'inizio
                 const consegnaBtn = document.querySelector('.mode-btn[data-mode="consegna"]');
                 if (consegnaBtn) consegnaBtn.click();
             });
@@ -1137,7 +1303,6 @@
                     document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active-mode'));
                     e.currentTarget.classList.add('active-mode');
                     
-                    // Rimuove 'required' da tutti i campi per evitare validazione su campi nascosti
                     document.querySelectorAll('.mode-data input, .mode-data select').forEach(input => input.removeAttribute('required'));
                     document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden')); 
                     
@@ -1146,8 +1311,6 @@
                     
                     if (dataDiv) {
                         dataDiv.classList.remove('hidden');
-                        
-                        // Imposta 'required' solo per i campi della modalità attiva
                         dataDiv.querySelectorAll('input:not([type="checkbox"]), select').forEach(input => input.setAttribute('required', 'required'));
                     }
                 });
@@ -1191,8 +1354,15 @@
                         ora: document.getElementById('banco-ora').value
                     };
                 }
-
-                const total = currentOrder.reduce((sum, item) => sum + item.prezzo, 0);
+                
+                // Calcola il totale INCLUSI i prezzi dei modificatori (aggiunte)
+                const total = currentOrder.reduce((sum, item) => {
+                    let itemTotal = item.prezzo;
+                    if (item.modifiers) {
+                        itemTotal += item.modifiers.reduce((modSum, mod) => modSum + mod.price, 0);
+                    }
+                    return sum + itemTotal;
+                }, 0);
 
                 const newOrder = {
                     id: orderCounter++,
@@ -1222,6 +1392,16 @@
                 addMenuItem(type, name, price);
                 e.target.reset();
             });
+            
+            // Nuovo Listener per aggiungere un Ingrediente modificabile
+            document.getElementById('add-ingredient-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('ingredient-name').value.trim();
+                if (name) {
+                    addIngredient(name);
+                    e.target.reset();
+                }
+            });
 
             document.getElementById('add-driver-form').addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -1230,7 +1410,6 @@
                 e.target.reset();
             });
             
-            // Inizializza la select delle impostazioni all'inizio
             renderSettings();
         });
     </script>
