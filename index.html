@@ -1,810 +1,232 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria - Codice Unico</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestionale Pizzeria – SmartApp</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<style>
+/* === Base === */
+body {
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:#f4f4f9;
+  color:#333;
+  padding-bottom:60px; /* spazio per la tabbar */
+}
+h1,h2,h3{margin:0 0 .5em}
+h2{color:#e31b23;border-bottom:2px solid #e31b23;padding-bottom:4px}
+button{cursor:pointer}
 
-    <style>
-        /* Stile base per smartphone */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
-            padding-bottom: 60px; /* Spazio per la barra di navigazione */
-        }
+/* === Sezioni principali === */
+.page{padding:16px}
+.page.hidden{display:none}
 
-        header {
-            background-color: #e31b23; /* Rosso Pizzeria */
-            color: white;
-            padding: 15px 10px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
+/* === Inserimento ordine (smart grid) === */
+.category-menu{display:flex;gap:6px;margin-bottom:10px}
+.category-menu button{
+  flex:1; background:#555; color:#fff; border:none;
+  padding:8px; border-radius:6px; font-size:14px;
+}
+.category-menu button.active{background:#e31b23}
+#products-list{
+  display:grid; gap:8px;
+  grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
+}
+.product-item{
+  background:#fff; border:1px solid #ddd; border-radius:8px;
+  text-align:center; padding:10px 5px; font-size:.9em;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
+}
+.product-item:hover{background:#ffe8e8}
+#current-order{
+  background:#fff; border:1px solid #ddd; border-radius:8px;
+  padding:12px; margin-top:12px;
+}
+#order-items-list{list-style:none;margin:0;padding:0}
+#order-items-list li{
+  display:flex; justify-content:space-between;
+  border-bottom:1px dotted #eee; padding:4px 0; font-size:.9em;
+}
+.remove-item-btn{background:none;border:none;color:#e31b23;font-size:1.1em}
 
-        #main-content {
-            padding: 10px;
-        }
+/* === Dettaglio Ordine === */
+.delivery-modes{display:flex;gap:6px;margin:10px 0}
+.delivery-modes button{
+  flex:1; padding:8px; border:none;
+  background:#ccc; border-radius:6px;
+}
+.delivery-modes button.active{background:#e31b23;color:#fff}
+.mode-fields{display:none;margin-bottom:12px}
+.mode-fields.active{display:block}
+.mode-fields input{width:100%;padding:8px;margin:4px 0;border:1px solid #ccc;border-radius:6px}
 
-        /* Navigazione in basso (tipo iOS Tab Bar) */
-        nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: space-around;
-            background-color: white;
-            border-top: 1px solid #ddd;
-            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
-            height: 50px;
-            z-index: 1000;
-        }
+/* === Lista ordini attivi === */
+#active-orders .order-card{
+  background:#fff; border:1px solid #ddd; border-radius:8px;
+  padding:12px; margin-bottom:10px;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
+}
+.order-card h4{margin-top:0;color:#e31b23}
 
-        nav button {
-            flex-grow: 1;
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 10px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 5px;
-            transition: color 0.2s;
-        }
-
-        nav button i {
-            font-size: 1.4em;
-            margin-bottom: 3px;
-        }
-
-        nav button.active {
-            color: #e31b23;
-        }
-
-        /* Sezioni e elementi comuni */
-        .hidden {
-            display: none !important;
-        }
-
-        h2 {
-            color: #e31b23;
-            border-bottom: 2px solid #e31b23;
-            padding-bottom: 5px;
-            margin-top: 20px;
-        }
-
-        h3 {
-            color: #555;
-            margin-top: 15px;
-        }
-
-        button {
-            background-color: #e31b23;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            margin: 5px 0;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-            box-sizing: border-box;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: #a01319;
-        }
-
-        input[type="text"], input[type="number"], input[type="tel"], input[type="time"], select {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
-
-        /* Stili specifici per l'inserimento ordine */
-        .category-menu, .delivery-mode-selection {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-        }
-
-        .category-menu button, .delivery-mode-selection button {
-            flex-grow: 1;
-            margin-right: 5px;
-            background-color: #555;
-            font-size: 14px; /* Ottimizzato per smartphone */
-            padding: 8px;
-        }
-
-        .category-menu button:last-child, .delivery-mode-selection button:last-child {
-            margin-right: 0;
-        }
-
-        .category-menu button.active-category, .delivery-mode-selection button.active-mode {
-            background-color: #e31b23;
-        }
-
-        #products-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Più compatto */
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .product-item {
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px 5px;
-            text-align: center;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            cursor: pointer;
-            font-size: 0.9em;
-        }
-
-        .product-item:hover {
-            background-color: #ffe8e8;
-        }
-
-        #current-order {
-            background-color: white;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-
-        #order-items-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        #order-items-list li {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px dotted #eee;
-            font-size: 0.9em;
-        }
-
-        .remove-item-btn {
-            background: none;
-            border: none;
-            color: #e31b23;
-            padding: 0;
-            margin: 0;
-            width: auto;
-            font-size: 1.2em;
-        }
-
-        #total-price {
-            font-size: 1.2em;
-            font-weight: bold;
-            text-align: right;
-            margin-top: 10px;
-        }
-
-        /* Stili per le impostazioni e ordini attivi */
-        #active-orders-container .order-card {
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        .order-card h4 {
-            margin: 0 0 10px 0;
-            color: #e31b23;
-        }
-
-        .order-card ul {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 10px;
-            font-size: 0.9em;
-        }
-
-        .order-card .status-btn {
-            width: auto;
-            padding: 8px 12px;
-            margin-right: 5px;
-            font-size: 0.8em;
-        }
-
-        #current-menu-display, #current-drivers-display {
-            margin-top: 20px;
-        }
-
-        #current-menu-display div, #current-drivers-display div {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            padding: 8px;
-            margin-bottom: 5px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        #current-menu-display div:hover, #current-drivers-display div:hover {
-            background-color: #f7f7f7;
-        }
-
-        .delete-item-btn {
-            color: #e31b23;
-            font-weight: bold;
-            cursor: pointer;
-            padding: 0 5px;
-        }
-    </style>
+/* === Barra di navigazione inferiore === */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;
+  display:flex;justify-content:space-around;
+  background:#fff;border-top:1px solid #ccc;height:56px;z-index:100;
+}
+.tabbar button{
+  flex:1;background:none;border:none;color:#888;
+  display:flex;flex-direction:column;align-items:center;
+  font-size:12px;padding:6px 0;
+}
+.tabbar button i{font-size:18px;margin-bottom:2px}
+.tabbar button.active{color:#e31b23}
+</style>
 </head>
 <body>
 
-    <header>
-        <h1>Gestione Ordini Pizzeria</h1>
-    </header>
+<header style="background:#e31b23;color:#fff;padding:12px;text-align:center">
+  <h1>Gestionale Pizzeria</h1>
+</header>
 
-    <div id="main-content">
-        <div id="order-entry-section">
-            <div id="menu-selection">
-                <h2>Crea Ordine</h2>
-                
-                <div class="category-menu">
-                    <button class="menu-btn" data-category="pizze">Pizze</button>
-                    <button class="menu-btn" data-category="bibite">Bibite</button>
-                    <button class="menu-btn" data-category="aggiunte">Aggiunte</button>
-                </div>
-                
-                <div id="products-list">
-                    </div>
-            </div>
+<main>
+  <!-- === INSERIMENTO ORDINE === -->
+  <section id="order-entry" class="page">
+    <h2>Crea Ordine</h2>
+    <div class="category-menu">
+      <button class="menu-btn active" data-cat="pizze">Pizze</button>
+      <button class="menu-btn" data-cat="bibite">Bibite</button>
+      <button class="menu-btn" data-cat="aggiunte">Aggiunte</button>
+    </div>
+    <div id="products-list"></div>
 
-            <div id="current-order">
-                <h3>Ordine Corrente</h3>
-                <ul id="order-items-list">
-                    </ul>
-                <div id="total-price">Totale: €0.00</div>
-                <button id="finalize-order-btn">Finalizza Ordine</button>
-            </div>
-        </div>
+    <div id="current-order">
+      <h3>Ordine Corrente</h3>
+      <ul id="order-items-list"></ul>
+      <div id="total-price"><strong>Totale: €0.00</strong></div>
+      <button id="finalize-order-btn" style="width:100%;margin-top:8px;background:#e31b23;color:#fff;border:none;padding:10px;border-radius:6px">
+        Prosegui
+      </button>
+    </div>
+  </section>
 
-        <div id="order-details-section" class="hidden">
-            <h2>Dettagli Ordine</h2>
+  <!-- === DETTAGLIO ORDINE === -->
+  <section id="order-detail" class="page hidden">
+    <h2>Dettaglio Ordine</h2>
 
-            <div class="delivery-mode-selection">
-                <button class="mode-btn" data-mode="consegna">Consegna a Domicilio</button>
-                <button class="mode-btn" data-mode="asporto">Asporto</button>
-                <button class="mode-btn" data-mode="banco">Banco Rapido</button>
-            </div>
-
-            <form id="order-form">
-                <div id="delivery-data" class="mode-data hidden">
-                    <h3>Dati Consegna a Domicilio</h3>
-                    <input type="text" id="consegna-nome" placeholder="Nome e Cognome" required>
-                    <input type="text" id="consegna-indirizzo" placeholder="Indirizzo" required>
-                    <input type="tel" id="consegna-telefono" placeholder="Telefono" required>
-                    <select id="fattorino-select" required>
-                        <option value="">Seleziona Fattorino</option>
-                        </select>
-                </div>
-
-                <div id="takeaway-data" class="mode-data hidden">
-                    <h3>Dati Asporto</h3>
-                    <input type="text" id="asporto-nome" placeholder="Nome e Cognome" required>
-                    <input type="tel" id="asporto-telefono" placeholder="Telefono" required>
-                    <label for="asporto-ora">Ora ritiro:</label>
-                    <input type="time" id="asporto-ora" required>
-                </div>
-
-                <div id="counter-data" class="mode-data hidden">
-                    <h3>Dati Banco Rapido</h3>
-                    <input type="text" id="banco-cognome" placeholder="Cognome" required>
-                    <label for="banco-ora">Ora:</label>
-                    <input type="time" id="banco-ora" required>
-                </div>
-                
-                <button type="submit" id="submit-order-btn">Conferma Ordine</button>
-            </form>
-        </div>
-
-        <div id="orders-list-section" class="hidden">
-            <h2><i class="fas fa-list-alt"></i> Ordini in Corso</h2>
-            <div id="active-orders-container">
-                </div>
-        </div>
-        
-        <div id="settings-section" class="hidden">
-            <h2><i class="fas fa-cog"></i> Impostazioni e Modifica</h2>
-            
-            <h3>Gestione Menu</h3>
-            <form id="add-product-form">
-                <select id="product-type-select">
-                    <option value="pizze">Pizza</option>
-                    <option value="bibite">Bibita</option>
-                    <option value="aggiunte">Aggiunta</option>
-                </select>
-                <input type="text" id="product-name" placeholder="Nome Prodotto" required>
-                <input type="number" id="product-price" placeholder="Prezzo (€)" step="0.01" required>
-                <button type="submit">Aggiungi Prodotto</button>
-            </form>
-
-            <div id="current-menu-display">
-                <h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>
-                </div>
-
-            <h3>Gestione Fattorini</h3>
-            <form id="add-driver-form">
-                <input type="text" id="driver-name" placeholder="Nome Fattorino" required>
-                <button type="submit">Aggiungi Fattorino</button>
-            </form>
-            <div id="current-drivers-display">
-                <h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>
-                </div>
-        </div>
+    <div class="delivery-modes">
+      <button class="mode-btn" data-mode="consegna">Consegna</button>
+      <button class="mode-btn" data-mode="asporto">Asporto</button>
+      <button class="mode-btn" data-mode="banco">Banco</button>
     </div>
 
-    <nav>
-        <button id="nav-order-entry"><i class="fas fa-cash-register"></i> Inserimento</button>
-        <button id="nav-orders-list"><i class="fas fa-clipboard-list"></i> Ordini</button>
-        <button id="nav-settings"><i class="fas fa-cog"></i> Impostazioni</button>
-    </nav>
+    <form id="detail-form">
+      <div class="mode-fields" data-for="consegna">
+        <input type="text" placeholder="Nome e Cognome">
+        <input type="text" placeholder="Indirizzo">
+        <input type="tel"  placeholder="Telefono">
+      </div>
 
-    <script>
-        // Dati iniziali del menu e dei fattorini
-        let menu = {
-            pizze: [
-                { nome: "Margherita", prezzo: 5.00 },
-                { nome: "Diavola", prezzo: 7.50 },
-                { nome: "Capricciosa", prezzo: 8.00 }
-            ],
-            bibite: [
-                { nome: "Acqua", prezzo: 1.50 },
-                { nome: "Coca-Cola", prezzo: 2.50 }
-            ],
-            aggiunte: [
-                { nome: "Mozzarella extra", prezzo: 1.00 },
-                { nome: "Patatine", prezzo: 2.00 }
-            ]
-        };
+      <div class="mode-fields" data-for="asporto">
+        <input type="text" placeholder="Nome e Cognome">
+        <input type="tel"  placeholder="Telefono">
+        <label>Ora ritiro <input type="time"></label>
+      </div>
 
-        let fattorini = ["Mario Rossi", "Giulia Verdi"];
-        let currentOrder = [];
-        let activeOrders = [];
-        let orderCounter = 1; // Contatore per ID ordine
+      <div class="mode-fields" data-for="banco">
+        <input type="text" placeholder="Cognome">
+        <label>Ora <input type="time"></label>
+      </div>
 
-        // ---------------------- Funzioni di Caricamento/Salvataggio (Simulazione DB) ----------------------
-        // Usiamo localStorage per persistere i dati tra le sessioni (sebbene non sia un vero DB)
-        function loadData() {
-            const savedMenu = localStorage.getItem('pizzeriaMenu');
-            if (savedMenu) menu = JSON.parse(savedMenu);
+      <button type="submit" style="width:100%;background:#e31b23;color:#fff;border:none;padding:10px;border-radius:6px">
+        Conferma Ordine
+      </button>
+    </form>
+  </section>
 
-            const savedFattorini = localStorage.getItem('pizzeriaFattorini');
-            if (savedFattorini) fattorini = JSON.parse(savedFattorini);
+  <!-- === LISTA ORDINI ATTIVI === -->
+  <section id="orders-list" class="page hidden">
+    <h2>Ordini Attivi</h2>
+    <div id="active-orders">
+      <!-- schede ordini verranno inserite qui nella fase successiva -->
+    </div>
+  </section>
+</main>
 
-            const savedOrders = localStorage.getItem('pizzeriaActiveOrders');
-            if (savedOrders) activeOrders = JSON.parse(savedOrders);
-            
-            // Aggiorna il contatore per evitare ID duplicati
-            if(activeOrders.length > 0) {
-                orderCounter = Math.max(...activeOrders.map(o => o.id)) + 1;
-            }
-        }
+<!-- === NAV BAR === -->
+<nav class="tabbar">
+  <button class="tab active" data-page="order-entry">
+    <i class="fas fa-cash-register"></i><span>Inserimento</span>
+  </button>
+  <button class="tab" data-page="orders-list">
+    <i class="fas fa-list-alt"></i><span>Ordini</span>
+  </button>
+  <button class="tab" data-page="order-detail">
+    <i class="fas fa-user"></i><span>Dettagli</span>
+  </button>
+</nav>
 
-        function saveData() {
-            localStorage.setItem('pizzeriaMenu', JSON.stringify(menu));
-            localStorage.setItem('pizzeriaFattorini', JSON.stringify(fattorini));
-            localStorage.setItem('pizzeriaActiveOrders', JSON.stringify(activeOrders));
-        }
+<script>
+// ------- Navigazione tra le pagine ---------
+document.querySelectorAll('.tabbar .tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tabbar .tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const page = btn.dataset.page;
+    document.querySelectorAll('main .page').forEach(sec=>{
+      sec.classList.toggle('hidden', sec.id!==page);
+    });
+  });
+});
 
-        // ---------------------- Funzioni di Rendering ----------------------
+// ------- Selezione modalità consegna ---------
+document.querySelectorAll('.delivery-modes .mode-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.delivery-modes .mode-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const mode = b.dataset.mode;
+    document.querySelectorAll('.mode-fields').forEach(f=>{
+      f.classList.toggle('active', f.dataset.for===mode);
+    });
+  });
+});
 
-        // 1. Renderizza i prodotti per la creazione ordine
-        function renderProducts(category) {
-            const list = document.getElementById('products-list');
-            list.innerHTML = '';
-            
-            menu[category].forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'product-item';
-                div.dataset.name = item.nome;
-                div.dataset.price = item.prezzo;
-                div.innerHTML = `
-                    <strong>${item.nome}</strong>
-                    <p>€${item.prezzo.toFixed(2)}</p>
-                `;
-                div.addEventListener('click', () => addItemToOrder(item.nome, item.prezzo));
-                list.appendChild(div);
-            });
-        }
-
-        // 2. Renderizza gli elementi nell'ordine corrente
-        function renderCurrentOrder() {
-            const list = document.getElementById('order-items-list');
-            list.innerHTML = '';
-            let total = 0;
-
-            currentOrder.forEach((item, index) => {
-                total += item.prezzo;
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <span>${item.nome}</span>
-                    <span>€${item.prezzo.toFixed(2)} 
-                        <button class="remove-item-btn" data-index="${index}"><i class="fas fa-times-circle"></i></button>
-                    </span>
-                `;
-                list.appendChild(li);
-            });
-
-            document.getElementById('total-price').textContent = `Totale: €${total.toFixed(2)}`;
-
-            // Aggiunge listener per la rimozione
-            document.querySelectorAll('.remove-item-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    removeItemFromOrder(parseInt(e.currentTarget.dataset.index));
-                });
-            });
-        }
-
-        // 3. Renderizza i fattorini nella dropdown di consegna
-        function renderFattorini() {
-            const select = document.getElementById('fattorino-select');
-            select.innerHTML = '<option value="">Seleziona Fattorino</option>';
-            fattorini.forEach(fattorino => {
-                const option = document.createElement('option');
-                option.value = fattorino;
-                option.textContent = fattorino;
-                select.appendChild(option);
-            });
-        }
-
-        // 4. Renderizza gli ordini attivi
-        function renderActiveOrders() {
-            const container = document.getElementById('active-orders-container');
-            container.innerHTML = '';
-
-            activeOrders.forEach(order => {
-                const card = document.createElement('div');
-                card.className = 'order-card';
-                
-                let details = '';
-                let clientName = '';
-
-                if (order.mode === 'consegna') {
-                    clientName = order.data.nome;
-                    details = `Indirizzo: ${order.data.indirizzo}<br>Fattorino: ${order.data.fattorino}`;
-                } else if (order.mode === 'asporto') {
-                    clientName = order.data.nome;
-                    details = `Ora Ritiro: ${order.data.ora}`;
-                } else if (order.mode === 'banco') {
-                    clientName = order.data.cognome;
-                    details = `Ora: ${order.data.ora}`;
-                }
-                
-                const itemsList = order.items.map(item => `<li>${item.nome} - €${item.prezzo.toFixed(2)}</li>`).join('');
-
-                card.innerHTML = `
-                    <h4>Ordine #${order.id} - ${order.mode.toUpperCase()} (${clientName})</h4>
-                    <p><strong>Totale: €${order.total.toFixed(2)}</strong></p>
-                    <p>${details}</p>
-                    <ul>${itemsList}</ul>
-                    <p>Stato: <strong>${order.status}</strong></p>
-                    ${order.status !== 'Completato' ? 
-                        `<button class="status-btn" data-id="${order.id}" data-action="next">Avanti Stato</button>
-                         <button class="status-btn" data-id="${order.id}" data-action="delete" style="background-color: #a01319;">Elimina</button>` 
-                        : '<button class="status-btn" disabled>Completato</button>'
-                    }
-                `;
-                container.appendChild(card);
-            });
-
-            // Aggiunge listener per i pulsanti di stato
-            document.querySelectorAll('.status-btn[data-action="next"]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    changeOrderStatus(parseInt(e.currentTarget.dataset.id));
-                });
-            });
-            document.querySelectorAll('.status-btn[data-action="delete"]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    if (confirm('Sei sicuro di voler eliminare questo ordine?')) {
-                        deleteOrder(parseInt(e.currentTarget.dataset.id));
-                    }
-                });
-            });
-        }
-
-        // 5. Renderizza il menu e i fattorini nelle Impostazioni
-        function renderSettings() {
-            const menuDisplay = document.getElementById('current-menu-display');
-            const driversDisplay = document.getElementById('current-drivers-display');
-            menuDisplay.innerHTML = '<h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>';
-            driversDisplay.innerHTML = '<h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>';
-
-            ['pizze', 'bibite', 'aggiunte'].forEach(category => {
-                menuDisplay.innerHTML += `<h5>**${category.toUpperCase()}**</h5>`;
-                menu[category].forEach((item, index) => {
-                    const div = document.createElement('div');
-                    div.innerHTML = `
-                        <span>${item.nome} - €${item.prezzo.toFixed(2)}</span>
-                        <span class="delete-item-btn" data-category="${category}" data-index="${index}"><i class="fas fa-times-circle"></i></span>
-                    `;
-                    menuDisplay.appendChild(div);
-                });
-            });
-
-            fattorini.forEach((driver, index) => {
-                const div = document.createElement('div');
-                div.innerHTML = `
-                    <span>${driver}</span>
-                    <span class="delete-item-btn" data-type="fattorino" data-index="${index}"><i class="fas fa-times-circle"></i></span>
-                `;
-                driversDisplay.appendChild(div);
-            });
-
-            // Aggiunge listener per l'eliminazione
-            document.querySelectorAll('.delete-item-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const index = parseInt(e.currentTarget.dataset.index);
-                    if (e.currentTarget.dataset.type === 'fattorino') {
-                        deleteFattorino(index);
-                    } else {
-                        deleteMenuItem(e.currentTarget.dataset.category, index);
-                    }
-                });
-            });
-        }
-
-
-        // ---------------------- Funzioni di Logica ----------------------
-
-        function addItemToOrder(name, price) {
-            currentOrder.push({ nome: name, prezzo: parseFloat(price) });
-            renderCurrentOrder();
-        }
-
-        function removeItemFromOrder(index) {
-            currentOrder.splice(index, 1);
-            renderCurrentOrder();
-        }
-
-        function switchSection(sectionId) {
-            // Nascondi tutte le sezioni
-            document.querySelectorAll('#main-content > div').forEach(sec => sec.classList.add('hidden'));
-            // Mostra la sezione richiesta
-            document.getElementById(sectionId).classList.remove('hidden');
-
-            // Aggiorna lo stato attivo della navigazione
-            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`nav-${sectionId.replace('-section', '')}`).classList.add('active');
-
-            // Ricarica i dati solo quando necessario
-            if (sectionId === 'orders-list-section') {
-                renderActiveOrders();
-            } else if (sectionId === 'settings-section') {
-                renderSettings();
-            }
-        }
-
-        function changeOrderStatus(orderId) {
-            const orderIndex = activeOrders.findIndex(o => o.id === orderId);
-            if (orderIndex === -1) return;
-
-            const statuses = ["In preparazione", "Pronto / In Consegna", "Completato"];
-            const currentStatus = activeOrders[orderIndex].status;
-            let nextStatusIndex = statuses.indexOf(currentStatus) + 1;
-
-            if (nextStatusIndex < statuses.length) {
-                activeOrders[orderIndex].status = statuses[nextStatusIndex];
-            }
-            
-            saveData();
-            renderActiveOrders(); // Ricarica la lista
-        }
-
-        function deleteOrder(orderId) {
-            activeOrders = activeOrders.filter(o => o.id !== orderId);
-            saveData();
-            renderActiveOrders();
-        }
-
-        // Funzioni Impostazioni
-        function addMenuItem(type, name, price) {
-            if (menu[type] && name && price) {
-                menu[type].push({ nome: name, prezzo: parseFloat(price) });
-                saveData();
-                renderSettings();
-                alert(`Prodotto "${name}" aggiunto a ${type.toUpperCase()}`);
-            }
-        }
-
-        function deleteMenuItem(category, index) {
-            if (confirm(`Sei sicuro di voler eliminare "${menu[category][index].nome}"?`)) {
-                menu[category].splice(index, 1);
-                saveData();
-                renderSettings();
-                renderProducts(document.querySelector('.menu-btn.active-category').dataset.category); // Ricarica il menu
-            }
-        }
-
-        function addFattorino(name) {
-            if (name && !fattorini.includes(name)) {
-                fattorini.push(name);
-                saveData();
-                renderSettings();
-                renderFattorini(); // Aggiorna anche la select
-                alert(`Fattorino "${name}" aggiunto.`);
-            }
-        }
-
-        function deleteFattorino(index) {
-            if (confirm(`Sei sicuro di voler eliminare il fattorino "${fattorini[index]}"?`)) {
-                fattorini.splice(index, 1);
-                saveData();
-                renderSettings();
-                renderFattorini(); // Aggiorna anche la select
-            }
-        }
-
-
-        // ---------------------- Event Listeners ----------------------
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            
-            // Attiva la prima categoria di default e la renderizza
-            const defaultCategoryBtn = document.querySelector('.menu-btn[data-category="pizze"]');
-            if (defaultCategoryBtn) {
-                defaultCategoryBtn.classList.add('active-category');
-                renderProducts('pizze'); 
-            }
-            
-            renderFattorini();
-            switchSection('order-entry-section'); // Sezione di default
-
-            // Navigazione
-            document.getElementById('nav-order-entry').addEventListener('click', () => switchSection('order-entry-section'));
-            document.getElementById('nav-orders-list').addEventListener('click', () => switchSection('orders-list-section'));
-            document.getElementById('nav-settings').addEventListener('click', () => switchSection('settings-section'));
-
-            // Selezione Categoria Menu
-            document.querySelectorAll('.menu-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active-category'));
-                    e.currentTarget.classList.add('active-category');
-                    renderProducts(e.currentTarget.dataset.category);
-                });
-            });
-
-            // Pulsante "Finalizza Ordine"
-            document.getElementById('finalize-order-btn').addEventListener('click', () => {
-                if (currentOrder.length === 0) {
-                    alert("L'ordine è vuoto! Inserisci almeno un prodotto.");
-                    return;
-                }
-                document.getElementById('order-entry-section').classList.add('hidden');
-                document.getElementById('order-details-section').classList.remove('hidden');
-                document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden')); // Nasconde i campi
-                
-                // Clicca sul pulsante "Consegna" di default per mostrare i campi
-                document.querySelector('.mode-btn[data-mode="consegna"]').click();
-            });
-
-            // Selezione Modalità
-            document.querySelectorAll('.mode-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active-mode'));
-                    e.currentTarget.classList.add('active-mode');
-                    document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden'));
-                    
-                    const mode = e.currentTarget.dataset.mode;
-                    // Rende i campi obbligatori a seconda della modalità
-                    document.querySelectorAll('#order-form input, #order-form select').forEach(input => input.removeAttribute('required'));
-
-                    if (mode === 'consegna') {
-                        document.getElementById('delivery-data').classList.remove('hidden');
-                        document.getElementById('consegna-nome').setAttribute('required', 'required');
-                        document.getElementById('consegna-indirizzo').setAttribute('required', 'required');
-                        document.getElementById('consegna-telefono').setAttribute('required', 'required');
-                        document.getElementById('fattorino-select').setAttribute('required', 'required');
-                    } else if (mode === 'asporto') {
-                        document.getElementById('takeaway-data').classList.remove('hidden');
-                        document.getElementById('asporto-nome').setAttribute('required', 'required');
-                        document.getElementById('asporto-telefono').setAttribute('required', 'required');
-                        document.getElementById('asporto-ora').setAttribute('required', 'required');
-                    } else if (mode === 'banco') {
-                        document.getElementById('counter-data').classList.remove('hidden');
-                        document.getElementById('banco-cognome').setAttribute('required', 'required');
-                        document.getElementById('banco-ora').setAttribute('required', 'required');
-                    }
-                });
-            });
-            // ATTENZIONE: l'attivazione della modalità predefinita è stata spostata nel gestore di "Finalizza Ordine"
-
-            // Invio Ordine (Form principale)
-            document.getElementById('order-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                
-                const selectedModeBtn = document.querySelector('.mode-btn.active-mode');
-                if (!selectedModeBtn) {
-                    alert("Errore: Seleziona una modalità di consegna/ritiro.");
-                    return;
-                }
-                const mode = selectedModeBtn.dataset.mode;
-                let orderData = {};
-                
-                // Raccogli i dati in base alla modalità
-                if (mode === 'consegna') {
-                    orderData = {
-                        nome: document.getElementById('consegna-nome').value,
-                        indirizzo: document.getElementById('consegna-indirizzo').value,
-                        telefono: document.getElementById('consegna-telefono').value,
-                        fattorino: document.getElementById('fattorino-select').value
-                    };
-                } else if (mode === 'asporto') {
-                    orderData = {
-                        nome: document.getElementById('asporto-nome').value,
-                        telefono: document.getElementById('asporto-telefono').value,
-                        ora: document.getElementById('asporto-ora').value
-                    };
-                } else if (mode === 'banco') {
-                    orderData = {
-                        cognome: document.getElementById('banco-cognome').value,
-                        ora: document.getElementById('banco-ora').value
-                    };
-                }
-
-                const total = currentOrder.reduce((sum, item) => sum + item.prezzo, 0);
-
-                // Crea il nuovo ordine
-                const newOrder = {
-                    id: orderCounter++,
-                    mode: mode,
-                    items: [...currentOrder],
-                    data: orderData,
-                    total: total,
-                    status: "In preparazione" // Stato iniziale
-                };
-
-                activeOrders.push(newOrder);
-                saveData();
-
-                alert(`Ordine #${newOrder.id} (${mode}) confermato! Totale: €${total.toFixed(2)}`);
-
-                // Resetta l'interfaccia
-                currentOrder = [];
-                renderCurrentOrder();
-                document.getElementById('order-form').reset();
-                switchSection('orders-list-section'); // Vai alla lista degli ordini
-            });
-
-            // Gestione Aggiunta Prodotto (Impostazioni)
-            document.getElementById('add-product-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const type = document.getElementById('product-type-select').value;
-                const name = document.getElementById('product-name').value;
-                const price = document.getElementById('product-price').value;
-                addMenuItem(type, name, price);
-                e.target.reset();
-            });
-
-            // Gestione Aggiunta Fattorino (Impostazioni)
-            document.getElementById('add-driver-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const name = document.getElementById('driver-name').value;
-                addFattorino(name);
-                e.target.reset();
-            });
-        });
-    </script>
+// ------- Menu demo per la griglia ---------
+const menu = {
+  pizze:[
+    {nome:"Margherita", prezzo:5},
+    {nome:"Diavola", prezzo:7.5}
+  ],
+  bibite:[
+    {nome:"Acqua", prezzo:1},
+    {nome:"Coca-Cola", prezzo:2.5}
+  ],
+  aggiunte:[
+    {nome:"Mozzarella extra", prezzo:1},
+    {nome:"Funghi", prezzo:1.2}
+  ]
+};
+let currentCat = 'pizze';
+function renderProducts(cat){
+  currentCat = cat;
+  const list = document.getElementById('products-list');
+  list.innerHTML='';
+  menu[cat].forEach(item=>{
+    const d=document.createElement('div');
+    d.className='product-item';
+    d.innerHTML=`<strong>${item.nome}</strong><p>€${item.prezzo.toFixed(2)}</p>`;
+    list.appendChild(d);
+  });
+}
+document.querySelectorAll('.menu-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.menu-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    renderProducts(b.dataset.cat);
+  });
+});
+renderProducts('pizze');
+</script>
 </body>
 </html>
