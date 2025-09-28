@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato</title>
+    <title>Gestionale Pizzeria Avanzato (v4)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -115,6 +115,18 @@
             border-radius: 5px;
             box-sizing: border-box;
         }
+        
+        .form-group-inline {
+            display: flex;
+            align-items: center;
+            margin: 5px 0 10px 0;
+        }
+
+        .form-group-inline label {
+            margin-left: 10px;
+            font-size: 1em;
+            font-weight: normal;
+        }
 
         /* Stili specifici per l'inserimento ordine */
         .category-menu, .delivery-mode-selection {
@@ -185,12 +197,13 @@
             justify-content: space-between;
         }
 
-        /* Stili per le modifiche (nuova integrazione) */
+        /* Stili per le modifiche (modificatori) */
         .modification-row {
             display: grid;
-            grid-template-columns: 1fr repeat(4, auto); /* Nome + 4 pulsanti */
+            grid-template-columns: 1fr repeat(5, auto); /* Nome + 5 pulsanti (Più, Senza, Poco, Abbondante, Elimina) */
             align-items: center;
-            gap: 5px;
+            gap: 3px;
+            padding: 5px 0;
         }
         
         .modification-row span:first-child {
@@ -199,7 +212,7 @@
 
         .modifier-btn {
             background-color: #17a2b8; /* Blu per modificatori */
-            padding: 5px 8px;
+            padding: 5px 5px;
             font-size: 0.7em;
             width: auto;
             margin: 2px 0;
@@ -207,8 +220,14 @@
         
         .delete-mod-btn {
             background-color: #e31b23;
-            padding: 5px 8px;
+            padding: 5px 5px;
         }
+        
+        /* Modifiche per i pulsanti Più/Senza/Poco/Abbondante */
+        .modifier-btn[data-mod="Più"] { background-color: #28a745; }
+        .modifier-btn[data-mod="Senza"] { background-color: #6c757d; }
+        .modifier-btn[data-mod="Poco"] { background-color: #ffc107; color: #333; }
+        .modifier-btn[data-mod="Abbondante"] { background-color: #007bff; }
 
         .modifier-text {
             display: block;
@@ -258,12 +277,13 @@
         .order-card .fattorino-assign select {
             width: 70%;
             margin: 0 5px 0 10px;
+            padding: 8px;
         }
         
-        .order-card .fattorino-assign button {
+        .order-card .fattorino-assign label {
             width: 30%;
-            padding: 8px 5px;
-            font-size: 0.8em;
+            font-size: 0.9em;
+            font-weight: bold;
         }
 
         .order-card ul {
@@ -350,9 +370,18 @@
             <form id="order-form">
                 <div id="delivery-data" class="mode-data hidden">
                     <h3>Dati Consegna a Domicilio</h3>
-                    <input type="text" id="consegna-nome" placeholder="Nome e Cognome" required>
-                    <input type="text" id="consegna-indirizzo" placeholder="Indirizzo" required>
-                    <input type="tel" id="consegna-telefono" placeholder="Telefono" required>
+                    <input type="text" id="consegna-nome" placeholder="Nome" required>
+                    <input type="text" id="consegna-cognome" placeholder="Cognome" required>
+                    <input type="text" id="consegna-via" placeholder="Via/Indirizzo" required>
+                    <input type="text" id="consegna-numero" placeholder="Numero Civico" required>
+                    <input type="text" id="consegna-paese" placeholder="Paese/Città" required>
+                    <input type="tel" id="consegna-telefono" placeholder="Numero di Telefono" required>
+                    <label for="consegna-ora">Ora di Consegna Preferita:</label>
+                    <input type="time" id="consegna-ora" required>
+                    <div class="form-group-inline">
+                        <input type="checkbox" id="consegna-tagliate" style="width: auto;" value="si">
+                        <label for="consegna-tagliate">Le pizze devono essere tagliate</label>
+                    </div>
                     <select id="fattorino-select" required>
                         <option value="">Seleziona Fattorino</option>
                         </select>
@@ -360,10 +389,15 @@
 
                 <div id="takeaway-data" class="mode-data hidden">
                     <h3>Dati Asporto</h3>
-                    <input type="text" id="asporto-nome" placeholder="Nome e Cognome" required>
-                    <input type="tel" id="asporto-telefono" placeholder="Telefono" required>
+                    <input type="text" id="asporto-nome" placeholder="Nome" required>
+                    <input type="text" id="asporto-cognome" placeholder="Cognome" required>
+                    <input type="tel" id="asporto-telefono" placeholder="Numero di Telefono" required>
                     <label for="asporto-ora">Ora ritiro:</label>
                     <input type="time" id="asporto-ora" required>
+                    <div class="form-group-inline">
+                        <input type="checkbox" id="asporto-tagliate" style="width: auto;" value="si">
+                        <label for="asporto-tagliate">Le pizze devono essere tagliate</label>
+                    </div>
                 </div>
 
                 <div id="counter-data" class="mode-data hidden">
@@ -429,7 +463,7 @@
             </div>
 
             <div id="modification-order-details">
-                <h3>Ordine Attuale</h3>
+                <h3>Ordine Attuale (usa i pulsanti per modificare le aggiunte)</h3>
                 <ul id="modification-items-list">
                     </ul>
                 <div id="modification-total-price">Totale: €0.00</div>
@@ -467,9 +501,9 @@
         let currentOrder = [];
         let activeOrders = [];
         let orderCounter = 1; 
-        let currentModifyingOrder = null; // ID dell'ordine in modifica
+        let currentModifyingOrder = null; 
 
-        // ---------------------- Funzioni di Caricamento/Salvataggio (Simulazione DB) ----------------------
+        // ---------------------- Funzioni di Caricamento/Salvataggio ----------------------
         function loadData() {
             const savedMenu = localStorage.getItem('pizzeriaMenu');
             if (savedMenu) menu = JSON.parse(savedMenu);
@@ -493,7 +527,6 @@
 
         // ---------------------- Funzioni di Rendering ----------------------
 
-        // Renderizza i prodotti per la creazione ordine (Usato anche per la modifica)
         function renderProducts(category, listId, handler, className) {
             const list = document.getElementById(listId);
             list.innerHTML = '';
@@ -512,7 +545,7 @@
             });
         }
 
-        // 2. Renderizza gli elementi nell'ordine corrente (Nuovi Modificatori)
+        // Renderizza l'ordine con i NUOVI modificatori Più, Senza, Poco, Abbondante
         function renderCurrentOrder(orderList, totalPriceDiv, orderArray, allowModification) {
             orderList.innerHTML = '';
             let total = 0;
@@ -524,18 +557,17 @@
                 li.style.borderBottom = '1px dotted #eee';
                 
                 if (allowModification) {
-                    // Visualizzazione con Modificatori (per la Modifica e l'Inserimento)
                     const modifier = item.modifier || "";
                     li.className = 'modification-row';
                     li.innerHTML = `
                         <span>${item.nome} <span class="modifier-text">${modifier}</span></span>
-                        <button class="modifier-btn" data-index="${index}" data-mod="Meno"><i class="fas fa-minus"></i> Meno</button>
+                        <button class="modifier-btn" data-index="${index}" data-mod="Più"><i class="fas fa-plus-circle"></i> Più</button>
+                        <button class="modifier-btn" data-index="${index}" data-mod="Senza"><i class="fas fa-ban"></i> Senza</button>
                         <button class="modifier-btn" data-index="${index}" data-mod="Poco"><i class="fas fa-pepper-hot"></i> Poco</button>
-                        <button class="modifier-btn" data-index="${index}" data-mod="Abbondante"><i class="fas fa-plus"></i> Abbondante</button>
+                        <button class="modifier-btn" data-index="${index}" data-mod="Abbondante"><i class="fas fa-pizza-slice"></i> Abbondante</button>
                         <button class="delete-mod-btn" data-index="${index}" data-mod="Elimina"><i class="fas fa-trash-alt"></i></button>
                     `;
                 } else {
-                    // Visualizzazione Semplice (per la Finalizzazione)
                     const modifier = item.modifier ? ` (${item.modifier})` : "";
                     li.innerHTML = `
                         <span>${item.nome}${modifier}</span>
@@ -550,7 +582,6 @@
 
             totalPriceDiv.textContent = `Totale: €${total.toFixed(2)}`;
 
-            // Listener per la rimozione/modifica se non siamo in modalità di modifica
             if (!allowModification) {
                 document.querySelectorAll('.remove-item-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
@@ -558,7 +589,7 @@
                     });
                 });
             } else {
-                // Listener per i pulsanti Meno/Poco/Abbondante/Elimina
+                // Listener per i pulsanti Più/Senza/Poco/Abbondante/Elimina nel modal di modifica
                 document.querySelectorAll('#modification-items-list .modifier-btn, #modification-items-list .delete-mod-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         handleModificationItemChange(parseInt(e.currentTarget.dataset.index), e.currentTarget.dataset.mod);
@@ -567,17 +598,15 @@
             }
         }
 
-        // Wrapper per l'ordine in creazione (semplice)
         function renderMainOrder() {
              renderCurrentOrder(
                 document.getElementById('order-items-list'),
                 document.getElementById('total-price'),
                 currentOrder,
-                false // Nessun modificatore Meno/Poco/Abbondante nella prima schermata
+                false 
             );
         }
 
-        // Wrapper per l'ordine in modifica (con modificatori)
         function renderModificationOrder() {
             if (!currentModifyingOrder) return;
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
@@ -587,12 +616,10 @@
                 document.getElementById('modification-items-list'),
                 document.getElementById('modification-total-price'),
                 activeOrders[orderIndex].items,
-                true // Abilita i modificatori Meno/Poco/Abbondante/Elimina
+                true 
             );
         }
 
-
-        // 3. Renderizza i fattorini nella dropdown di consegna
         function renderFattorini() {
             const select = document.getElementById('fattorino-select');
             select.innerHTML = '<option value="">Seleziona Fattorino</option>';
@@ -604,12 +631,10 @@
             });
         }
 
-        // 4. Renderizza gli ordini attivi
         function renderActiveOrders() {
             const container = document.getElementById('active-orders-container');
             container.innerHTML = '';
             
-            // Dati per la dropdown del fattorino in ogni card
             const fattoriniOptions = fattorini.map(f => `<option value="${f}">${f}</option>`).join('');
 
             activeOrders.forEach(order => {
@@ -618,13 +643,14 @@
                 
                 let details = '';
                 let clientName = '';
+                let notes = '';
                 let fattorinoControl = '';
 
                 if (order.mode === 'consegna') {
-                    clientName = order.data.nome;
-                    details = `Indirizzo: ${order.data.indirizzo}`;
+                    clientName = `${order.data.nome} ${order.data.cognome}`;
+                    details = `Indirizzo: ${order.data.via}, ${order.data.numero} - ${order.data.paese}<br>Tel: ${order.data.telefono} | Ora: ${order.data.ora}`;
+                    notes = order.data.tagliate === 'si' ? '<p style="color:#a01319; font-weight: bold;">[NOTE: Pizze Tagliate]</p>' : '';
                     
-                    // Menu a tendina per il fattorino
                     fattorinoControl = `
                         <div class="fattorino-assign">
                             <label>Fattorino:</label>
@@ -635,8 +661,9 @@
                         </div>
                     `;
                 } else if (order.mode === 'asporto') {
-                    clientName = order.data.nome;
-                    details = `Ora Ritiro: ${order.data.ora}`;
+                    clientName = `${order.data.nome} ${order.data.cognome}`;
+                    details = `Ora Ritiro: ${order.data.ora}<br>Tel: ${order.data.telefono}`;
+                    notes = order.data.tagliate === 'si' ? '<p style="color:#a01319; font-weight: bold;">[NOTE: Pizze Tagliate]</p>' : '';
                 } else if (order.mode === 'banco') {
                     clientName = order.data.cognome;
                     details = `Ora: ${order.data.ora}`;
@@ -651,6 +678,7 @@
                     <h4>Ordine #${order.id} - ${order.mode.toUpperCase()} (${clientName})</h4>
                     <p><strong>Totale: €${order.total.toFixed(2)}</strong></p>
                     <p>${details}</p>
+                    ${notes}
                     ${fattorinoControl}
                     <ul>${itemsList}</ul>
                     <p>Stato: <strong>${order.status}</strong></p>
@@ -663,28 +691,24 @@
                 `;
                 container.appendChild(card);
                 
-                // Imposta il fattorino attuale
                 if (order.mode === 'consegna' && order.data.fattorino) {
                     const selectElement = card.querySelector(`.fattorino-select-list`);
                     if (selectElement) selectElement.value = order.data.fattorino;
                 }
             });
 
-            // Aggiunge listener per il cambio fattorino
             document.querySelectorAll('.fattorino-select-list').forEach(select => {
                 select.addEventListener('change', (e) => {
                     changeFattorino(parseInt(e.currentTarget.dataset.id), e.currentTarget.value);
                 });
             });
 
-            // Aggiunge listener per la modifica
             document.querySelectorAll('.modify-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     openModificationModal(parseInt(e.currentTarget.dataset.id));
                 });
             });
 
-            // Aggiunge listener per i pulsanti di stato e eliminazione
             document.querySelectorAll('.status-btn[data-action="next"]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     changeOrderStatus(parseInt(e.currentTarget.dataset.id));
@@ -698,17 +722,55 @@
                 });
             });
         }
+        
+        // La funzione renderSettings gestisce già l'eliminazione delle 'aggiunte'
+        function renderSettings() {
+            const menuDisplay = document.getElementById('current-menu-display');
+            const driversDisplay = document.getElementById('current-drivers-display');
+            menuDisplay.innerHTML = '<h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>';
+            driversDisplay.innerHTML = '<h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>';
+
+            ['pizze', 'bibite', 'aggiunte'].forEach(category => {
+                menuDisplay.innerHTML += `<h5>**${category.toUpperCase()}**</h5>`;
+                menu[category].forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <span>${item.nome} - €${item.prezzo.toFixed(2)}</span>
+                        <span class="delete-item-btn" data-category="${category}" data-index="${index}"><i class="fas fa-times-circle"></i></span>
+                    `;
+                    menuDisplay.appendChild(div);
+                });
+            });
+
+            fattorini.forEach((driver, index) => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <span>${driver}</span>
+                    <span class="delete-item-btn" data-type="fattorino" data-index="${index}"><i class="fas fa-times-circle"></i></span>
+                `;
+                driversDisplay.appendChild(div);
+            });
+
+            document.querySelectorAll('.delete-item-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    if (e.currentTarget.dataset.type === 'fattorino') {
+                        deleteFattorino(index);
+                    } else {
+                        deleteMenuItem(e.currentTarget.dataset.category, index);
+                    }
+                });
+            });
+        }
 
         // ---------------------- Funzioni di Logica ----------------------
 
         function addItemToOrder(name, price) {
-            // Aggiunge un item all'ordine in creazione
             currentOrder.push({ nome: name, prezzo: parseFloat(price), modifier: "" });
             renderMainOrder();
         }
 
         function removeItemFromOrder(index) {
-            // Rimuove un item dall'ordine in creazione
             currentOrder.splice(index, 1);
             renderMainOrder();
         }
@@ -719,11 +781,8 @@
             
             activeOrders[orderIndex].data.fattorino = newFattorino;
             saveData();
-            // Non ricaricare la lista, aggiornamento visivo già avvenuto con l'evento change
-            alert(`Fattorino per Ordine #${orderId} assegnato a ${newFattorino || 'Nessuno'}`);
         }
 
-        // Logica di modifica item nel modal di modifica
         function handleModificationItemChange(index, action) {
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
             if (orderIndex === -1) return;
@@ -732,28 +791,30 @@
 
             if (action === 'Elimina') {
                 orderItems.splice(index, 1);
+            } else if (action === 'Più') {
+                // Se l'azione è Più, non è un modificatore, ma un duplicato con modificatore vuoto
+                // Per simulare "Più" come nell'esempio, aggiungo un duplicato dell'oggetto.
+                // Se invece 'Più' è inteso come modificatore di quantità, mantengo il testo.
+                orderItems[index].modifier = action; 
+            } else if (action === orderItems[index].modifier) {
+                 // Cliccare due volte sullo stesso modificatore lo resetta
+                orderItems[index].modifier = "";
             } else {
-                // Imposta il modificatore Meno/Poco/Abbondante
                 orderItems[index].modifier = action;
             }
             
-            // Ricalcola il totale
             activeOrders[orderIndex].total = orderItems.reduce((sum, item) => sum + item.prezzo, 0);
 
             renderModificationOrder();
         }
 
         function switchSection(sectionId) {
-            // Nascondi tutte le sezioni
             document.querySelectorAll('#main-content > div').forEach(sec => sec.classList.add('hidden'));
-            // Mostra la sezione richiesta
             document.getElementById(sectionId).classList.remove('hidden');
 
-            // Aggiorna lo stato attivo della navigazione
             document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`nav-${sectionId.replace('-section', '')}`).classList.add('active');
 
-            // Ricarica i dati solo quando necessario
             if (sectionId === 'orders-list-section') {
                 renderActiveOrders();
             } else if (sectionId === 'settings-section') {
@@ -774,7 +835,7 @@
             }
             
             saveData();
-            renderActiveOrders(); // Ricarica la lista
+            renderActiveOrders(); 
         }
 
         function deleteOrder(orderId) {
@@ -783,7 +844,48 @@
             renderActiveOrders();
         }
         
-        // Logica Modifica Ordine (Apertura/Chiusura Modal)
+        function addMenuItem(type, name, price) {
+            if (menu[type] && name && price) {
+                menu[type].push({ nome: name, prezzo: parseFloat(price) });
+                saveData();
+                renderSettings();
+                alert(`Prodotto "${name}" aggiunto a ${type.toUpperCase()}`);
+            }
+        }
+
+        function deleteMenuItem(category, index) {
+            if (confirm(`Sei sicuro di voler eliminare "${menu[category][index].nome}"?`)) {
+                menu[category].splice(index, 1);
+                saveData();
+                renderSettings();
+                // Ricarica la lista prodotti se la categoria attiva è quella modificata
+                const activeCategoryBtn = document.querySelector('.menu-btn.active-category:not(.mod-menu-btn)');
+                if (activeCategoryBtn && activeCategoryBtn.dataset.category === category) {
+                    renderProducts(category, 'products-list', addItemToOrder, 'product-item'); 
+                }
+            }
+        }
+
+        function addFattorino(name) {
+            if (name && !fattorini.includes(name)) {
+                fattorini.push(name);
+                saveData();
+                renderSettings();
+                renderFattorini();
+                alert(`Fattorino "${name}" aggiunto.`);
+            }
+        }
+
+        function deleteFattorino(index) {
+            if (confirm(`Sei sicuro di voler eliminare il fattorino "${fattorini[index]}"?`)) {
+                fattorini.splice(index, 1);
+                saveData();
+                renderSettings();
+                renderFattorini();
+            }
+        }
+
+        // Logica Modifica Ordine
         function openModificationModal(orderId) {
             const orderIndex = activeOrders.findIndex(o => o.id === orderId);
             if (orderIndex === -1) return;
@@ -791,10 +893,8 @@
             currentModifyingOrder = orderId;
             document.getElementById('mod-order-id').textContent = orderId;
             
-            // Renderizza l'ordine attuale nel modal
             renderModificationOrder();
             
-            // Renderizza i prodotti per l'aggiunta rapida (Pizze di default)
             renderProducts('pizze', 'modification-products-list', addModificationItem, 'product-item');
             document.querySelectorAll('.mod-menu-btn').forEach(b => b.classList.remove('active-category'));
             document.querySelector('.mod-menu-btn[data-category="pizze"]').classList.add('active-category');
@@ -803,10 +903,10 @@
         }
 
         function addModificationItem(name, price) {
-            // Aggiunge un item all'ordine in modifica
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
             if (orderIndex === -1) return;
 
+            // Uso "Più" per aggiungere un duplicato come richiesto dal pulsante
             activeOrders[orderIndex].items.push({ nome: name, prezzo: parseFloat(price), modifier: "" });
             activeOrders[orderIndex].total = activeOrders[orderIndex].items.reduce((sum, item) => sum + item.prezzo, 0);
 
@@ -815,20 +915,18 @@
 
         function saveModification() {
             if (currentModifyingOrder) {
-                // I dati sono già stati aggiornati in memoria (activeOrders) tramite handleModificationItemChange
                 saveData();
                 alert(`Ordine #${currentModifyingOrder} modificato con successo!`);
             }
             
-            // Chiudi e aggiorna la lista degli ordini
             document.getElementById('modification-modal').classList.add('hidden');
             currentModifyingOrder = null;
             renderActiveOrders();
         }
         
         function cancelModification() {
-            // Ricarica i dati salvati per annullare le modifiche fatte
-            loadData();
+            // Ricarica i dati per annullare le modifiche non salvate
+            loadData(); 
             document.getElementById('modification-modal').classList.add('hidden');
             currentModifyingOrder = null;
             renderActiveOrders();
@@ -838,7 +936,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
             
-            // Configurazione iniziale menu e navigazione
             const defaultCategoryBtn = document.querySelector('.menu-btn[data-category="pizze"]:not(.mod-menu-btn)');
             if (defaultCategoryBtn) {
                 defaultCategoryBtn.classList.add('active-category');
@@ -846,15 +943,13 @@
             }
             
             renderFattorini();
-            renderMainOrder(); // Render iniziale ordine in creazione
-            switchSection('order-entry-section'); // Sezione di default
+            renderMainOrder(); 
+            switchSection('order-entry-section'); 
 
-            // Navigazione
             document.getElementById('nav-order-entry').addEventListener('click', () => switchSection('order-entry-section'));
             document.getElementById('nav-orders-list').addEventListener('click', () => switchSection('orders-list-section'));
             document.getElementById('nav-settings').addEventListener('click', () => switchSection('settings-section'));
 
-            // Selezione Categoria Menu (Inserimento Ordine Principale)
             document.querySelectorAll('.menu-btn:not(.mod-menu-btn)').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     document.querySelectorAll('.menu-btn:not(.mod-menu-btn)').forEach(b => b.classList.remove('active-category'));
@@ -863,7 +958,6 @@
                 });
             });
             
-            // Selezione Categoria Menu (Modal Modifica)
             document.querySelectorAll('.mod-menu-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     document.querySelectorAll('.mod-menu-btn').forEach(b => b.classList.remove('active-category'));
@@ -872,11 +966,9 @@
                 });
             });
 
-            // Gestione Modal Modifica
             document.getElementById('save-modification-btn').addEventListener('click', saveModification);
             document.getElementById('cancel-modification-btn').addEventListener('click', cancelModification);
             
-            // Pulsante "Finalizza Ordine" e gestione form (Logica già inclusa dal codice precedente)
             document.getElementById('finalize-order-btn').addEventListener('click', () => {
                 if (currentOrder.length === 0) {
                     alert("L'ordine è vuoto! Inserisci almeno un prodotto.");
@@ -888,7 +980,43 @@
                 document.querySelector('.mode-btn[data-mode="consegna"]').click();
             });
 
-            // Invio Ordine (Form principale)
+            // Selezione Modalità 
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active-mode'));
+                    e.currentTarget.classList.add('active-mode');
+                    
+                    // Rimuovi 'required' da tutti i campi prima di settare quelli giusti
+                    document.querySelectorAll('.mode-data input, .mode-data select').forEach(input => input.removeAttribute('required'));
+                    document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden')); 
+                    
+                    const mode = e.currentTarget.dataset.mode;
+
+                    if (mode === 'consegna') {
+                        document.getElementById('delivery-data').classList.remove('hidden');
+                        document.getElementById('consegna-nome').setAttribute('required', 'required');
+                        document.getElementById('consegna-cognome').setAttribute('required', 'required');
+                        document.getElementById('consegna-via').setAttribute('required', 'required');
+                        document.getElementById('consegna-numero').setAttribute('required', 'required');
+                        document.getElementById('consegna-paese').setAttribute('required', 'required');
+                        document.getElementById('consegna-telefono').setAttribute('required', 'required');
+                        document.getElementById('consegna-ora').setAttribute('required', 'required');
+                        document.getElementById('fattorino-select').setAttribute('required', 'required');
+                    } else if (mode === 'asporto') {
+                        document.getElementById('takeaway-data').classList.remove('hidden');
+                        document.getElementById('asporto-nome').setAttribute('required', 'required');
+                        document.getElementById('asporto-cognome').setAttribute('required', 'required');
+                        document.getElementById('asporto-telefono').setAttribute('required', 'required');
+                        document.getElementById('asporto-ora').setAttribute('required', 'required');
+                    } else if (mode === 'banco') {
+                        document.getElementById('counter-data').classList.remove('hidden');
+                        document.getElementById('banco-cognome').setAttribute('required', 'required');
+                        document.getElementById('banco-ora').setAttribute('required', 'required');
+                    }
+                });
+            });
+
+            // Invio Ordine (Form principale) - Logica AGGIORNATA
             document.getElementById('order-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 
@@ -900,19 +1028,25 @@
                 const mode = selectedModeBtn.dataset.mode;
                 let orderData = {};
                 
-                // Raccogli i dati in base alla modalità
                 if (mode === 'consegna') {
                     orderData = {
                         nome: document.getElementById('consegna-nome').value,
-                        indirizzo: document.getElementById('consegna-indirizzo').value,
+                        cognome: document.getElementById('consegna-cognome').value, 
+                        via: document.getElementById('consegna-via').value, 
+                        numero: document.getElementById('consegna-numero').value, 
+                        paese: document.getElementById('consegna-paese').value, 
                         telefono: document.getElementById('consegna-telefono').value,
+                        ora: document.getElementById('consegna-ora').value,
+                        tagliate: document.getElementById('consegna-tagliate').checked ? 'si' : 'no',
                         fattorino: document.getElementById('fattorino-select').value
                     };
                 } else if (mode === 'asporto') {
                     orderData = {
                         nome: document.getElementById('asporto-nome').value,
+                        cognome: document.getElementById('asporto-cognome').value,
                         telefono: document.getElementById('asporto-telefono').value,
-                        ora: document.getElementById('asporto-ora').value
+                        ora: document.getElementById('asporto-ora').value,
+                        tagliate: document.getElementById('asporto-tagliate').checked ? 'si' : 'no'
                     };
                 } else if (mode === 'banco') {
                     orderData = {
@@ -937,14 +1071,12 @@
 
                 alert(`Ordine #${newOrder.id} (${mode}) confermato! Totale: €${total.toFixed(2)}`);
 
-                // Resetta l'interfaccia
                 currentOrder = [];
                 renderMainOrder();
                 document.getElementById('order-form').reset();
                 switchSection('orders-list-section'); 
             });
 
-            // Gestione Aggiunta Prodotto (Impostazioni)
             document.getElementById('add-product-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const type = document.getElementById('product-type-select').value;
@@ -954,7 +1086,6 @@
                 e.target.reset();
             });
 
-            // Gestione Aggiunta Fattorino (Impostazioni)
             document.getElementById('add-driver-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const name = document.getElementById('driver-name').value;
