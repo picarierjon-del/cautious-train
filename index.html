@@ -1,232 +1,287 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestionale Pizzeria – SmartApp</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SmartApp Pizzeria – Full</title>
+<meta name="theme-color" content="#0b1223">
 <style>
-/* === Base === */
-body {
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  background:#f4f4f9;
-  color:#333;
-  padding-bottom:60px; /* spazio per la tabbar */
-}
-h1,h2,h3{margin:0 0 .5em}
-h2{color:#e31b23;border-bottom:2px solid #e31b23;padding-bottom:4px}
-button{cursor:pointer}
+  :root{--bg:#0b1223;--panel:#0f172a;--ring:rgba(255,255,255,.1);--ink:#f1f5f9;--accent:#e31b23;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto}
+  h2{margin:0 0 8px;font-size:1.2rem;color:var(--accent)}
 
-/* === Sezioni principali === */
-.page{padding:16px}
-.page.hidden{display:none}
+  header{position:fixed;top:0;left:0;right:0;background:#111827;border-bottom:1px solid var(--ring);
+         padding:12px 16px;font-weight:700;z-index:30;text-align:center}
 
-/* === Inserimento ordine (smart grid) === */
-.category-menu{display:flex;gap:6px;margin-bottom:10px}
-.category-menu button{
-  flex:1; background:#555; color:#fff; border:none;
-  padding:8px; border-radius:6px; font-size:14px;
-}
-.category-menu button.active{background:#e31b23}
-#products-list{
-  display:grid; gap:8px;
-  grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
-}
-.product-item{
-  background:#fff; border:1px solid #ddd; border-radius:8px;
-  text-align:center; padding:10px 5px; font-size:.9em;
-  box-shadow:0 1px 3px rgba(0,0,0,.05);
-}
-.product-item:hover{background:#ffe8e8}
-#current-order{
-  background:#fff; border:1px solid #ddd; border-radius:8px;
-  padding:12px; margin-top:12px;
-}
-#order-items-list{list-style:none;margin:0;padding:0}
-#order-items-list li{
-  display:flex; justify-content:space-between;
-  border-bottom:1px dotted #eee; padding:4px 0; font-size:.9em;
-}
-.remove-item-btn{background:none;border:none;color:#e31b23;font-size:1.1em}
+  main{padding:70px 10px 80px;max-width:1100px;margin:auto}
+  section{margin-bottom:30px}
 
-/* === Dettaglio Ordine === */
-.delivery-modes{display:flex;gap:6px;margin:10px 0}
-.delivery-modes button{
-  flex:1; padding:8px; border:none;
-  background:#ccc; border-radius:6px;
-}
-.delivery-modes button.active{background:#e31b23;color:#fff}
-.mode-fields{display:none;margin-bottom:12px}
-.mode-fields.active{display:block}
-.mode-fields input{width:100%;padding:8px;margin:4px 0;border:1px solid #ccc;border-radius:6px}
+  nav{position:fixed;bottom:0;left:0;right:0;background:#111827;border-top:1px solid var(--ring);
+      display:flex;justify-content:space-around;padding:6px 0;z-index:40}
+  nav button{flex:1;background:none;border:none;color:#9ca3af;font-size:.9rem;padding:6px 0;cursor:pointer}
+  nav button.active{color:var(--accent);font-weight:600}
 
-/* === Lista ordini attivi === */
-#active-orders .order-card{
-  background:#fff; border:1px solid #ddd; border-radius:8px;
-  padding:12px; margin-bottom:10px;
-  box-shadow:0 1px 3px rgba(0,0,0,.05);
-}
-.order-card h4{margin-top:0;color:#e31b23}
+  .topbar,.bottombar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .btn{flex:1 1 auto;padding:8px 10px;border:none;border-radius:10px;color:#fff;font-weight:600;cursor:pointer}
+  .btn.small{padding:6px 8px;font-size:.85rem}
 
-/* === Barra di navigazione inferiore === */
-.tabbar{
-  position:fixed;left:0;right:0;bottom:0;
-  display:flex;justify-content:space-around;
-  background:#fff;border-top:1px solid #ccc;height:56px;z-index:100;
-}
-.tabbar button{
-  flex:1;background:none;border:none;color:#888;
-  display:flex;flex-direction:column;align-items:center;
-  font-size:12px;padding:6px 0;
-}
-.tabbar button i{font-size:18px;margin-bottom:2px}
-.tabbar button.active{color:#e31b23}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+  .product{background:#1f2937;padding:12px;border-radius:10px;text-align:center;cursor:pointer}
+  .product small{display:block;font-size:.85rem;opacity:.8}
+
+  .cart{background:#1f2937;border-radius:10px;padding:12px;margin-top:12px}
+  .cart-item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed var(--ring);padding:6px 0}
+  .qty{display:flex;align-items:center;gap:4px}
+  .qty button{background:#374151;border:none;color:#fff;border-radius:6px;width:26px;height:26px;cursor:pointer}
+  .total{margin-top:10px;font-weight:700;text-align:right}
+
+  .order-card{background:#1f2937;border-radius:10px;padding:12px;margin-bottom:10px}
+  .order-card h4{margin:0 0 6px;color:var(--accent)}
+  .order-items{margin:0;padding-left:16px;font-size:.9rem}
+  .order-actions button{margin-top:6px;margin-right:6px}
+
+  /* Modal impostazioni avanzate */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal.show{display:flex}
+  .panel{width:min(1200px,95vw);max-height:90vh;overflow:auto;background:#0b1223;
+         color:#e5e7eb;border:1px solid var(--ring);border-radius:16px;padding:12px}
+  .card{border:1px solid var(--ring);border-radius:12px;padding:10px;background:#0e1427;margin-bottom:10px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .hr{height:1px;background:var(--ring);margin:8px 0}
+  input[type="text"],input[type="number"]{background:#0b1223;color:#e5e7eb;border:1px solid var(--ring);
+         border-radius:8px;padding:8px}
+  .swatches{display:flex;flex-wrap:wrap;gap:6px}
+  .sw{width:26px;height:26px;border-radius:6px;border:2px solid rgba(255,255,255,.2);cursor:pointer}
+  .sw.active{outline:2px solid #fff}
 </style>
 </head>
 <body>
+<header>🍕 SmartApp Pizzeria</header>
 
-<header style="background:#e31b23;color:#fff;padding:12px;text-align:center">
-  <h1>Gestionale Pizzeria</h1>
-</header>
-
-<main>
-  <!-- === INSERIMENTO ORDINE === -->
-  <section id="order-entry" class="page">
+<main id="app">
+  <!-- Inserimento -->
+  <section v-show="view==='inserimento'">
     <h2>Crea Ordine</h2>
-    <div class="category-menu">
-      <button class="menu-btn active" data-cat="pizze">Pizze</button>
-      <button class="menu-btn" data-cat="bibite">Bibite</button>
-      <button class="menu-btn" data-cat="aggiunte">Aggiunte</button>
-    </div>
-    <div id="products-list"></div>
-
-    <div id="current-order">
-      <h3>Ordine Corrente</h3>
-      <ul id="order-items-list"></ul>
-      <div id="total-price"><strong>Totale: €0.00</strong></div>
-      <button id="finalize-order-btn" style="width:100%;margin-top:8px;background:#e31b23;color:#fff;border:none;padding:10px;border-radius:6px">
-        Prosegui
+    <div class="topbar">
+      <button v-for="(cat,i) in topGroups" :key="cat._uid" class="btn"
+              :style="{background:cat.color}" @click="currentTopIndex=i;currentBottomGroup=null">
+        {{cat.icon}} {{cat.label}}
       </button>
+    </div>
+
+    <div class="grid">
+      <div v-for="p in filteredTopItems" :key="p._uid" class="product"
+           :style="{background:p.color}" @click="addItem(p)">
+        {{p.icon}} {{p.label}}<small>{{money(p.price)}}</small>
+      </div>
+    </div>
+
+    <div class="bottombar">
+      <button v-for="g in row1Mods" :key="g._uid" class="btn small"
+              :style="{background:g.color}" @click="selectBottomGroup(g)">
+        {{g.icon}} {{g.label}}
+      </button>
+    </div>
+    <div class="bottombar">
+      <button v-for="g in row2Mods" :key="g._uid" class="btn small"
+              :style="{background:g.color}" @click="selectBottomGroup(g)">
+        {{g.icon}} {{g.label}}
+      </button>
+    </div>
+
+    <div class="grid" v-if="currentBottomGroup">
+      <div v-for="ex in currentBottomGroup.items" :key="ex._uid"
+           class="product" :style="{background:ex.color}" @click="applyModifier(ex)">
+        {{ex.icon}} {{ex.label}}<small>{{money(ex.price)}}</small>
+      </div>
+    </div>
+
+    <div class="cart" v-if="cart.length">
+      <div class="cart-item" v-for="(c,i) in cart" :key="i">
+        <span>{{c.qty}}× {{c.name}}</span>
+        <div class="qty">
+          <button @click="decQty(i)">−</button>
+          <button @click="incQty(i)">+</button>
+          <button @click="removeItem(i)">🗑️</button>
+        </div>
+      </div>
+      <div class="total">Totale: {{money(grandTotal)}}</div>
+      <button class="btn" :style="{background:'#e31b23',width:'100%',marginTop:'8px'}"
+              @click="finalizza">Finalizza Ordine</button>
     </div>
   </section>
 
-  <!-- === DETTAGLIO ORDINE === -->
-  <section id="order-detail" class="page hidden">
-    <h2>Dettaglio Ordine</h2>
-
-    <div class="delivery-modes">
-      <button class="mode-btn" data-mode="consegna">Consegna</button>
-      <button class="mode-btn" data-mode="asporto">Asporto</button>
-      <button class="mode-btn" data-mode="banco">Banco</button>
-    </div>
-
-    <form id="detail-form">
-      <div class="mode-fields" data-for="consegna">
-        <input type="text" placeholder="Nome e Cognome">
-        <input type="text" placeholder="Indirizzo">
-        <input type="tel"  placeholder="Telefono">
-      </div>
-
-      <div class="mode-fields" data-for="asporto">
-        <input type="text" placeholder="Nome e Cognome">
-        <input type="tel"  placeholder="Telefono">
-        <label>Ora ritiro <input type="time"></label>
-      </div>
-
-      <div class="mode-fields" data-for="banco">
-        <input type="text" placeholder="Cognome">
-        <label>Ora <input type="time"></label>
-      </div>
-
-      <button type="submit" style="width:100%;background:#e31b23;color:#fff;border:none;padding:10px;border-radius:6px">
-        Conferma Ordine
-      </button>
-    </form>
-  </section>
-
-  <!-- === LISTA ORDINI ATTIVI === -->
-  <section id="orders-list" class="page hidden">
+  <!-- Ordini attivi -->
+  <section v-show="view==='ordini'">
     <h2>Ordini Attivi</h2>
-    <div id="active-orders">
-      <!-- schede ordini verranno inserite qui nella fase successiva -->
+    <div v-if="!activeOrders.length">Nessun ordine.</div>
+    <div v-for="o in activeOrders" :key="o.id" class="order-card">
+      <h4>Ordine #{{o.id}} — {{o.status}}</h4>
+      <ul class="order-items">
+        <li v-for="(it,ii) in o.items" :key="ii">{{it.qty}}× {{it.name}}</li>
+      </ul>
+      <div class="order-actions">
+        <button class="btn small" @click="nextStatus(o)">Avanza Stato</button>
+        <button class="btn small" style="background:#b91c1c" @click="deleteOrder(o.id)">Elimina</button>
+      </div>
     </div>
+  </section>
+
+  <!-- Impostazioni -->
+  <section v-show="view==='impostazioni'">
+    <h2>Impostazioni Avanzate</h2>
+    <button class="btn" style="background:#3b82f6" @click="openSettings">Apri Modifica Menu</button>
   </section>
 </main>
 
-<!-- === NAV BAR === -->
-<nav class="tabbar">
-  <button class="tab active" data-page="order-entry">
-    <i class="fas fa-cash-register"></i><span>Inserimento</span>
-  </button>
-  <button class="tab" data-page="orders-list">
-    <i class="fas fa-list-alt"></i><span>Ordini</span>
-  </button>
-  <button class="tab" data-page="order-detail">
-    <i class="fas fa-user"></i><span>Dettagli</span>
-  </button>
+<nav>
+  <button :class="{active:view==='inserimento'}" @click="view='inserimento'">Inserimento</button>
+  <button :class="{active:view==='ordini'}" @click="view='ordini'">Ordini</button>
+  <button :class="{active:view==='impostazioni'}" @click="view='impostazioni'">Impostazioni</button>
 </nav>
 
+<!-- Modal impostazioni -->
+<div class="modal" :class="{show: showSettings}" @click.self="showSettings=false">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <strong>Configura Menu & Modificatori</strong>
+      <button class="btn" @click="applyAndSave">💾 Salva</button>
+      <button class="btn" @click="showSettings=false">Chiudi</button>
+    </div>
+    <div class="card">
+      <h3>Categorie</h3>
+      <button class="btn" style="background:#3b82f6" @click="addTopGroup">➕ Aggiungi Categoria</button>
+      <div class="hr"></div>
+      <div v-for="(g,gi) in editTop" :key="g._uid" class="card">
+        <div class="row">
+          <input type="text" v-model="g.icon" style="width:60px">
+          <input type="text" v-model="g.label" placeholder="Nome" style="flex:1">
+          <input type="color" v-model="g.color" style="width:60px">
+          <button class="btn small" style="background:#b91c1c" @click="removeTopGroup(gi)">Elimina</button>
+        </div>
+        <div class="hr"></div>
+        <div v-for="(it,ii) in g.items" :key="it._uid" class="row" style="gap:6px;margin-bottom:4px">
+          <input type="text" v-model="it.icon" style="width:60px">
+          <input type="text" v-model="it.label" style="flex:1">
+          <input type="number" v-model.number="it.price" step="0.01" style="width:80px">
+          <input type="color" v-model="it.color" style="width:60px">
+          <button class="btn small" style="background:#b91c1c" @click="removeTopItem(gi,ii)">🗑️</button>
+        </div>
+        <button class="btn small" @click="addTopItem(gi)">+ Articolo</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Modificatori</h3>
+      <button class="btn" style="background:#3b82f6" @click="addBottomGroup">➕ Aggiungi Gruppo</button>
+      <div class="hr"></div>
+      <div v-for="(g,gi) in editBottom" :key="g._uid" class="card">
+        <div class="row">
+          <input type="text" v-model="g.icon" style="width:60px">
+          <input type="text" v-model="g.label" style="flex:1">
+          <input type="color" v-model="g.color" style="width:60px">
+          <button class="btn small" style="background:#b91c1c" @click="removeBottomGroup(gi)">Elimina</button>
+        </div>
+        <div class="hr"></div>
+        <div v-for="(it,ii) in g.items" :key="it._uid" class="row" style="gap:6px;margin-bottom:4px">
+          <input type="text" v-model="it.icon" style="width:60px">
+          <input type="text" v-model="it.label" style="flex:1">
+          <input type="number" v-model.number="it.price" step="0.01" style="width:80px">
+          <input type="color" v-model="it.color" style="width:60px">
+          <button class="btn small" style="background:#b91c1c" @click="removeBottomItem(gi,ii)">🗑️</button>
+        </div>
+        <button class="btn small" @click="addBottomItem(gi)">+ Voce</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.iife.js"></script>
 <script>
-// ------- Navigazione tra le pagine ---------
-document.querySelectorAll('.tabbar .tab').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.tabbar .tab').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const page = btn.dataset.page;
-    document.querySelectorAll('main .page').forEach(sec=>{
-      sec.classList.toggle('hidden', sec.id!==page);
-    });
-  });
-});
+const uid = ()=>Math.random().toString(36).slice(2,9);
+const money = n=>n.toLocaleString('it-IT',{style:'currency',currency:'EUR'});
+function deepClone(o){return JSON.parse(JSON.stringify(o));}
 
-// ------- Selezione modalità consegna ---------
-document.querySelectorAll('.delivery-modes .mode-btn').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('.delivery-modes .mode-btn').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    const mode = b.dataset.mode;
-    document.querySelectorAll('.mode-fields').forEach(f=>{
-      f.classList.toggle('active', f.dataset.for===mode);
-    });
-  });
-});
-
-// ------- Menu demo per la griglia ---------
-const menu = {
-  pizze:[
-    {nome:"Margherita", prezzo:5},
-    {nome:"Diavola", prezzo:7.5}
-  ],
-  bibite:[
-    {nome:"Acqua", prezzo:1},
-    {nome:"Coca-Cola", prezzo:2.5}
-  ],
-  aggiunte:[
-    {nome:"Mozzarella extra", prezzo:1},
-    {nome:"Funghi", prezzo:1.2}
+const DEFAULT = {
+  topGroups:[{icon:'🍕',label:'Pizze',color:'#e31b23',_uid:uid(),items:[
+    {icon:'🍕',label:'Margherita',price:6,color:'#e31b23',_uid:uid()},
+    {icon:'🌶️',label:'Diavola',price:7.5,color:'#b91c1c',_uid:uid()}
+  ]}],
+  bottomGroups:[
+    {icon:'➕',label:'Più',color:'#22c55e',_uid:uid(),items:[
+      {icon:'🧀',label:'Mozzarella',price:1,color:'#22c55e',_uid:uid()}
+    ]},
+    {icon:'🚚',label:'Consegna',color:'#3b82f6',_uid:uid(),items:[
+      {icon:'🚚',label:'Consegna',price:1.5,color:'#3b82f6',_uid:uid()}
+    ]}
   ]
 };
-let currentCat = 'pizze';
-function renderProducts(cat){
-  currentCat = cat;
-  const list = document.getElementById('products-list');
-  list.innerHTML='';
-  menu[cat].forEach(item=>{
-    const d=document.createElement('div');
-    d.className='product-item';
-    d.innerHTML=`<strong>${item.nome}</strong><p>€${item.prezzo.toFixed(2)}</p>`;
-    list.appendChild(d);
-  });
-}
-document.querySelectorAll('.menu-btn').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('.menu-btn').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    renderProducts(b.dataset.cat);
-  });
-});
-renderProducts('pizze');
+
+PetiteVue.createApp({
+  view:'inserimento',
+  topGroups:[],
+  bottomGroups:[],
+  currentTopIndex:0,
+  currentBottomGroup:null,
+  cart:[],
+  activeOrders:JSON.parse(localStorage.getItem('smart_orders')||'[]'),
+  showSettings:false,
+  editTop:[],editBottom:[],
+
+  get filteredTopItems(){return this.topGroups[this.currentTopIndex]?.items||[]},
+  get row1Mods(){return this.bottomGroups.slice(0,4)},
+  get row2Mods(){return this.bottomGroups.slice(4)},
+  get grandTotal(){return this.cart.reduce((s,i)=>s+((i.price||0)*i.qty),0)},
+  money,
+
+  selectBottomGroup(g){this.currentBottomGroup=g;},
+  addItem(p){this.cart.push({name:p.label,price:+p.price,qty:1})},
+  applyModifier(ex){this.cart.push({name:ex.label,price:+ex.price,qty:1})},
+  incQty(i){this.cart[i].qty++},
+  decQty(i){if(this.cart[i].qty>1)this.cart[i].qty--},
+  removeItem(i){this.cart.splice(i,1)},
+
+  finalizza(){
+    if(!this.cart.length) return alert('Carrello vuoto');
+    this.activeOrders.push({id:uid(),items:deepClone(this.cart),status:'In preparazione'});
+    localStorage.setItem('smart_orders',JSON.stringify(this.activeOrders));
+    this.cart=[];this.view='ordini';
+  },
+  nextStatus(o){
+    const st=['In preparazione','Pronto/In consegna','Completato'];
+    let idx=st.indexOf(o.status);
+    if(idx<st.length-1){o.status=st[idx+1];this.saveOrders();}
+  },
+  deleteOrder(id){this.activeOrders=this.activeOrders.filter(o=>o.id!==id);this.saveOrders();},
+  saveOrders(){localStorage.setItem('smart_orders',JSON.stringify(this.activeOrders));},
+
+  openSettings(){
+    this.editTop=deepClone(this.topGroups);
+    this.editBottom=deepClone(this.bottomGroups);
+    this.showSettings=true;
+  },
+  applyAndSave(){
+    this.topGroups=deepClone(this.editTop);
+    this.bottomGroups=deepClone(this.editBottom);
+    localStorage.setItem('smart_cfg',JSON.stringify({topGroups:this.topGroups,bottomGroups:this.bottomGroups}));
+    this.showSettings=false;
+  },
+  addTopGroup(){this.editTop.push({icon:'🔘',label:'Nuova',color:'#e31b23',_uid:uid(),items:[]})},
+  removeTopGroup(i){this.editTop.splice(i,1)},
+  addTopItem(i){this.editTop[i].items.push({icon:'•',label:'Articolo',price:0,color:this.editTop[i].color,_uid:uid()})},
+  removeTopItem(i,j){this.editTop[i].items.splice(j,1)},
+  addBottomGroup(){this.editBottom.push({icon:'🔘',label:'Gruppo',color:'#22c55e',_uid:uid(),items:[]})},
+  removeBottomGroup(i){this.editBottom.splice(i,1)},
+  addBottomItem(i){this.editBottom[i].items.push({icon:'•',label:'Voce',price:0,color:this.editBottom[i].color,_uid:uid()})},
+  removeBottomItem(i,j){this.editBottom[i].items.splice(j,1)},
+
+  mounted(){
+    const cfg=localStorage.getItem('smart_cfg');
+    if(cfg){const c=JSON.parse(cfg);this.topGroups=c.topGroups;this.bottomGroups=c.bottomGroups;}
+    else{this.topGroups=DEFAULT.topGroups;this.bottomGroups=DEFAULT.bottomGroups;}
+  }
+}).mount('#app');
 </script>
 </body>
 </html>
