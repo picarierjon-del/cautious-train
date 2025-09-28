@@ -1,627 +1,320 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>SmartBiz Pro (Mobile)</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-
-<style>
-/* CSS Ottimizzato per iOS/Mobile */
-:root{
-  --bg:#0b0c10;--card:#12141a;--text:#f2f5ff;--accent:#007aff; /* Blu iOS */
-  --ok:#34c759; /* Verde iOS */--bad:#ff3b30; /* Rosso iOS */--muted:#8e8e93; /* Grigio iOS */
-  --ios-btn-bg: #1c1c1e;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,sans-serif;
-  min-height:100vh;
-  /* Per un'esperienza fullscreen "app-like" su iOS */
-  padding-bottom: constant(safe-area-inset-bottom);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-header{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;
-  padding:14px;background:#0b0c10ee;backdrop-filter:blur(10px);border-bottom:1px solid #1c1c1e;}
-header h1{font-size:20px;margin:0;font-weight:600;}
-.btn{padding:8px 14px;border:1px solid var(--ios-btn-bg);border-radius:10px;background:var(--ios-btn-bg);color:#fff;cursor:pointer;font-weight:500;font-size:14px}
-.btn.primary{background:var(--accent);border:none;padding:10px 14px;}
-.btn.bad{background:var(--bad);border:none;}
-.card{background:var(--card);border-radius:14px;margin:14px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.15);}
-label{display:block;margin:8px 0 4px;font-size:13px;color:var(--muted)}
-input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid #333;background:var(--ios-btn-bg);color:var(--text);font-size:16px;}
-table{width:100%;border-collapse:collapse}th,td{padding:10px 4px;border-bottom:1px solid #222;vertical-align:middle;font-size:13px;}
-th{font-weight:600;color:var(--muted);text-align:left;}
-td:last-child{text-align:right;}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-.kpi{background:var(--ios-btn-bg);border-radius:10px;padding:12px;text-align:center;}
-.kpi h3{margin:0 0 4px;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:500;}
-.money{font-weight:700;font-size:20px;}
-.ok{color:var(--ok)}.bad{color:var(--bad)}
-canvas{width:100%;height:240px;background:var(--ios-btn-bg);border-radius:12px;padding:10px}
-.badge{display:inline-block;background:var(--ios-btn-bg);border:1px solid #2a3346;padding:4px 8px;border-radius:999px;font-size:12px;color:#cbd2e2}
-
-/* Menu compatto - Uso un popover più "iOS-style" */
-.tools-menu{position:absolute;top:58px;right:10px;background:var(--card);border:1px solid #2a3344;border-radius:14px;
-  box-shadow:0 10px 30px rgba(0,0,0,.45);padding:8px;z-index:60;display:none;width:min(280px,92vw)}
-.tools-menu.show{display:block}
-.tools-menu button{display:block;width:100%;text-align:left;margin:4px 0;padding:10px;border-radius:10px;
-  background:var(--ios-btn-bg);border:1px solid #2a3344;color:#e6ebff;cursor:pointer;font-size:16px;}
-.tools-menu button.primary{background:var(--accent);border:none;color:#fff}
-
-/* Layout */
-main{padding-bottom:100px} /* Spazio per barra nav e FAB */
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.muted{color:var(--muted);font-size:12px}
-
-/* Barra inferiore per iPhone */
-.bottom-nav{
-  position:fixed;
-  bottom:0; left:0; right:0;
-  background:#0b0c10ee;
-  backdrop-filter:blur(10px);
-  display:flex;
-  justify-content:space-around;
-  border-top:1px solid #222;
-  z-index:50;
-  padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); /* Aggiunge padding per safe areas */
-}
-.bottom-nav button{
-  flex:1;
-  padding:12px 6px; /* Aumentato padding */
-  background:none;
-  border:none;
-  color:var(--muted);
-  font-size:11px;
-  cursor:pointer;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-}
-.bottom-nav button i{font-size:22px;margin-bottom:2px;} /* Icone non definite, ma pronte */
-.bottom-nav button.active{color:var(--accent);font-weight:600;}
-
-/* Floating Action Button (FAB) */
-#fabAdd{
-  position:fixed;
-  right:20px;
-  bottom:70px; /* Sopra la barra di navigazione */
-  z-index:55;
-  width:56px;height:56px;
-  border-radius:50%;
-  background:var(--accent);
-  color:white;
-  font-size:30px;
-  border:none;
-  box-shadow:0 4px 12px rgba(0,0,0,.3);
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;
-}
-
-/* Messaggi di feedback temporanei */
-#feedback-message{
-  position:fixed;
-  bottom:120px;
-  left:50%;
-  transform:translateX(-50%);
-  background:rgba(0,0,0,0.7);
-  color:white;
-  padding:10px 20px;
-  border-radius:20px;
-  opacity:0;
-  transition:opacity 0.3s ease;
-  z-index:100;
-  font-size:14px;
-}
-</style>
-</head>
-<body>
-
-<header>
-  <h1>SmartBiz Pro</h1>
-  <div class="row">
-    <span id="ivaReminder" class="badge"></span>
-    <button class="btn" id="menuBtn" aria-label="Strumenti">⋯</button>
-  </div>
-  <div id="menuPanel" class="tools-menu" role="menu" aria-hidden="true">
-    <button id="mSummary">📊 Riepilogo Completo</button>
-    <button id="mSup">🏷️ Fornitori & Categorie</button>
-    <button id="mDead">⏰ Scadenze</button>
-    <hr style="border:none;border-top:1px solid #2a3344;margin:6px 0">
-    <button id="mImp">⬆️ Importa JSON</button>
-    <button id="mExpCsv">⬇️ Export CSV</button>
-    <button id="mExpJson">⬇️ Export JSON</button>
-    <button id="mPdf">🧾 Report PDF</button>
-    <input type="file" id="fileImport" accept="application/json" hidden>
-  </div>
-</header>
-
-<main id="content"></main>
-
-<button id="fabAdd" aria-label="Nuovo movimento">+</button>
-
-<nav class="bottom-nav">
-  <button id="tabMov" class="active">
-    <i class="icon">📜</i>
-    <span>Movimenti</span>
-  </button>
-  <button id="tabForn">
-    <i class="icon">🏷️</i>
-    <span>Fornitori</span>
-  </button>
-</nav>
-
-<div id="feedback-message" aria-live="polite"></div>
-
-<script>
-/* ===== Helpers & stato ===== */
-const cur=new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'});
-const $=s=>document.querySelector(s);
-const LS='smartbiz_store_v1';
-let store;
-try{store=JSON.parse(localStorage.getItem(LS))||{};}catch{store={};}
-if(!Array.isArray(store.movimenti)) store.movimenti=[];
-if(!Array.isArray(store.fornitori)) store.fornitori=[];
-if(!Array.isArray(store.categorie)) store.categorie=['Vendita prodotti','Servizi','Affitto','Utenze','Marketing','Spesa','Altro'];
-if(!Array.isArray(store.scadenze)) store.scadenze=[];
-function save(){localStorage.setItem(LS,JSON.stringify(store));}
-function uid(){return (crypto.randomUUID&&crypto.randomUUID())||(Date.now().toString(36)+Math.random().toString(36).slice(2));}
-function view(h){$('#content').innerHTML=h;}
-function menu(show){const p=$('#menuPanel');p.classList.toggle('show',show);p.setAttribute('aria-hidden',show?'false':'true');}
-function showFeedback(msg){
-    const fm=$('#feedback-message');
-    fm.textContent=msg;
-    fm.style.opacity=1;
-    setTimeout(()=>fm.style.opacity=0, 2000);
-}
-
-/* ===== Menu ===== */
-$('#menuBtn').onclick=(e)=>{e.stopPropagation();menu(!$('#menuPanel').classList.contains('show'));};
-document.addEventListener('click',e=>{const p=$('#menuPanel');if(p.classList.contains('show')&&!p.contains(e.target)&&e.target.id!=='menuBtn'){menu(false);}});
-
-/* ===== Pagine ===== */
-function pageAdd(mov){
-  const m = mov || { d:new Date().toISOString().slice(0,10), type:'entrata', method:'Contanti', cat:store.categorie[0]||'Altro', sup:'', desc:'', imp:'', iva:'22', tags:[], doc_ref:'' };
-  setActive($('#fabAdd'));
-
-  view(`
-  <div class="card">
-    <h2>${mov?'Modifica':'Nuovo'} movimento</h2>
-    <div class="grid">
-      <div><label>Data <input type="date" id="d" value="${m.d}"></label></div>
-      <div><label>Tipo <select id="t"><option ${m.type==='entrata'?'selected':''}>entrata</option><option ${m.type==='uscita'?'selected':''}>uscita</option></select></label></div>
-      <div><label>Metodo <select id="me">
-          ${['Contanti','Bancomat','Carta','Bonifico'].map(v=>`<option ${v===m.method?'selected':''}>${v}</option>`).join('')}
-      </select></label></div>
-      <div><label>IVA % <select id="iva">${[0,4,5,10,22].map(v=>`<option ${v==m.ivaPerc?'selected':''}>${v}</option>`).join('')}</select></label></div>
-      <div><label>Imponibile (€) <input type="number" id="imp" step="0.01" value="${m.imp}"></label></div>
-      <div><label>Categoria <select id="c">${store.categorie.map(x=>`<option ${x===m.cat?'selected':''}>${x}</option>`).join('')}</select></label></div>
-      <div><label>Fornitore <select id="s"><option></option>${store.fornitori.map(x=>`<option ${x===m.sup?'selected':''}>${x}</option>`).join('')}</select></label></div>
-      <div><label>Tag (virgola) <input id="tg" value="${(m.tags||[]).join(', ')}"></label></div>
-      <div style="grid-column:1/-1"><label>Descrizione <input id="desc" value="${m.desc}"></label></div>
-      <div style="grid-column:1/-1"><label>Rif. Documento/Foto <input id="doc_ref" placeholder="Es. Fattura N. 123 o link a foto" value="${m.doc_ref||''}"></label></div>
-      
-      <div style="grid-column:1/-1;margin-top:10px;"><button class="btn primary" id="saveBtn">💾 Salva Movimento</button></div>
-    </div>
-  </div>`);
-
-  $('#saveBtn').onclick = ()=>{
-    const rec={
-      id: m.id || uid(),
-      d: $('#d').value,
-      type: $('#t').value,
-      method: $('#me').value,
-      cat: $('#c').value,
-      sup: $('#s').value,
-      desc: $('#desc').value,
-      imp: parseFloat($('#imp').value)||0,
-      ivaPerc: parseFloat($('#iva').value),
-      tags: ($('#tg').value||'').split(',').map(s=>s.trim()).filter(Boolean),
-      doc_ref: $('#doc_ref').value.trim() // Nuovo campo
-    };
-    rec.iva = rec.imp * (rec.ivaPerc||0) / 100;
-    rec.tot = rec.imp + rec.iva;
-
-    if(!rec.d || !(rec.imp>0)){ showFeedback('⚠️ Inserisci data e imponibile.'); return; }
-
-    if(m.id){
-      store.movimenti = store.movimenti.map(x=> x.id===m.id ? rec : x);
-      showFeedback('✅ Movimento modificato!');
-    }else{
-      store.movimenti.push(rec);
-      showFeedback('✅ Movimento salvato!');
-    }
-    save(); pageList();
-  };
-}
-
-function pageList(){
-  setActive($('#tabMov'));
-  const arr = [...store.movimenti].sort((a,b)=>b.d.localeCompare(a.d));
-  view(`
-  <div class="card">
-    <h2>Lista Movimenti</h2>
-    <div class="row" style="gap:10px;margin:6px 0 12px;display:block">
-      <label>Cerca (Descrizione/Tag) <input type="text" id="fSearch" placeholder="Es. Utenze o Progetto X"></label>
-      <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:8px">
-        <label>Dal <input type="date" id="fFrom"></label>
-        <label>Al <input type="date" id="fTo"></label>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <label>Tipo 
-          <select id="fTipo">
-            <option value="">Tutti</option>
-            <option value="entrata">Vendite (Entrate)</option>
-            <option value="uscita">Acquisti (Uscite)</option>
-          </select>
-        </label>
-        <label>Fornitore 
-          <select id="fSup">
-            <option value="">Tutti</option>
-            ${store.fornitori.map(n=>`<option>${n}</option>`).join('')}
-          </select>
-        </label>
-      </div>
-      <div class="row" style="margin-top:10px;justify-content:space-between">
-        <button class="btn primary" id="fApplica">Applica Filtri</button>
-        <button class="btn" id="fReset">Reset Filtri</button>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr><th>Data</th><th>Descrizione</th><th>Totale</th><th></th></tr>
-      </thead>
-      <tbody id="listBody"></tbody>
-    </table>
-  </div>`);
-
-  function apply(){
-    const from=$('#fFrom').value, to=$('#fTo').value, tipo=$('#fTipo').value, fs=$('#fSup').value, search=$('#fSearch').value.toLowerCase();
-    
-    const filt = arr.filter(m=>{
-      const d=new Date(m.d);
-      if(from && m.d < from) return false;
-      if(to && m.d > to) return false;
-      if(tipo && m.type!==tipo) return false;
-      if(fs && (m.sup||'')!==fs) return false;
-      if(search && !(m.desc||'').toLowerCase().includes(search) && !(m.tags||[]).join(' ').toLowerCase().includes(search)) return false;
-      return true;
-    });
-    
-    const tb=$('#listBody'); tb.innerHTML='';
-    filt.forEach(m=>{
-      const tr=document.createElement('tr');
-      const totClass = m.type === 'entrata' ? 'ok' : 'bad';
-      tr.innerHTML = `<td>${m.d.slice(5)}</td>
-      <td>${m.desc||m.cat||'—'} <div class="muted">${m.cat} (${m.method})</div></td>
-      <td class="${totClass}">${cur.format(m.tot||0)}</td>
-      <td style="white-space:nowrap">
-        <button class="btn" data-edit="${m.id}">Mod.</button>
-      </td>`;
-      tb.appendChild(tr);
-    });
-    // bind
-    tb.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=> {
-        const mov=store.movimenti.find(x=>x.id===b.dataset.edit);
-        if(mov){ pageAdd(mov); } else { showFeedback('Movimento non trovato!'); }
-    });
-  }
-
-  $('#fApplica').onclick=apply;
-  $('#fReset').onclick=()=>{ $('#fFrom').value=''; $('#fTo').value=''; $('#fTipo').value=''; $('#fSup').value=''; $('#fSearch').value=''; apply(); };
-  $('#fSearch').oninput=apply; // Filtro per ricerca dinamico
-  apply();
-}
-
-function pageSummary(){
-  setActive(null);
-  const list=[...store.movimenti];
-  const totalEntr=list.filter(m=>m.type==='entrata').reduce((a,b)=>a+(b.tot||0),0);
-  const totalUsc =list.filter(m=>m.type==='uscita').reduce((a,b)=>a+(b.tot||0),0);
-  const totalDeb =list.filter(m=>m.type==='entrata').reduce((a,b)=>a+(b.iva||0),0);
-  const totalCred=list.filter(m=>m.type==='uscita').reduce((a,b)=>a+(b.iva||0),0);
-
-  // Calcolo Mese Corrente
-  const now = new Date();
-  const currentMonth = now.toISOString().slice(0, 7);
-  const currentMonthList = list.filter(m => (m.d || '').slice(0, 7) === currentMonth);
-  const monthEntr = currentMonthList.filter(m => m.type === 'entrata').reduce((a, b) => a + (b.tot || 0), 0);
-  const monthUsc = currentMonthList.filter(m => m.type === 'uscita').reduce((a, b) => a + (b.tot || 0), 0);
-  const monthDeb = currentMonthList.filter(m => m.type === 'entrata').reduce((a, b) => a + (b.iva || 0), 0);
-  const monthCred = currentMonthList.filter(m => m.type === 'uscita').reduce((a, b) => a + (b.iva || 0), 0);
-
-
-  view(`<div class="card">
-    <h2>Riepilogo Mese Corrente (${currentMonth})</h2>
-    <div class="kpi-grid">
-      <div class="kpi"><h3>Entrate</h3><div class="money ok">${cur.format(monthEntr)}</div></div>
-      <div class="kpi"><h3>Uscite</h3><div class="money bad">${cur.format(monthUsc)}</div></div>
-      <div class="kpi"><h3>Saldo Mensile</h3><div class="money">${cur.format(monthEntr-monthUsc)}</div></div>
-    </div>
-    <div class="kpi-grid" style="margin-top:10px">
-        <div class="kpi"><h3>IVA Debito</h3><div class="money">${cur.format(monthDeb)}</div></div>
-        <div class="kpi"><h3>IVA Credito</h3><div class="money">${cur.format(monthCred)}</div></div>
-        <div class="kpi"><h3>Δ IVA Mese</h3><div class="money">${cur.format(monthDeb-monthCred)}</div></div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Riepilogo Totale (Sempre)</h2>
-    <div class="kpi-grid">
-      <div class="kpi"><h3>Entrate Tot.</h3><div class="money ok">${cur.format(totalEntr)}</div></div>
-      <div class="kpi"><h3>Uscite Tot.</h3><div class="money bad">${cur.format(totalUsc)}</div></div>
-      <div class="kpi"><h3>Saldo Totale</h3><div class="money">${cur.format(totalEntr-totalUsc)}</div></div>
-    </div>
-    <div class="kpi-grid" style="margin-top:10px">
-        <div class="kpi"><h3>Δ IVA Tot.</h3><div class="money">${cur.format(totalDeb-totalCred)}</div></div>
-    </div>
-    <canvas id="chart" style="margin-top:15px"></canvas>
-  </div>
-  `);
-
-  const byMonth={};
-  list.forEach(m=>{ const k=(m.d||'').slice(0,7); if(!k) return; byMonth[k]=(byMonth[k]||0)+(m.type==='entrata'?(m.tot||0):-(m.tot||0)); });
-  const labels=Object.keys(byMonth).sort();
-  const dataVals=labels.map(k=>byMonth[k]);
-  const ctx=document.getElementById('chart').getContext('2d');
-  if(window._chart) window._chart.destroy();
-  window._chart=new Chart(ctx,{
-    type:'bar',
-    data:{labels,datasets:[{label:'Saldo mensile',data:dataVals,backgroundColor:dataVals.map(v=>v>=0?'#34c759':'#ff3b30')}]},
-    options:{
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins:{
-            legend:{display:false},
-            tooltip: {
-                callbacks: {
-                    label: function(context) { return 'Saldo: ' + cur.format(context.parsed.y); }
-                }
-            }
-        },
-        scales:{x:{grid:{display:false}, ticks:{color:'var(--muted)'}},y:{grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'var(--muted)'}}}
-    }
-  });
-}
-
-/* ===== Fornitori & categorie / Scadenze ===== */
-function pageSup(){
-  setActive($('#tabForn'));
-  view(`<div class="card">
-    <h2>Fornitori & Categorie</h2>
-    <div class="grid">
-      <div class="card" style="margin:0;padding:10px;background:var(--bg)">
-        <h3>Fornitori</h3>
-        <div class="row" style="gap:8px;margin:8px 0;flex-wrap:nowrap">
-          <input id="newSup" placeholder="Es. Molino Rossi"><button class="btn primary" id="addSup">➕</button>
-        </div>
-        <table><thead><tr><th>Nome</th><th></th></tr></thead><tbody id="supBody"></tbody></table>
-      </div>
-      <div class="card" style="margin:0;padding:10px;background:var(--bg)">
-        <h3>Categorie</h3>
-        <div class="row" style="gap:8px;margin:8px 0;flex-wrap:nowrap">
-          <input id="newCat" placeholder="Nuova categoria"><button class="btn primary" id="addCat">➕</button>
-        </div>
-        <table><thead><tr><th>Nome</th><th></th></tr></thead><tbody id="catBody"></tbody></table>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Scadenze ⏰</h2>
-    <div class="row" style="gap:8px;margin:8px 0;flex-wrap:nowrap">
-      <input id="scTit" placeholder="INPS, IMU, F24…">
-      <input id="scDat" type="date">
-      <button class="btn primary" id="scAdd">➕</button>
-    </div>
-    <table><thead><tr><th>Data</th><th>Titolo</th><th></th></tr></thead><tbody id="scBody"></tbody></table>
-    <p class="muted">Ricevi notifica per scadenze entro 3 giorni.</p>
-  </div>`);
-
-  function renderLists(){
-    // Fornitori
-    const sb=$('#supBody'); sb.innerHTML='';
-    store.fornitori.forEach((n,i)=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${n}</td><td style="text-align:right"><button class="btn bad" data-i="${i}">✖</button></td>`;
-      sb.appendChild(tr);
-    });
-    sb.onclick=(e)=>{
-      const i=e.target.dataset.i; if(i===undefined) return;
-      if(confirm('Eliminare fornitore?')){ store.fornitori.splice(i,1); save(); renderLists(); }
-    };
-
-    // Categorie
-    const cb=$('#catBody'); cb.innerHTML='';
-    store.categorie.forEach((n,i)=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${n}</td><td style="text-align:right"><button class="btn bad" data-i="${i}">✖</button></td>`;
-      cb.appendChild(tr);
-    });
-    cb.onclick=(e)=>{
-      const i=e.target.dataset.i; if(i===undefined) return;
-      if(confirm('Eliminare categoria? I movimenti passeranno a "Altro".')){
-        const name=store.categorie[i];
-        store.categorie.splice(i,1);
-        store.movimenti = store.movimenti.map(m=> m.cat===name ? {...m, cat:'Altro'} : m );
-        save(); renderLists();
-      }
-    };
-    
-    // Scadenze
-    const tb=$('#scBody'); tb.innerHTML='';
-    store.scadenze.sort((a,b)=>a.data.localeCompare(b.data)).forEach(s=>{
-      const diff=Math.ceil((new Date(s.data)-new Date())/86400000);
-      const diffText = diff >= 0 ? ` (${diff}g)` : '';
-      const style = diff <= 3 && diff >= 0 ? 'color:var(--bad);font-weight:700;' : '';
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td style="${style}">${s.data}${diffText}</td><td>${s.titolo}</td><td style="text-align:right"><button class="btn bad" data-id="${s.id}">✖</button></td>`;
-      tb.appendChild(tr);
-    });
-    tb.onclick=(e)=>{
-      const id=e.target.dataset.id; if(!id) return;
-      if(confirm('Eliminare questa scadenza?')){ store.scadenze = store.scadenze.filter(x=>x.id!==id); save(); renderLists(); showFeedback('Scadenza eliminata.'); }
-    };
-  }
-  renderLists();
-
-  $('#addSup').onclick=()=>{ const v=$('#newSup').value.trim(); if(!v) return; if(!store.fornitori.includes(v)) store.fornitori.push(v); save(); $('#newSup').value=''; renderLists(); showFeedback('Fornitore aggiunto.'); };
-  $('#addCat').onclick=()=>{ const v=$('#newCat').value.trim(); if(!v) return; if(!store.categorie.includes(v)) store.categorie.push(v); save(); $('#newCat').value=''; renderLists(); showFeedback('Categoria aggiunta.'); };
-  
-  $('#scAdd').onclick=()=>{
-    const t=$('#scTit').value.trim(), d=$('#scDat').value;
-    if(!t||!d) { showFeedback('Inserisci titolo e data!'); return; }
-    store.scadenze.push({id:uid(), titolo:t, data:d});
-    save(); $('#scTit').value=''; $('#scDat').value=''; renderLists(); showFeedback('Scadenza aggiunta.');
-    ivaReminder(); // Aggiorna promemoria
-  };
-}
-
-
-/* ===== Import / Export / PDF (Logica invariata per semplicità) ===== */
-function exportJSON(){
-  const blob=new Blob([JSON.stringify(store,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='smartbiz.json'; a.click(); URL.revokeObjectURL(a.href);
-  showFeedback('Export JSON completato.');
-}
-function exportCSV(){
-  const rows=[['Data','Tipo','Metodo','Categoria','Fornitore','Descrizione','Imponibile','IVA','Totale']];
-  store.movimenti.forEach(m=> rows.push([m.d,m.type,m.method,m.cat,m.sup,m.desc,(m.imp||0),(m.iva||0),(m.tot||0)]));
-  const csv=rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='smartbiz_movimenti.csv'; a.click(); URL.revokeObjectURL(a.href);
-  showFeedback('Export CSV completato.');
-}
-function importJSON(e){
-  const f=e.target.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=()=>{
-    try{
-      const obj=JSON.parse(r.result);
-      if(obj.movimenti || obj.fornitori || obj.categorie || obj.scadenze){
-        store = { 
-          movimenti: Array.isArray(obj.movimenti)?obj.movimenti:store.movimenti,
-          fornitori: Array.isArray(obj.fornitori)?obj.fornitori:store.fornitori,
-          categorie: Array.isArray(obj.categorie)&&obj.categorie.length?obj.categorie:store.categorie,
-          scadenze: Array.isArray(obj.scadenze)?obj.scadenze:store.scadenze
-        };
-      }else if(Array.isArray(obj)){ 
-        store.movimenti = obj;
-      }
-      save(); showFeedback('Importazione completata!'); pageList();
-    }catch(err){ showFeedback('⚠️ File JSON non valido.'); }
-    e.target.value='';
-  };
-  r.readAsText(f);
-}
-function reportPDF(){
-  const { jsPDF } = window.jspdf;
-  const doc=new jsPDF({unit:'pt',format:'a4'});
-  const eTot=store.movimenti.filter(m=>m.type==='entrata').reduce((a,b)=>a+(b.tot||0),0);
-  const uTot=store.movimenti.filter(m=>m.type==='uscita').reduce((a,b)=>a+(b.tot||0),0);
-  const deb=store.movimenti.filter(m=>m.type==='entrata').reduce((a,b)=>a+(b.iva||0),0);
-  const cred=store.movimenti.filter(m=>m.type==='uscita').reduce((a,b)=>a+(b.iva||0),0);
-
-  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Report SmartBiz Pro',40,40);
-  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.text(`Generato: ${new Date().toLocaleDateString('it-IT')}`,40,60);
-
-  doc.setFont('helvetica','bold'); doc.text('Riepilogo',40,90);
-  doc.autoTable({startY:100, head:[['Voce','Valore']], body:[
-    ['Entrate',cur.format(eTot)],['Uscite',cur.format(uTot)],['Saldo',cur.format(eTot-uTot)],
-    ['IVA Debito',cur.format(deb)],['IVA Credito',cur.format(cred)],['Δ IVA',cur.format(deb-cred)]
-  ], styles:{fontSize:10}, theme:'grid'});
-
-  const rows=store.movimenti
-    .sort((a,b)=>a.d.localeCompare(b.d))
-    .map(m=>[m.d,m.type,m.method,m.cat,m.sup,m.desc,(m.imp||0).toFixed(2),(m.iva||0).toFixed(2),(m.tot||0).toFixed(2)]);
-  doc.addPage();
-  doc.setFont('helvetica','bold'); doc.text('Dettaglio movimenti',40,40);
-  doc.autoTable({startY:50, head:[['Data','Tipo','Metodo','Cat','Fornitore','Descrizione','Imp.','IVA','Tot.']], body:rows, styles:{fontSize:8,cellPadding:2}, headStyles:{fillColor:[59,130,246]}, theme:'striped'});
-
-  doc.save('report_smartbiz.pdf');
-  showFeedback('PDF creato e scaricato.');
-}
-
-/* ===== IVA / Scadenze reminder (Unito per coerenza) ===== */
-function ivaReminder(){
-  const now=new Date(); now.setHours(0,0,0,0);
-  const y=now.getFullYear();
-  
-  // Scadenze IVA (16 Mag, 20 Ago, 16 Nov, 16 Mar anno succ.)
-  const scadIva=[ new Date(y,4,16), new Date(y,7,20), new Date(y,10,16), new Date(y+1,2,16) ];
-  let nextIva=scadIva.find(d=>d>=now) || scadIva[0];
-  const diffIva=Math.ceil((nextIva-now)/86400000);
-  
-  // Scadenze Custom
-  const nextCustomScad = store.scadenze
-    .filter(s => new Date(s.data) >= now)
-    .sort((a, b) => a.data.localeCompare(b.data))[0];
-    
-  let badgeText = '';
-  let urgentAlerts = [];
-
-  if (diffIva <= 3 && diffIva >= 0) {
-      urgentAlerts.push(`IVA scade tra ${diffIva} giorni!`);
-      badgeText = `IVA: ${diffIva}g ⚠️`;
-      $('#ivaReminder').style.backgroundColor = 'var(--bad)';
-  } else {
-      badgeText = `IVA: ${nextIva.toLocaleDateString('it-IT').slice(0,5)} • ${diffIva}g`;
-      $('#ivaReminder').style.backgroundColor = 'var(--ios-btn-bg)';
-  }
-
-  if (nextCustomScad) {
-      const diffCustom = Math.ceil((new Date(nextCustomScad.data) - now) / 86400000);
-      if (diffCustom <= 3 && diffCustom >= 0) {
-          urgentAlerts.push(`Scadenza "${nextCustomScad.titolo}" tra ${diffCustom} giorni!`);
-      }
-      
-      // Se la scadenza custom è più vicina dell'IVA e non è già urgente
-      if(diffCustom < diffIva && diffCustom >= 0 && diffCustom > 3){
-          badgeText = `Scad.: ${new Date(nextCustomScad.data).toLocaleDateString('it-IT').slice(0,5)} • ${diffCustom}g`;
-          $('#ivaReminder').style.backgroundColor = 'var(--ios-btn-bg)';
-      }
-  }
-
-  $('#ivaReminder').textContent = badgeText;
-  
-  // Mostra alert solo una volta per sessione (se non è già stato mostrato)
-  if(urgentAlerts.length > 0 && !sessionStorage.getItem('urgent_alert_shown')){
-      alert(`🚨 Promemoria Urgente:\n${urgentAlerts.join('\n')}`);
-      sessionStorage.setItem('urgent_alert_shown', 'true');
-  }
-}
-
-/* ===== Bind menu e Navigazione ===== */
-$('#mSummary').onclick=()=>{ menu(false); pageSummary(); };
-$('#mSup').onclick   = ()=>{ menu(false); pageSup(); };
-$('#mDead').onclick  = ()=>{ menu(false); pageSup(); }; // Scadenze gestite nella pagina Fornitori/Cat
-$('#mExpJson').onclick=()=>{ menu(false); exportJSON(); };
-$('#mExpCsv').onclick =()=>{ menu(false); exportCSV(); };
-$('#mPdf').onclick    =()=>{ menu(false); reportPDF(); };
-$('#mImp').onclick    =()=>{ menu(false); $('#fileImport').click(); };
-$('#fileImport').onchange = importJSON;
-$('#fabAdd').onclick = ()=> pageAdd(); // FAB
-
-const tMov  = document.getElementById('tabMov');
-const tForn = document.getElementById('tabForn');
-
-function setActive(btn){
-  document.querySelectorAll('.bottom-nav button, #fabAdd')
-    .forEach(b=>{
-        if(b.id === 'fabAdd'){
-            b.classList.toggle('active', b === btn);
-        } else {
-            b.classList.toggle('active', b === btn);
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizzeria Smart Order - Gemini App</title>
+    <!-- Carica Tailwind CSS per uno styling moderno e responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Stile personalizzato per assicurare l'altezza massima su mobile */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7; /* Sfondo generale chiaro */
+            padding-bottom: 5rem; /* Spazio per la barra inferiore fissa */
+            padding-top: 4rem; /* Spazio per la barra superiore fissa */
         }
-    });
-}
-tMov.onclick  = ()=>{ setActive(tMov); pageList();   };
-tForn.onclick = ()=>{ setActive(tForn); pageSup();    };
 
-/* ===== Avvio ===== */
-ivaReminder();
-pageList();
-</script>
+        /* Stile per le barre fisse */
+        .fixed-bar {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            backdrop-filter: blur(8px); /* Effetto vetro per un look moderno */
+        }
+
+        /* Nasconde lo scrollbar ma permette lo scorrimento (per pulizia estetica) */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- 1. BARRA DI NAVIGAZIONE SUPERIORE (CATEGORIE) -->
+    <header id="top-nav" class="fixed-bar fixed top-0 left-0 right-0 z-50 bg-white/90">
+        <div class="flex overflow-x-auto hide-scrollbar p-2 space-x-2 border-b border-gray-200">
+            <!-- Array dei pulsanti superiori -->
+            <script>
+                const categories = ['Pizze', 'Baby', 'Calzoni', 'Panini', 'Mezzo Metro', 'Bibite', 'Menù 17', 'Gourmet'];
+                const topNav = document.getElementById('top-nav').querySelector('div');
+
+                categories.forEach((cat, index) => {
+                    const button = document.createElement('button');
+                    button.textContent = cat;
+                    button.className = `px-4 py-2 text-sm font-semibold rounded-full whitespace-nowrap transition duration-150 ease-in-out ${index === 0 ? 'bg-red-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-red-100'}`;
+                    button.onclick = () => selectCategory(cat);
+                    topNav.appendChild(button);
+                });
+
+                function selectCategory(category) {
+                    console.log(`Categoria selezionata: ${category}`);
+                    // Logica per caricare i prodotti della categoria qui (es. caricare le pizze)
+                    document.getElementById('current-item-name').textContent = category === 'Pizze' ? 'Margherita Classica' : `Primo Articolo di ${category}`;
+                    document.getElementById('item-price').textContent = '€ 7.50';
+                }
+
+                // Simula la selezione iniziale
+                document.addEventListener('DOMContentLoaded', () => {
+                    selectCategory('Pizze');
+                });
+            </script>
+        </div>
+    </header>
+
+    <!-- 2. CONTENUTO PRINCIPALE SCORREVOLE -->
+    <main class="flex-grow p-4 space-y-6">
+
+        <!-- Blocco Esempio Articolo Selezionato (Simulazione) -->
+        <section class="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
+            <h2 id="current-item-name" class="text-2xl font-extrabold text-gray-800">Margherita Classica</h2>
+            <p id="item-price" class="text-3xl font-bold text-red-600 my-2">€ 7.50</p>
+            <p class="text-sm text-gray-500 mb-4">Pomodoro, Mozzarella, Basilico fresco, Olio EVO.</p>
+
+            <!-- Placeholder per Aggiunte/Modifiche Correnti -->
+            <div id="current-modifiers" class="space-y-2 text-sm">
+                <p class="font-semibold text-gray-700">Modifiche Attuali:</p>
+                <ul id="modifiers-list" class="list-disc list-inside text-gray-600">
+                    <li>Nessuna modifica selezionata.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Blocco Aggiunte/Modifiche con i quattro pulsanti -->
+        <section class="mt-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Aggiunte e Modifiche Speciali</h3>
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <button onclick="showModifierModal('Più', 'Aggiungi Ingredienti')"
+                        class="modifier-btn bg-green-500 text-white p-4 rounded-xl shadow-md hover:bg-green-600 transition duration-200 transform hover:scale-105 font-bold text-lg">
+                    Più (+)
+                </button>
+                <button onclick="showModifierModal('Meno', 'Rimuovi Ingredienti')"
+                        class="modifier-btn bg-yellow-500 text-white p-4 rounded-xl shadow-md hover:bg-yellow-600 transition duration-200 transform hover:scale-105 font-bold text-lg">
+                    Meno (-)
+                </button>
+                <button onclick="showModifierModal('Poco', 'Quantità Ridotta')"
+                        class="modifier-btn bg-blue-500 text-white p-4 rounded-xl shadow-md hover:bg-blue-600 transition duration-200 transform hover:scale-105 font-bold text-lg">
+                    Poco
+                </button>
+                <button onclick="showModifierModal('Abbondante', 'Quantità Maggiorata')"
+                        class="modifier-btn bg-red-500 text-white p-4 rounded-xl shadow-md hover:bg-red-600 transition duration-200 transform hover:scale-105 font-bold text-lg">
+                    Abbondante
+                </button>
+            </div>
+        </section>
+
+        <!-- Area per la lista degli articoli (qui andrebbe la lista delle Pizze, Calzoni, etc.) -->
+        <section class="mt-8 pt-4 border-t border-gray-200">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Lista Articoli (Esempio)</h3>
+            <div class="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
+                <p class="text-gray-600">Clicca un pulsante in alto per cambiare categoria, poi usa i pulsanti Più/Meno/Poco/Abbondante per personalizzare l'articolo in evidenza.</p>
+                <button class="w-full mt-3 bg-red-100 text-red-700 py-3 rounded-lg font-semibold hover:bg-red-200">Aggiungi al carrello</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 3. BARRA DI NAVIGAZIONE INFERIORE (MODALITÀ ORDINE) -->
+    <footer id="bottom-nav" class="fixed-bar fixed bottom-0 left-0 right-0 z-50 bg-white/90 p-3">
+        <div class="flex justify-around space-x-2">
+            <!-- Array dei pulsanti inferiori -->
+            <script>
+                const orderModes = [
+                    { name: 'A Domicilio', icon: '🏠', color: 'bg-indigo-600' },
+                    { name: 'Asporto', icon: '🛍️', color: 'bg-pink-600' },
+                    { name: 'Banco', icon: '🍽️', color: 'bg-teal-600' }
+                ];
+                const bottomNav = document.getElementById('bottom-nav').querySelector('div');
+
+                orderModes.forEach((mode, index) => {
+                    const button = document.createElement('button');
+                    button.innerHTML = `<span class="text-xl">${mode.icon}</span> ${mode.name}`;
+                    button.className = `flex-1 flex flex-col items-center justify-center p-2 rounded-xl text-xs font-semibold text-white transition duration-150 ease-in-out ${mode.color} shadow-lg hover:opacity-90`;
+                    button.onclick = () => selectOrderMode(mode.name);
+                    bottomNav.appendChild(button);
+                });
+
+                function selectOrderMode(mode) {
+                    // Logica per selezionare la modalità di ordine
+                    console.log(`Modalità ordine selezionata: ${mode}`);
+                    alertSmart(`Modalità Ordine Impostata: ${mode}`);
+                }
+            </script>
+        </div>
+    </footer>
+
+    <!-- 4. MODAL PER AGGIUNTE E MODIFICHE (Il "menù a tendina" dinamico) -->
+    <div id="modifier-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-end justify-center z-[100] hidden transition-opacity duration-300 opacity-0" onclick="closeModifierModal(event)">
+        <div id="modal-content" class="bg-white w-full rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 p-6 space-y-4" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b pb-3 mb-2">
+                <h3 id="modal-title" class="text-2xl font-extrabold text-gray-800">Aggiungi Ingredienti</h3>
+                <button onclick="closeModifierModal()" class="text-gray-500 hover:text-gray-800 text-2xl font-light">&times;</button>
+            </div>
+
+            <p id="modal-subtitle" class="text-sm text-gray-500">Seleziona le aggiunte per l'articolo Margherita Classica.</p>
+
+            <!-- Lista Dinamica delle Opzioni -->
+            <div id="options-list" class="space-y-3 max-h-80 overflow-y-auto hide-scrollbar">
+                <!-- Verrà popolato da JS -->
+            </div>
+
+            <button onclick="applyModifiers()" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 transition duration-200">
+                Conferma Aggiunte
+            </button>
+        </div>
+    </div>
+
+    <!-- 5. Funzione Sostitutiva di alert() (Mostra un messaggio personalizzato) -->
+    <div id="custom-alert" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-xl opacity-0 transition-opacity duration-300 z-[200]" style="pointer-events: none;">
+        Messaggio di prova
+    </div>
+
+    <!-- LOGICA JAVASCRIPT -->
+    <script>
+        // Array globale per tenere traccia delle modifiche attuali
+        let activeModifiers = [];
+
+        // Dati di esempio per le aggiunte (simula il menù a tendina)
+        const additionOptions = [
+            { name: 'Mozzarella di bufala', price: 2.00, type: 'Più' },
+            { name: 'Prosciutto Cotto', price: 1.50, type: 'Più' },
+            { name: 'Sale Piccante', price: 0.50, type: 'Più' },
+            { name: 'Crostacei', price: 5.00, type: 'Più' },
+            { name: 'Funghi Porcini', price: 2.50, type: 'Più' },
+            { name: 'Basilico Extra', price: 0.50, type: 'Abbondante' },
+            { name: 'Meno Pomodoro', price: 0.00, type: 'Meno' },
+            { name: 'Poco Olio EVO', price: 0.00, type: 'Poco' },
+        ];
+
+        // Riferimenti agli elementi DOM
+        const modal = document.getElementById('modifier-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalSubtitle = document.getElementById('modal-subtitle');
+        const optionsList = document.getElementById('options-list');
+        const currentModifiersList = document.getElementById('modifiers-list');
+
+        let currentModifierType = ''; // Tiene traccia del tipo di modifica (+, -, Poco, Abbondante)
+
+        /**
+         * Funzione per mostrare la modale delle aggiunte.
+         * Viene chiamata quando si clicca uno dei 4 pulsanti (Più, Meno, Poco, Abbondante).
+         * @param {string} type - Il tipo di modifica ('Più', 'Meno', 'Poco', 'Abbondante')
+         * @param {string} title - Titolo da mostrare nella modale
+         */
+        function showModifierModal(type, title) {
+            currentModifierType = type;
+            const itemName = document.getElementById('current-item-name').textContent;
+
+            // 1. Aggiorna i testi della modale
+            modalTitle.textContent = title + ` (${type})`;
+            modalSubtitle.textContent = `Seleziona le modifiche di tipo "${type}" per l'articolo ${itemName}.`;
+
+            // 2. Filtra le opzioni in base al tipo di modifica
+            const filteredOptions = additionOptions.filter(opt => opt.type === type);
+
+            // 3. Popola la lista delle opzioni
+            optionsList.innerHTML = ''; // Pulisce le opzioni precedenti
+            if (filteredOptions.length === 0) {
+                optionsList.innerHTML = `<p class="text-gray-500 italic">Nessuna opzione di tipo "${type}" disponibile per questo articolo.</p>`;
+                return;
+            }
+
+            filteredOptions.forEach(option => {
+                const isChecked = activeModifiers.some(mod => mod.name === option.name);
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition duration-150';
+
+                item.innerHTML = `
+                    <label class="flex items-center space-x-3 w-full cursor-pointer">
+                        <input type="checkbox" data-name="${option.name}" data-price="${option.price}" data-type="${option.type}"
+                               class="h-5 w-5 text-red-600 rounded focus:ring-red-500" ${isChecked ? 'checked' : ''} onchange="toggleModifier(this)">
+                        <span class="text-base font-medium text-gray-700">${option.name}</span>
+                    </label>
+                    <span class="text-sm font-semibold text-red-500">+€ ${option.price.toFixed(2)}</span>
+                `;
+                optionsList.appendChild(item);
+            });
+
+            // 4. Mostra la modale con animazione
+            modal.classList.remove('hidden', 'opacity-0');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                document.getElementById('modal-content').classList.remove('translate-y-full');
+            }, 10); // Piccolo ritardo per l'animazione CSS
+        }
+
+        /** Gestisce l'aggiunta/rimozione della modifica al click della checkbox */
+        function toggleModifier(checkbox) {
+            const { name, price, type } = checkbox.dataset;
+            const newModifier = { name, price: parseFloat(price), type };
+
+            if (checkbox.checked) {
+                // Aggiungi se non esiste già
+                if (!activeModifiers.some(mod => mod.name === name)) {
+                    activeModifiers.push(newModifier);
+                }
+            } else {
+                // Rimuovi
+                activeModifiers = activeModifiers.filter(mod => mod.name !== name);
+            }
+            console.log("Modifiche temporanee:", activeModifiers);
+        }
+
+        /** Applicare le modifiche e chiudere la modale */
+        function applyModifiers() {
+            updateModifiersDisplay();
+            closeModifierModal();
+            alertSmart("Modifiche aggiunte con successo!");
+        }
+
+        /** Funzione per chiudere la modale */
+        function closeModifierModal(event) {
+            // Chiudi solo se l'evento è un click sullo sfondo (modal overlay) o sul pulsante 'x'
+            if (event && event.target.id !== 'modifier-modal' && event.target.id !== 'close-btn') {
+                return;
+            }
+            // Rimuove l'animazione di entrata e chiude la modale
+            document.getElementById('modal-content').classList.add('translate-y-full');
+            modal.classList.remove('opacity-100');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300); // Abbina la durata della transizione CSS
+        }
+
+        /** Aggiorna la lista delle modifiche nell'area di contenuto principale */
+        function updateModifiersDisplay() {
+            currentModifiersList.innerHTML = '';
+            if (activeModifiers.length === 0) {
+                currentModifiersList.innerHTML = '<li>Nessuna modifica selezionata.</li>';
+                return;
+            }
+            activeModifiers.forEach(mod => {
+                const li = document.createElement('li');
+                let costText = mod.price > 0 ? ` (+€ ${mod.price.toFixed(2)})` : '';
+                li.innerHTML = `[${mod.type}] ${mod.name}${costText}`;
+                currentModifiersList.appendChild(li);
+            });
+        }
+
+        /** Sostituzione di alert() con un messaggio toast per mobile */
+        function alertSmart(message) {
+            const alertDiv = document.getElementById('custom-alert');
+            alertDiv.textContent = message;
+
+            // Mostra
+            alertDiv.classList.add('opacity-100');
+
+            // Nascondi dopo 3 secondi
+            setTimeout(() => {
+                alertDiv.classList.remove('opacity-100');
+            }, 3000);
+        }
+
+    </script>
 </body>
 </html>
+
