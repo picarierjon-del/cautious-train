@@ -1,601 +1,810 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Gestionale SmartApp — Smart UI (tutto-in-uno)</title>
-<meta name="theme-color" content="#0b1223" />
-<style>
-  :root{
-    --bg:#0b1223; --panel:#0f172a; --bar:#0c1426; --muted:#1f2937;
-    --ink:#e5e7eb; --ink-dim:#9aa4bf; --ring:rgba(255,255,255,.08);
-    --accent:#3b82f6; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
-  }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;display:flex;flex-direction:column}
-  /* Header app-like */
-  header{
-    position:fixed; top:0; left:0; right:0; z-index:40;
-    background:linear-gradient(180deg, rgba(15,23,42,.95), rgba(11,18,35,.92));
-    border-bottom:1px solid var(--ring); backdrop-filter:blur(12px);
-    padding:calc(env(safe-area-inset-top)+8px) 10px 8px;
-  }
-  .hbar{display:flex; align-items:center; gap:8px}
-  .brand{font-weight:800; letter-spacing:.2px}
-  .grow{flex:1}
-  .btn{cursor:pointer; border:1px solid var(--ring); padding:8px 12px; border-radius:12px;
-       background:linear-gradient(180deg,#1f2937,#0b1223); color:var(--ink); font-weight:700}
-  .btn.icon{padding:8px; width:44px; display:inline-flex; align-items:center; justify-content:center}
-  .btn.primary{border-color:rgba(59,130,246,.4)}
-  .btn.danger{border-color:rgba(239,68,68,.4)}
-  .btn.ok{border-color:rgba(34,197,94,.4)}
-  /* Top tabs – 2 righe forzate */
-  .topwrap{margin-top:8px; display:grid; gap:6px}
-  .toprow{display:flex; gap:6px; overflow:auto; padding-bottom:2px}
-  .tab{border:1px solid var(--ring); border-radius:12px; padding:8px 12px; background:#0e1427; white-space:nowrap; cursor:pointer; font-weight:700}
-  .tab.active{outline:2px solid rgba(255,255,255,.18)}
-  /* Search */
-  .searchbox{margin-top:8px; display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--ring); border-radius:12px; padding:8px 10px}
-  .searchbox input{flex:1; background:#0b1223; color:#e5e7eb; border:1px solid var(--ring); border-radius:10px; padding:10px}
-  /* Layout principale */
-  main{flex:1; display:grid; grid-template-columns:320px 1fr; min-height:0;
-       margin-top:calc(env(safe-area-inset-top)+132px); /* header alto (brand+2 righe+search) */
-       margin-bottom:calc(env(safe-area-inset-bottom)+110px); } /* footer alto 2 righe */
-  @media (max-width:1060px){ main{grid-template-columns:1fr} }
-  /* Ticket */
-  aside{background:var(--panel); border-right:1px solid var(--ring); padding:10px; overflow:auto}
-  .line{display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap}
-  .ticket-item{border:1px dashed var(--ring); border-radius:10px; padding:8px; cursor:pointer; margin-bottom:8px; background:#0b1327}
-  .ticket-item.active{outline:2px solid var(--accent)}
-  .qtybtn{background:#101a30; border:1px solid var(--ring); border-radius:8px; padding:2px 8px; cursor:pointer}
-  .extra{font-size:.92rem; color:var(--ink-dim); display:flex; align-items:center; gap:6px; justify-content:space-between}
-  .total{padding-top:8px; margin-top:8px; border-top:1px solid var(--ring); font-weight:800; font-size:1.1rem}
-  .small{font-size:.85rem; opacity:.85}
-  /* Stage (grid centrale) */
-  .stage{display:flex; flex-direction:column; min-width:0; padding:10px}
-  .grid{flex:1; overflow:auto; padding-top:6px; display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px}
-  .gridbtn{border:none; border-radius:14px; padding:18px 10px; color:#fff; font-weight:800; cursor:pointer; text-shadow:0 1px 1px rgba(0,0,0,.3); box-shadow:0 4px 14px rgba(0,0,0,.25)}
-  .gridbtn small{display:block; opacity:.92; font-weight:700}
-  /* Footer – 2 righe gruppi */
-  footer{
-    position:fixed; left:0; right:0; bottom:0; z-index:35;
-    background:linear-gradient(180deg, rgba(11,18,35,.92), rgba(8,12,24,.94));
-    border-top:1px solid var(--ring); backdrop-filter:blur(12px);
-    padding:8px 10px calc(env(safe-area-inset-bottom)+8px);
-  }
-  .botwrap{display:grid; gap:6px}
-  .botrow{display:flex; gap:6px; overflow:auto; padding-bottom:2px}
-  .quick{border:1px solid var(--ring); border-radius:12px; padding:10px 12px; background:linear-gradient(180deg,#1f2937,#0b1223); color:#fff; cursor:pointer; font-weight:800; white-space:nowrap}
-  /* Modal impostazioni */
-  .modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
-  .modal.show{display:flex}
-  .panel{width:min(1200px,96vw); max-height:84vh; overflow:auto; background:#0b1223; color:#e5e7eb; border:1px solid var(--ring); border-radius:16px; padding:12px}
-  .card{border:1px solid var(--ring); border-radius:12px; padding:10px; background:#0e1427}
-  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-  .hr{height:1px; background:var(--ring); margin:8px 0}
-  input[type="text"], input[type="number"]{background:#0b1223; color:#e5e7eb; border:1px solid var(--ring); border-radius:8px; padding:8px}
-  .section{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-  @media (max-width: 900px){ .section{grid-template-columns:1fr} }
-  .swatches{display:flex; flex-wrap:wrap; gap:6px}
-  .sw{width:26px; height:26px; border-radius:6px; border:2px solid rgba(255,255,255,.2); cursor:pointer}
-  .sw.active{outline:2px solid #fff}
-  /* Print */
-  @media print{
-    header, footer, .modal{display:none !important}
-    main{grid-template-columns:1fr}
-    aside{border:none}
-    body{background:#fff; color:#000}
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale Pizzeria - Codice Unico</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        /* Stile base per smartphone */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+            padding-bottom: 60px; /* Spazio per la barra di navigazione */
+        }
+
+        header {
+            background-color: #e31b23; /* Rosso Pizzeria */
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #main-content {
+            padding: 10px;
+        }
+
+        /* Navigazione in basso (tipo iOS Tab Bar) */
+        nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            background-color: white;
+            border-top: 1px solid #ddd;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+            height: 50px;
+            z-index: 1000;
+        }
+
+        nav button {
+            flex-grow: 1;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+
+        nav button i {
+            font-size: 1.4em;
+            margin-bottom: 3px;
+        }
+
+        nav button.active {
+            color: #e31b23;
+        }
+
+        /* Sezioni e elementi comuni */
+        .hidden {
+            display: none !important;
+        }
+
+        h2 {
+            color: #e31b23;
+            border-bottom: 2px solid #e31b23;
+            padding-bottom: 5px;
+            margin-top: 20px;
+        }
+
+        h3 {
+            color: #555;
+            margin-top: 15px;
+        }
+
+        button {
+            background-color: #e31b23;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #a01319;
+        }
+
+        input[type="text"], input[type="number"], input[type="tel"], input[type="time"], select {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        /* Stili specifici per l'inserimento ordine */
+        .category-menu, .delivery-mode-selection {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .category-menu button, .delivery-mode-selection button {
+            flex-grow: 1;
+            margin-right: 5px;
+            background-color: #555;
+            font-size: 14px; /* Ottimizzato per smartphone */
+            padding: 8px;
+        }
+
+        .category-menu button:last-child, .delivery-mode-selection button:last-child {
+            margin-right: 0;
+        }
+
+        .category-menu button.active-category, .delivery-mode-selection button.active-mode {
+            background-color: #e31b23;
+        }
+
+        #products-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Più compatto */
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .product-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px 5px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .product-item:hover {
+            background-color: #ffe8e8;
+        }
+
+        #current-order {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        #order-items-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        #order-items-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dotted #eee;
+            font-size: 0.9em;
+        }
+
+        .remove-item-btn {
+            background: none;
+            border: none;
+            color: #e31b23;
+            padding: 0;
+            margin: 0;
+            width: auto;
+            font-size: 1.2em;
+        }
+
+        #total-price {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 10px;
+        }
+
+        /* Stili per le impostazioni e ordini attivi */
+        #active-orders-container .order-card {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .order-card h4 {
+            margin: 0 0 10px 0;
+            color: #e31b23;
+        }
+
+        .order-card ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .order-card .status-btn {
+            width: auto;
+            padding: 8px 12px;
+            margin-right: 5px;
+            font-size: 0.8em;
+        }
+
+        #current-menu-display, #current-drivers-display {
+            margin-top: 20px;
+        }
+
+        #current-menu-display div, #current-drivers-display div {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        #current-menu-display div:hover, #current-drivers-display div:hover {
+            background-color: #f7f7f7;
+        }
+
+        .delete-item-btn {
+            color: #e31b23;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+    </style>
 </head>
-<body v-scope="App" @vue:mounted="init()">
-  <header>
-    <div class="hbar">
-      <div class="brand">🧾 Gestionale SmartApp</div>
-      <div class="grow"></div>
-      <button class="btn" @click="printOrder" title="Stampa / PDF">🖨️</button>
-      <button class="btn" @click="shareWA" title="WhatsApp">🟢</button>
-      <button class="btn" @click="shareEmail" title="Email">✉️</button>
-      <button class="btn" @click="copyOrder" title="Copia">📋</button>
-      <button class="btn icon" @click="openSettings" title="Impostazioni">⚙️</button>
-      <button class="btn danger" @click="clearOrder" title="Svuota">🗑️</button>
-    </div>
+<body>
 
-    <!-- TOP: 2 righe categorie -->
-    <div class="topwrap">
-      <div class="toprow">
-        <button class="tab" v-for="(g,i) in topRow1" :key="g._uid"
-          :class="{active: currentBottomGroup==null && currentTopIndex===i}"
-          @click="currentBottomGroup=null; currentTopIndex=i; search='';">
-          {{ g.icon }} {{ g.label }}
-        </button>
-      </div>
-      <div class="toprow">
-        <button class="tab" v-for="(g,i) in topRow2" :key="g._uid"
-          :class="{active: currentBottomGroup==null && currentTopIndex===i+topRow1.length}"
-          @click="currentBottomGroup=null; currentTopIndex=i+topRow1.length; search='';">
-          {{ g.icon }} {{ g.label }}
-        </button>
-      </div>
-    </div>
+    <header>
+        <h1>Gestione Ordini Pizzeria</h1>
+    </header>
 
-    <!-- Ricerca contestuale -->
-    <div class="searchbox">
-      🔍
-      <input type="text" v-model.trim="search"
-        :placeholder="currentBottomGroup ? ('Cerca in '+currentBottomGroup.label) : ('Cerca in '+(topGroups[currentTopIndex]?.label||'categoria'))" />
-      <button class="btn ok" @click="search=''" title="Pulisci ricerca">✖</button>
-    </div>
-  </header>
-
-  <main>
-    <!-- Ticket -->
-    <aside>
-      <div class="line" style="margin-bottom:6px">
-        <strong>Ordine</strong>
-        <span class="small">{{ now }}</span>
-      </div>
-
-      <template v-if="cart.length>0">
-        <div class="ticket-item" :class="{active: activeIndex===i}"
-             v-for="(it,i) in cart" :key="i" @click="activeIndex=i">
-          <div class="line">
-            <div>
-              <strong contenteditable @input="e=>editName(i,e)">{{ it.name }}</strong>
-              <span class="small" v-if="it.isService">(servizio)</span>
-            </div>
-            <div>
-              <button class="qtybtn" @click.stop="decQty(i)">−</button>
-              <span contenteditable @input="e=>editQty(i,e)">{{ it.qty }}</span>
-              <button class="qtybtn" @click.stop="incQty(i)">+</button>
-              &nbsp;×&nbsp;€ <span contenteditable @input="e=>editPrice(i,e)">{{ it.price.toFixed(2) }}</span>
-              <button class="qtybtn" @click.stop="removeItem(i)" title="Elimina">🗑️</button>
-            </div>
-          </div>
-
-          <div class="extra" v-for="(ex,ei) in it.extras" :key="ei">
-            <span>• <span contenteditable @input="e=>editExText(i,ei,e)">{{ ex.text }}</span></span>
-            <span class="small">+ € <span contenteditable @input="e=>editExPrice(i,ei,e)">{{ ex.price.toFixed(2) }}</span></span>
-            <button class="qtybtn" @click.stop="removeExtra(i,ei)">✖</button>
-          </div>
-
-          <div class="line">
-            <span class="small">Subtotale</span>
-            <strong>{{ money(lineTotal(it)) }}</strong>
-          </div>
-        </div>
-      </template>
-      <template v-else>
-        <div class="small" style="opacity:.7">Nessun articolo ancora.</div>
-      </template>
-
-      <div class="total">Totale: <span>{{ money(grandTotal) }}</span></div>
-    </aside>
-
-    <!-- Stage (griglia centrale) -->
-    <section class="stage">
-      <div class="grid">
-        <!-- Articoli di categoria -->
-        <template v-if="currentBottomGroup==null">
-          <button v-for="it in filteredTopItems" :key="it._uid"
-                  class="gridbtn" :style="bgStyle(it)" @click="addItem(it)">
-            {{ it.icon }} {{ it.label }} <small>{{ money(it.price) }}</small>
-          </button>
-        </template>
-        <!-- Voci del gruppo modificatore -->
-        <template v-else>
-          <button v-for="ex in filteredBottomItems" :key="ex._uid"
-                  class="gridbtn" :style="bgStyle(ex)" @click="applyModifier(ex)">
-            {{ ex.icon }} {{ ex.label }} <small>{{ money(ex.price) }}</small>
-          </button>
-        </template>
-      </div>
-    </section>
-  </main>
-
-  <!-- FOOTER: 2 righe gruppi -->
-  <footer>
-    <div class="botwrap">
-      <!-- Riga 1: intensità (Più, Senza, Poco, Abbondante) -->
-      <div class="botrow">
-        <button v-for="g in bottomPrimary" :key="g._uid"
-                class="quick" :style="bgStyle(g)" @click="selectBottomGroup(g)">
-          {{ g.icon }} {{ g.label }}
-        </button>
-      </div>
-      <!-- Riga 2: resto (consegna, asporto, banco, …) -->
-      <div class="botrow">
-        <button v-for="g in bottomSecondary" :key="g._uid"
-                class="quick" :style="bgStyle(g)" @click="selectBottomGroup(g)">
-          {{ g.icon }} {{ g.label }}
-        </button>
-      </div>
-    </div>
-  </footer>
-
-  <!-- MODAL IMPOSTAZIONI -->
-  <div class="modal" :class="{show: showSettings}" @click.self="showSettings=false">
-    <div class="panel">
-      <div class="line" style="margin-bottom:10px">
-        <strong>Impostazioni avanzate</strong>
-        <div class="grow"></div>
-        <button class="btn" @click="applyAndSave">💾 Salva</button>
-        <button class="btn danger" @click="resetConfig">Ripristina</button>
-        <button class="btn" @click="showSettings=false">Chiudi</button>
-      </div>
-
-      <div class="section">
-        <!-- Categorie (Top) -->
-        <div class="card">
-          <h3 style="margin:6px 0">Barra superiore — Categorie</h3>
-          <div class="row" style="margin-bottom:10px">
-            <button class="btn primary" @click="addTopGroup">➕ Aggiungi categoria</button>
-          </div>
-          <div class="hr"></div>
-
-          <div v-for="(g,gi) in editTop" :key="g._uid" class="card" style="margin-bottom:10px">
-            <div class="row">
-              <label>Icona</label>
-              <input type="text" style="width:80px" v-model="g.icon" />
-              <label>Nome</label>
-              <input type="text" style="flex:1" v-model="g.label" />
-              <label>Colore</label>
-              <div class="swatches">
-                <div v-for="c in PALETTE" :key="c" class="sw" :class="{active: g.color===c}" :style="{background:c}" @click="g.color=c"></div>
-              </div>
-              <button class="btn danger" @click="removeTopGroup(gi)">Elimina categoria</button>
+    <div id="main-content">
+        <div id="order-entry-section">
+            <div id="menu-selection">
+                <h2>Crea Ordine</h2>
+                
+                <div class="category-menu">
+                    <button class="menu-btn" data-category="pizze">Pizze</button>
+                    <button class="menu-btn" data-category="bibite">Bibite</button>
+                    <button class="menu-btn" data-category="aggiunte">Aggiunte</button>
+                </div>
+                
+                <div id="products-list">
+                    </div>
             </div>
 
-            <div class="hr"></div>
-            <div class="small" style="opacity:.8;margin-bottom:6px">Articoli</div>
-
-            <div v-for="(it,ii) in g.items" :key="it._uid" class="row" style="gap:6px;margin-bottom:6px">
-              <input type="text" placeholder="Icona" style="width:80px" v-model="it.icon" />
-              <input type="text" placeholder="Nome" style="flex:1" v-model="it.label" />
-              <input type="number" step="0.01" placeholder="Prezzo" style="width:140px" v-model.number="it.price" />
-              <div class="swatches">
-                <div v-for="c in PALETTE" :key="c" class="sw" :class="{active: it.color===c}" :style="{background:c}" @click="it.color=c"></div>
-              </div>
-              <button class="btn danger" @click="removeTopItem(gi,ii)">🗑️</button>
+            <div id="current-order">
+                <h3>Ordine Corrente</h3>
+                <ul id="order-items-list">
+                    </ul>
+                <div id="total-price">Totale: €0.00</div>
+                <button id="finalize-order-btn">Finalizza Ordine</button>
             </div>
-
-            <div class="row">
-              <button class="btn" @click="addTopItem(gi)">➕ Aggiungi articolo</button>
-            </div>
-          </div>
         </div>
 
-        <!-- Modificatori (Bottom) -->
-        <div class="card">
-          <h3 style="margin:6px 0">Barra inferiore — Modificatori</h3>
-          <div class="row" style="margin-bottom:10px">
-            <button class="btn primary" @click="addBottomGroup">➕ Aggiungi gruppo</button>
-          </div>
-          <div class="hr"></div>
+        <div id="order-details-section" class="hidden">
+            <h2>Dettagli Ordine</h2>
 
-          <div v-for="(g,gi) in editBottom" :key="g._uid" class="card" style="margin-bottom:10px">
-            <div class="row">
-              <label>Icona</label>
-              <input type="text" style="width:80px" v-model="g.icon" />
-              <label>Nome</label>
-              <input type="text" style="flex:1" v-model="g.label" />
-              <label>Colore</label>
-              <div class="swatches">
-                <div v-for="c in PALETTE" :key="c" class="sw" :class="{active: g.color===c}" :style="{background:c}" @click="g.color=c"></div>
-              </div>
-              <button class="btn danger" @click="removeBottomGroup(gi)">Elimina gruppo</button>
+            <div class="delivery-mode-selection">
+                <button class="mode-btn" data-mode="consegna">Consegna a Domicilio</button>
+                <button class="mode-btn" data-mode="asporto">Asporto</button>
+                <button class="mode-btn" data-mode="banco">Banco Rapido</button>
             </div>
 
-            <div class="hr"></div>
-            <div class="small" style="opacity:.8;margin-bottom:6px">Voci / modificatori</div>
+            <form id="order-form">
+                <div id="delivery-data" class="mode-data hidden">
+                    <h3>Dati Consegna a Domicilio</h3>
+                    <input type="text" id="consegna-nome" placeholder="Nome e Cognome" required>
+                    <input type="text" id="consegna-indirizzo" placeholder="Indirizzo" required>
+                    <input type="tel" id="consegna-telefono" placeholder="Telefono" required>
+                    <select id="fattorino-select" required>
+                        <option value="">Seleziona Fattorino</option>
+                        </select>
+                </div>
 
-            <div v-for="(it,ii) in g.items" :key="it._uid" class="row" style="gap:6px;margin-bottom:6px">
-              <input type="text" placeholder="Icona" style="width:80px" v-model="it.icon" />
-              <input type="text" placeholder="Nome" style="flex:1" v-model="it.label" />
-              <input type="number" step="0.01" placeholder="Prezzo" style="width:140px" v-model.number="it.price" />
-              <label class="small" style="display:flex;gap:6px;align-items:center">
-                <input type="checkbox" v-model="it.applyToOrder"> Applica all’ordine
-              </label>
-              <div class="swatches">
-                <div v-for="c in PALETTE" :key="c" class="sw" :class="{active: it.color===c}" :style="{background:c}" @click="it.color=c"></div>
-              </div>
-              <button class="btn danger" @click="removeBottomItem(gi,ii)">🗑️</button>
-            </div>
+                <div id="takeaway-data" class="mode-data hidden">
+                    <h3>Dati Asporto</h3>
+                    <input type="text" id="asporto-nome" placeholder="Nome e Cognome" required>
+                    <input type="tel" id="asporto-telefono" placeholder="Telefono" required>
+                    <label for="asporto-ora">Ora ritiro:</label>
+                    <input type="time" id="asporto-ora" required>
+                </div>
 
-            <div class="row">
-              <button class="btn" @click="addBottomItem(gi)">➕ Aggiungi voce</button>
-            </div>
-          </div>
+                <div id="counter-data" class="mode-data hidden">
+                    <h3>Dati Banco Rapido</h3>
+                    <input type="text" id="banco-cognome" placeholder="Cognome" required>
+                    <label for="banco-ora">Ora:</label>
+                    <input type="time" id="banco-ora" required>
+                </div>
+                
+                <button type="submit" id="submit-order-btn">Conferma Ordine</button>
+            </form>
         </div>
-      </div>
 
-      <p class="small" style="margin-top:10px;opacity:.8">
-        Le modifiche vengono salvate in locale sul dispositivo (<code>localStorage</code>).
-      </p>
+        <div id="orders-list-section" class="hidden">
+            <h2><i class="fas fa-list-alt"></i> Ordini in Corso</h2>
+            <div id="active-orders-container">
+                </div>
+        </div>
+        
+        <div id="settings-section" class="hidden">
+            <h2><i class="fas fa-cog"></i> Impostazioni e Modifica</h2>
+            
+            <h3>Gestione Menu</h3>
+            <form id="add-product-form">
+                <select id="product-type-select">
+                    <option value="pizze">Pizza</option>
+                    <option value="bibite">Bibita</option>
+                    <option value="aggiunte">Aggiunta</option>
+                </select>
+                <input type="text" id="product-name" placeholder="Nome Prodotto" required>
+                <input type="number" id="product-price" placeholder="Prezzo (€)" step="0.01" required>
+                <button type="submit">Aggiungi Prodotto</button>
+            </form>
+
+            <div id="current-menu-display">
+                <h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>
+                </div>
+
+            <h3>Gestione Fattorini</h3>
+            <form id="add-driver-form">
+                <input type="text" id="driver-name" placeholder="Nome Fattorino" required>
+                <button type="submit">Aggiungi Fattorino</button>
+            </form>
+            <div id="current-drivers-display">
+                <h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>
+                </div>
+        </div>
     </div>
-  </div>
 
-  <!-- Petite-Vue -->
-  <script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.iife.js"></script>
-  <script>
-  const money = n => (isNaN(n)?0:n).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
-  const uid = () => Math.random().toString(36).slice(2,9);
-  function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
-  function ensureUidList(arr){
-    if(!arr) return;
-    arr.forEach(g=>{
-      if (g._uid == null) g._uid = uid();
-      var its = g.items || [];
-      its.forEach(it=>{ if (it._uid == null) it._uid = uid(); });
-    });
-  }
+    <nav>
+        <button id="nav-order-entry"><i class="fas fa-cash-register"></i> Inserimento</button>
+        <button id="nav-orders-list"><i class="fas fa-clipboard-list"></i> Ordini</button>
+        <button id="nav-settings"><i class="fas fa-cog"></i> Impostazioni</button>
+    </nav>
 
-  const DEFAULT_CONFIG = {
-    topGroups: [
-      {icon:"🍕", label:"Pizze", color:"#f43f5e", _uid:uid(), items:[
-        {icon:"🍕",label:"Margherita",price:6,color:"#f43f5e",_uid:uid()},
-        {icon:"🌶️",label:"Diavola",price:7,color:"#ef4444",_uid:uid()},
-        {icon:"🍄",label:"Funghi",price:7,color:"#10b981",_uid:uid()},
-        {icon:"🥓",label:"Capricciosa",price:7.5,color:"#f43f5e",_uid:uid()},
-        {icon:"🕓",label:"Quattro Stagioni",price:7.5,color:"#f43f5e",_uid:uid()},
-        {icon:"🐃",label:"Bufala",price:8,color:"#ec4899",_uid:uid()}
-      ]},
-      {icon:"🥟", label:"Calzoni", color:"#f97316", _uid:uid(), items:[
-        {icon:"🥟",label:"Classico",price:7,color:"#f97316",_uid:uid()},
-        {icon:"🧀",label:"Ripieno",price:8,color:"#f97316",_uid:uid()}
-      ]},
-      {icon:"🥪", label:"Panini", color:"#eab308", _uid:uid(), items:[
-        {icon:"🍔",label:"Hamburger",price:5.5,color:"#eab308",_uid:uid()},
-        {icon:"🌭",label:"Hot Dog",price:4.5,color:"#eab308",_uid:uid()}
-      ]},
-      {icon:"🍞", label:"Schiacciata grande", color:"#22c55e", _uid:uid(), items:[
-        {icon:"🍞",label:"Semplice",price:9,color:"#22c55e",_uid:uid()}
-      ]},
-      {icon:"📏", label:"Mezzo metro", color:"#6366f1", _uid:uid(), items:[
-        {icon:"🥓",label:"Salumi",price:14,color:"#6366f1",_uid:uid()}
-      ]},
-      {icon:"🥤", label:"Bibite", color:"#0ea5e9", _uid:uid(), items:[
-        {icon:"🥤",label:"Cola 33cl",price:2,color:"#0ea5e9",_uid:uid()},
-        {icon:"💧",label:"Acqua",price:1,color:"#06b6d4",_uid:uid()},
-        {icon:"🍺",label:"Birra",price:3,color:"#0ea5e9",_uid:uid()}
-      ]},
-      {icon:"🧾", label:"Ordini", color:"#475569", _uid:uid(), items:[]}
-    ],
-    bottomGroups: [
-      {icon:"➕",label:"Più",color:"#22c55e",_uid:uid(),items:[
-        {icon:"🧀",label:"Mozzarella",price:1,color:"#22c55e",applyToOrder:false,_uid:uid()},
-        {icon:"🍄",label:"Funghi",price:1,color:"#22c55e",applyToOrder:false,_uid:uid()},
-        {icon:"🥓",label:"Prosciutto",price:1.5,color:"#22c55e",applyToOrder:false,_uid:uid()}
-      ]},
-      {icon:"➖",label:"Senza",color:"#6b7280",_uid:uid(),items:[
-        {icon:"🍅",label:"Pomodoro",price:0,color:"#6b7280",applyToOrder:false,_uid:uid()},
-        {icon:"🧅",label:"Cipolla",price:0,color:"#6b7280",applyToOrder:false,_uid:uid()}
-      ]},
-      {icon:"🥄",label:"Poco",color:"#eab308",_uid:uid(),items:[
-        {icon:"🫒",label:"Olio",price:0,color:"#eab308",applyToOrder:false,_uid:uid()}
-      ]},
-      {icon:"🍽️",label:"Abbondante",color:"#8b5cf6",_uid:uid(),items:[
-        {icon:"🧀",label:"Formaggio",price:1,color:"#8b5cf6",applyToOrder:false,_uid:uid()},
-        {icon:"🫒",label:"Olive",price:0.5,color:"#8b5cf6",applyToOrder:false,_uid:uid()}
-      ]},
-      {icon:"🚚",label:"Consegna a domicilio",color:"#3b82f6",_uid:uid(),items:[
-        {icon:"🚚",label:"Consegna",price:1.5,color:"#3b82f6",applyToOrder:true,_uid:uid()}
-      ]},
-      {icon:"🥡",label:"Da asporto",color:"#14b8a6",_uid:uid(),items:[]},
-      {icon:"🪑",label:"Banco",color:"#71717a",_uid:uid(),items:[]}
-    ]
-  };
+    <script>
+        // Dati iniziali del menu e dei fattorini
+        let menu = {
+            pizze: [
+                { nome: "Margherita", prezzo: 5.00 },
+                { nome: "Diavola", prezzo: 7.50 },
+                { nome: "Capricciosa", prezzo: 8.00 }
+            ],
+            bibite: [
+                { nome: "Acqua", prezzo: 1.50 },
+                { nome: "Coca-Cola", prezzo: 2.50 }
+            ],
+            aggiunte: [
+                { nome: "Mozzarella extra", prezzo: 1.00 },
+                { nome: "Patatine", prezzo: 2.00 }
+            ]
+        };
 
-  function App(){
-    return {
-      /* ===== STATO ===== */
-      now: new Date().toLocaleString('it-IT', {dateStyle:'short', timeStyle:'short'}),
-      search: '',
-      activeIndex: -1,
-      currentTopIndex: 0,
-      currentBottomGroup: null,
-      showSettings: false,
+        let fattorini = ["Mario Rossi", "Giulia Verdi"];
+        let currentOrder = [];
+        let activeOrders = [];
+        let orderCounter = 1; // Contatore per ID ordine
 
-      topGroups: [],
-      bottomGroups: [],
-      cart: [],
+        // ---------------------- Funzioni di Caricamento/Salvataggio (Simulazione DB) ----------------------
+        // Usiamo localStorage per persistere i dati tra le sessioni (sebbene non sia un vero DB)
+        function loadData() {
+            const savedMenu = localStorage.getItem('pizzeriaMenu');
+            if (savedMenu) menu = JSON.parse(savedMenu);
 
-      PALETTE: ["#f43f5e","#ef4444","#f97316","#f59e0b","#eab308","#84cc16","#22c55e","#10b981","#14b8a6","#06b6d4","#0ea5e9","#3b82f6","#6366f1","#8b5cf6","#a855f7","#d946ef","#ec4899","#475569","#6b7280","#71717a","#78716c"],
+            const savedFattorini = localStorage.getItem('pizzeriaFattorini');
+            if (savedFattorini) fattorini = JSON.parse(savedFattorini);
 
-      /* ===== LIFECYCLE ===== */
-      init(){
-        var self=this;
-        setInterval(function(){ self.now=new Date().toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) }, 1000);
-
-        // Config
-        var cfgRaw = localStorage.getItem('smartapp_cfg_v3');
-        if(cfgRaw){
-          try{
-            var cfg = JSON.parse(cfgRaw);
-            ensureUidList(cfg.topGroups);
-            ensureUidList(cfg.bottomGroups);
-            this.topGroups = cfg.topGroups || [];
-            this.bottomGroups = cfg.bottomGroups || [];
-          }catch(e){
-            this.resetConfig(true);
-          }
-        }else{
-          this.resetConfig(true);
+            const savedOrders = localStorage.getItem('pizzeriaActiveOrders');
+            if (savedOrders) activeOrders = JSON.parse(savedOrders);
+            
+            // Aggiorna il contatore per evitare ID duplicati
+            if(activeOrders.length > 0) {
+                orderCounter = Math.max(...activeOrders.map(o => o.id)) + 1;
+            }
         }
 
-        // Cart
-        var cartRaw = localStorage.getItem('smartapp_cart_v1');
-        if(cartRaw){ try{ this.cart = JSON.parse(cartRaw) || []; }catch(e){} }
-
-        // Watchers
-        this.$watch(()=>[this.topGroups,this.bottomGroups], ()=> this.saveConfig(), {deep:true});
-        this.$watch('cart', ()=> localStorage.setItem('smartapp_cart_v1', JSON.stringify(this.cart)), {deep:true});
-      },
-
-      /* ===== DERIVATI ===== */
-      get topRow1(){
-        var n=this.topGroups.length, mid=Math.ceil(n/2);
-        return this.topGroups.slice(0,mid);
-      },
-      get topRow2(){
-        var n=this.topGroups.length, mid=Math.ceil(n/2);
-        return this.topGroups.slice(mid);
-      },
-      get topItems(){
-        var g = this.topGroups[this.currentTopIndex];
-        return (g && g.items) ? g.items : [];
-      },
-      get filteredTopItems(){
-        var q=this.search.toLowerCase();
-        return this.topItems.filter(p=> ( (p.icon||'') + ' ' + p.label ).toLowerCase().includes(q));
-      },
-      get filteredBottomItems(){
-        var q=this.search.toLowerCase();
-        var list = (this.currentBottomGroup && this.currentBottomGroup.items) ? this.currentBottomGroup.items : [];
-        return list.filter(p=> ( (p.icon||'') + ' ' + p.label ).toLowerCase().includes(q));
-      },
-      // Gruppi intensità (prima riga) vs altri (seconda riga)
-      isIntensity(g){
-        var n=(g.label||'').toLowerCase();
-        return n.indexOf('più')===0 || n.indexOf('senza')===0 || n.indexOf('poco')===0 || n.indexOf('abbondante')===0;
-      },
-      get bottomPrimary(){ return this.bottomGroups.filter(g=>this.isIntensity(g)); },
-      get bottomSecondary(){ return this.bottomGroups.filter(g=>!this.isIntensity(g)); },
-      get grandTotal(){ return this.cart.reduce((sum,it)=> sum + this.lineTotal(it), 0); },
-
-      /* ===== STYLE ===== */
-      bgStyle(obj){ return {background: obj.color || '#6b7280'}; },
-      money,
-
-      /* ===== AZIONI GRIGLIA ===== */
-      selectBottomGroup(g){ this.currentBottomGroup=g; this.search=''; },
-      addItem(p){
-        this.cart.push({name:p.label, price:+p.price||0, qty:1, extras:[], isService:false});
-        this.activeIndex=this.cart.length-1;
-      },
-      applyModifier(ex){
-        if(ex.applyToOrder){
-          this.cart.push({name:ex.label, price:+ex.price||0, qty:1, extras:[], isService:true});
-          this.activeIndex=this.cart.length-1;
-          return;
+        function saveData() {
+            localStorage.setItem('pizzeriaMenu', JSON.stringify(menu));
+            localStorage.setItem('pizzeriaFattorini', JSON.stringify(fattorini));
+            localStorage.setItem('pizzeriaActiveOrders', JSON.stringify(activeOrders));
         }
-        if(!this.cart.length){ alert('Aggiungi prima un articolo.'); return; }
-        var idx = this.activeIndex>=0 ? this.activeIndex : this.cart.length-1;
-        var target = this.cart[idx];
-        var gname = this.currentBottomGroup ? (this.currentBottomGroup.label || '') : '';
-        var prefixNeeded = /Più|Senza|Poco|Abbondante/i.test(gname) ? (gname+' ') : '';
-        target.extras.push({text: prefixNeeded + ex.label, price:+ex.price||0});
-        this.activeIndex = idx;
-      },
 
-      /* ===== TICKET ===== */
-      lineTotal(it){
-        var extras = (it.extras||[]).reduce((s,e)=> s + (+e.price||0), 0);
-        return ((+it.price||0) + extras) * (it.qty||1);
-      },
-      incQty(i){ this.cart[i].qty = (this.cart[i].qty||1)+1; },
-      decQty(i){ this.cart[i].qty = Math.max(1,(this.cart[i].qty||1)-1); },
-      removeItem(i){ this.cart.splice(i,1); if(this.activeIndex>=this.cart.length) this.activeIndex=this.cart.length-1; },
-      removeExtra(i,ei){ this.cart[i].extras.splice(ei,1); },
+        // ---------------------- Funzioni di Rendering ----------------------
 
-      editName(i,e){ this.cart[i].name = e.target.textContent.trim(); },
-      editQty(i,e){ var n=parseInt(e.target.textContent)||1; this.cart[i].qty = Math.max(1,n); },
-      editPrice(i,e){ var n=parseFloat(e.target.textContent.replace(',','.'))||0; this.cart[i].price = n; },
-      editExText(i,ei,e){ this.cart[i].extras[ei].text = e.target.textContent.trim(); },
-      editExPrice(i,ei,e){ var n=parseFloat(e.target.textContent.replace(',','.'))||0; this.cart[i].extras[ei].price = n; },
+        // 1. Renderizza i prodotti per la creazione ordine
+        function renderProducts(category) {
+            const list = document.getElementById('products-list');
+            list.innerHTML = '';
+            
+            menu[category].forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'product-item';
+                div.dataset.name = item.nome;
+                div.dataset.price = item.prezzo;
+                div.innerHTML = `
+                    <strong>${item.nome}</strong>
+                    <p>€${item.prezzo.toFixed(2)}</p>
+                `;
+                div.addEventListener('click', () => addItemToOrder(item.nome, item.prezzo));
+                list.appendChild(div);
+            });
+        }
 
-      clearOrder(){ if(confirm('Svuotare l’ordine?')){ this.cart.splice(0); this.activeIndex=-1; } },
+        // 2. Renderizza gli elementi nell'ordine corrente
+        function renderCurrentOrder() {
+            const list = document.getElementById('order-items-list');
+            list.innerHTML = '';
+            let total = 0;
 
-      /* ===== Condivisione ===== */
-      orderText(){
-        const lines = this.cart.map(it=>{
-          const cad = (+it.price||0) + (it.extras||[]).reduce((s,e)=>s+(+e.price||0),0);
-          const extras = (it.extras||[]).map(e=>`   • ${e.text} ${e.price?`(+${money(e.price)})`:''}`).join('\n');
-          return `${it.qty}× ${it.name} — ${money(cad)} cad.\n${extras}`;
-        }).join('\n');
-        return `ORDINE\n${lines}\nTotale: ${money(this.grandTotal)}\nOra: ${this.now}`;
-      },
-      printOrder(){ window.print(); },
-      async copyOrder(){ try{ await navigator.clipboard.writeText(this.orderText()); alert('Riepilogo copiato!'); }catch{ alert('Copia non disponibile.'); } },
-      shareWA(){ const t=encodeURIComponent(this.orderText()); window.open(`https://wa.me/?text=${t}`,'_blank'); },
-      shareEmail(){ const s=encodeURIComponent('Nuovo ordine'); const b=encodeURIComponent(this.orderText()); location.href=`mailto:?subject=${s}&body=${b}`; },
+            currentOrder.forEach((item, index) => {
+                total += item.prezzo;
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${item.nome}</span>
+                    <span>€${item.prezzo.toFixed(2)} 
+                        <button class="remove-item-btn" data-index="${index}"><i class="fas fa-times-circle"></i></button>
+                    </span>
+                `;
+                list.appendChild(li);
+            });
 
-      /* ===== Impostazioni ===== */
-      editTop: [], editBottom: [],
-      openSettings(){
-        this.editTop = deepClone(this.topGroups);
-        this.editBottom = deepClone(this.bottomGroups);
-        ensureUidList(this.editTop); ensureUidList(this.editBottom);
-        this.showSettings = true;
-      },
-      applyAndSave(){
-        this.editTop.forEach(g=>{
-          g.label = (g.label && g.label.trim()) || 'Senza nome';
-          (g.items||[]).forEach(it=> it.label = (it.label && it.label.trim()) || 'Voce');
+            document.getElementById('total-price').textContent = `Totale: €${total.toFixed(2)}`;
+
+            // Aggiunge listener per la rimozione
+            document.querySelectorAll('.remove-item-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    removeItemFromOrder(parseInt(e.currentTarget.dataset.index));
+                });
+            });
+        }
+
+        // 3. Renderizza i fattorini nella dropdown di consegna
+        function renderFattorini() {
+            const select = document.getElementById('fattorino-select');
+            select.innerHTML = '<option value="">Seleziona Fattorino</option>';
+            fattorini.forEach(fattorino => {
+                const option = document.createElement('option');
+                option.value = fattorino;
+                option.textContent = fattorino;
+                select.appendChild(option);
+            });
+        }
+
+        // 4. Renderizza gli ordini attivi
+        function renderActiveOrders() {
+            const container = document.getElementById('active-orders-container');
+            container.innerHTML = '';
+
+            activeOrders.forEach(order => {
+                const card = document.createElement('div');
+                card.className = 'order-card';
+                
+                let details = '';
+                let clientName = '';
+
+                if (order.mode === 'consegna') {
+                    clientName = order.data.nome;
+                    details = `Indirizzo: ${order.data.indirizzo}<br>Fattorino: ${order.data.fattorino}`;
+                } else if (order.mode === 'asporto') {
+                    clientName = order.data.nome;
+                    details = `Ora Ritiro: ${order.data.ora}`;
+                } else if (order.mode === 'banco') {
+                    clientName = order.data.cognome;
+                    details = `Ora: ${order.data.ora}`;
+                }
+                
+                const itemsList = order.items.map(item => `<li>${item.nome} - €${item.prezzo.toFixed(2)}</li>`).join('');
+
+                card.innerHTML = `
+                    <h4>Ordine #${order.id} - ${order.mode.toUpperCase()} (${clientName})</h4>
+                    <p><strong>Totale: €${order.total.toFixed(2)}</strong></p>
+                    <p>${details}</p>
+                    <ul>${itemsList}</ul>
+                    <p>Stato: <strong>${order.status}</strong></p>
+                    ${order.status !== 'Completato' ? 
+                        `<button class="status-btn" data-id="${order.id}" data-action="next">Avanti Stato</button>
+                         <button class="status-btn" data-id="${order.id}" data-action="delete" style="background-color: #a01319;">Elimina</button>` 
+                        : '<button class="status-btn" disabled>Completato</button>'
+                    }
+                `;
+                container.appendChild(card);
+            });
+
+            // Aggiunge listener per i pulsanti di stato
+            document.querySelectorAll('.status-btn[data-action="next"]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    changeOrderStatus(parseInt(e.currentTarget.dataset.id));
+                });
+            });
+            document.querySelectorAll('.status-btn[data-action="delete"]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (confirm('Sei sicuro di voler eliminare questo ordine?')) {
+                        deleteOrder(parseInt(e.currentTarget.dataset.id));
+                    }
+                });
+            });
+        }
+
+        // 5. Renderizza il menu e i fattorini nelle Impostazioni
+        function renderSettings() {
+            const menuDisplay = document.getElementById('current-menu-display');
+            const driversDisplay = document.getElementById('current-drivers-display');
+            menuDisplay.innerHTML = '<h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>';
+            driversDisplay.innerHTML = '<h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>';
+
+            ['pizze', 'bibite', 'aggiunte'].forEach(category => {
+                menuDisplay.innerHTML += `<h5>**${category.toUpperCase()}**</h5>`;
+                menu[category].forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <span>${item.nome} - €${item.prezzo.toFixed(2)}</span>
+                        <span class="delete-item-btn" data-category="${category}" data-index="${index}"><i class="fas fa-times-circle"></i></span>
+                    `;
+                    menuDisplay.appendChild(div);
+                });
+            });
+
+            fattorini.forEach((driver, index) => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <span>${driver}</span>
+                    <span class="delete-item-btn" data-type="fattorino" data-index="${index}"><i class="fas fa-times-circle"></i></span>
+                `;
+                driversDisplay.appendChild(div);
+            });
+
+            // Aggiunge listener per l'eliminazione
+            document.querySelectorAll('.delete-item-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    if (e.currentTarget.dataset.type === 'fattorino') {
+                        deleteFattorino(index);
+                    } else {
+                        deleteMenuItem(e.currentTarget.dataset.category, index);
+                    }
+                });
+            });
+        }
+
+
+        // ---------------------- Funzioni di Logica ----------------------
+
+        function addItemToOrder(name, price) {
+            currentOrder.push({ nome: name, prezzo: parseFloat(price) });
+            renderCurrentOrder();
+        }
+
+        function removeItemFromOrder(index) {
+            currentOrder.splice(index, 1);
+            renderCurrentOrder();
+        }
+
+        function switchSection(sectionId) {
+            // Nascondi tutte le sezioni
+            document.querySelectorAll('#main-content > div').forEach(sec => sec.classList.add('hidden'));
+            // Mostra la sezione richiesta
+            document.getElementById(sectionId).classList.remove('hidden');
+
+            // Aggiorna lo stato attivo della navigazione
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`nav-${sectionId.replace('-section', '')}`).classList.add('active');
+
+            // Ricarica i dati solo quando necessario
+            if (sectionId === 'orders-list-section') {
+                renderActiveOrders();
+            } else if (sectionId === 'settings-section') {
+                renderSettings();
+            }
+        }
+
+        function changeOrderStatus(orderId) {
+            const orderIndex = activeOrders.findIndex(o => o.id === orderId);
+            if (orderIndex === -1) return;
+
+            const statuses = ["In preparazione", "Pronto / In Consegna", "Completato"];
+            const currentStatus = activeOrders[orderIndex].status;
+            let nextStatusIndex = statuses.indexOf(currentStatus) + 1;
+
+            if (nextStatusIndex < statuses.length) {
+                activeOrders[orderIndex].status = statuses[nextStatusIndex];
+            }
+            
+            saveData();
+            renderActiveOrders(); // Ricarica la lista
+        }
+
+        function deleteOrder(orderId) {
+            activeOrders = activeOrders.filter(o => o.id !== orderId);
+            saveData();
+            renderActiveOrders();
+        }
+
+        // Funzioni Impostazioni
+        function addMenuItem(type, name, price) {
+            if (menu[type] && name && price) {
+                menu[type].push({ nome: name, prezzo: parseFloat(price) });
+                saveData();
+                renderSettings();
+                alert(`Prodotto "${name}" aggiunto a ${type.toUpperCase()}`);
+            }
+        }
+
+        function deleteMenuItem(category, index) {
+            if (confirm(`Sei sicuro di voler eliminare "${menu[category][index].nome}"?`)) {
+                menu[category].splice(index, 1);
+                saveData();
+                renderSettings();
+                renderProducts(document.querySelector('.menu-btn.active-category').dataset.category); // Ricarica il menu
+            }
+        }
+
+        function addFattorino(name) {
+            if (name && !fattorini.includes(name)) {
+                fattorini.push(name);
+                saveData();
+                renderSettings();
+                renderFattorini(); // Aggiorna anche la select
+                alert(`Fattorino "${name}" aggiunto.`);
+            }
+        }
+
+        function deleteFattorino(index) {
+            if (confirm(`Sei sicuro di voler eliminare il fattorino "${fattorini[index]}"?`)) {
+                fattorini.splice(index, 1);
+                saveData();
+                renderSettings();
+                renderFattorini(); // Aggiorna anche la select
+            }
+        }
+
+
+        // ---------------------- Event Listeners ----------------------
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            
+            // Attiva la prima categoria di default e la renderizza
+            const defaultCategoryBtn = document.querySelector('.menu-btn[data-category="pizze"]');
+            if (defaultCategoryBtn) {
+                defaultCategoryBtn.classList.add('active-category');
+                renderProducts('pizze'); 
+            }
+            
+            renderFattorini();
+            switchSection('order-entry-section'); // Sezione di default
+
+            // Navigazione
+            document.getElementById('nav-order-entry').addEventListener('click', () => switchSection('order-entry-section'));
+            document.getElementById('nav-orders-list').addEventListener('click', () => switchSection('orders-list-section'));
+            document.getElementById('nav-settings').addEventListener('click', () => switchSection('settings-section'));
+
+            // Selezione Categoria Menu
+            document.querySelectorAll('.menu-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active-category'));
+                    e.currentTarget.classList.add('active-category');
+                    renderProducts(e.currentTarget.dataset.category);
+                });
+            });
+
+            // Pulsante "Finalizza Ordine"
+            document.getElementById('finalize-order-btn').addEventListener('click', () => {
+                if (currentOrder.length === 0) {
+                    alert("L'ordine è vuoto! Inserisci almeno un prodotto.");
+                    return;
+                }
+                document.getElementById('order-entry-section').classList.add('hidden');
+                document.getElementById('order-details-section').classList.remove('hidden');
+                document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden')); // Nasconde i campi
+                
+                // Clicca sul pulsante "Consegna" di default per mostrare i campi
+                document.querySelector('.mode-btn[data-mode="consegna"]').click();
+            });
+
+            // Selezione Modalità
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active-mode'));
+                    e.currentTarget.classList.add('active-mode');
+                    document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden'));
+                    
+                    const mode = e.currentTarget.dataset.mode;
+                    // Rende i campi obbligatori a seconda della modalità
+                    document.querySelectorAll('#order-form input, #order-form select').forEach(input => input.removeAttribute('required'));
+
+                    if (mode === 'consegna') {
+                        document.getElementById('delivery-data').classList.remove('hidden');
+                        document.getElementById('consegna-nome').setAttribute('required', 'required');
+                        document.getElementById('consegna-indirizzo').setAttribute('required', 'required');
+                        document.getElementById('consegna-telefono').setAttribute('required', 'required');
+                        document.getElementById('fattorino-select').setAttribute('required', 'required');
+                    } else if (mode === 'asporto') {
+                        document.getElementById('takeaway-data').classList.remove('hidden');
+                        document.getElementById('asporto-nome').setAttribute('required', 'required');
+                        document.getElementById('asporto-telefono').setAttribute('required', 'required');
+                        document.getElementById('asporto-ora').setAttribute('required', 'required');
+                    } else if (mode === 'banco') {
+                        document.getElementById('counter-data').classList.remove('hidden');
+                        document.getElementById('banco-cognome').setAttribute('required', 'required');
+                        document.getElementById('banco-ora').setAttribute('required', 'required');
+                    }
+                });
+            });
+            // ATTENZIONE: l'attivazione della modalità predefinita è stata spostata nel gestore di "Finalizza Ordine"
+
+            // Invio Ordine (Form principale)
+            document.getElementById('order-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const selectedModeBtn = document.querySelector('.mode-btn.active-mode');
+                if (!selectedModeBtn) {
+                    alert("Errore: Seleziona una modalità di consegna/ritiro.");
+                    return;
+                }
+                const mode = selectedModeBtn.dataset.mode;
+                let orderData = {};
+                
+                // Raccogli i dati in base alla modalità
+                if (mode === 'consegna') {
+                    orderData = {
+                        nome: document.getElementById('consegna-nome').value,
+                        indirizzo: document.getElementById('consegna-indirizzo').value,
+                        telefono: document.getElementById('consegna-telefono').value,
+                        fattorino: document.getElementById('fattorino-select').value
+                    };
+                } else if (mode === 'asporto') {
+                    orderData = {
+                        nome: document.getElementById('asporto-nome').value,
+                        telefono: document.getElementById('asporto-telefono').value,
+                        ora: document.getElementById('asporto-ora').value
+                    };
+                } else if (mode === 'banco') {
+                    orderData = {
+                        cognome: document.getElementById('banco-cognome').value,
+                        ora: document.getElementById('banco-ora').value
+                    };
+                }
+
+                const total = currentOrder.reduce((sum, item) => sum + item.prezzo, 0);
+
+                // Crea il nuovo ordine
+                const newOrder = {
+                    id: orderCounter++,
+                    mode: mode,
+                    items: [...currentOrder],
+                    data: orderData,
+                    total: total,
+                    status: "In preparazione" // Stato iniziale
+                };
+
+                activeOrders.push(newOrder);
+                saveData();
+
+                alert(`Ordine #${newOrder.id} (${mode}) confermato! Totale: €${total.toFixed(2)}`);
+
+                // Resetta l'interfaccia
+                currentOrder = [];
+                renderCurrentOrder();
+                document.getElementById('order-form').reset();
+                switchSection('orders-list-section'); // Vai alla lista degli ordini
+            });
+
+            // Gestione Aggiunta Prodotto (Impostazioni)
+            document.getElementById('add-product-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const type = document.getElementById('product-type-select').value;
+                const name = document.getElementById('product-name').value;
+                const price = document.getElementById('product-price').value;
+                addMenuItem(type, name, price);
+                e.target.reset();
+            });
+
+            // Gestione Aggiunta Fattorino (Impostazioni)
+            document.getElementById('add-driver-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('driver-name').value;
+                addFattorino(name);
+                e.target.reset();
+            });
         });
-        this.editBottom.forEach(g=>{
-          g.label = (g.label && g.label.trim()) || 'Senza nome';
-          (g.items||[]).forEach(it=> it.label = (it.label && it.label.trim()) || 'Voce');
-        });
-        this.topGroups = deepClone(this.editTop);
-        this.bottomGroups = deepClone(this.editBottom);
-        if(this.currentTopIndex >= this.topGroups.length) this.currentTopIndex = 0;
-        if(this.currentBottomGroup){
-          var found = this.bottomGroups.find(g=>g._uid===this.currentBottomGroup._uid);
-          this.currentBottomGroup = found || null;
-        }
-        this.saveConfig();
-        this.showSettings=false;
-        alert('Impostazioni salvate!');
-      },
-      saveConfig(){
-        const cfg = { topGroups: this.topGroups, bottomGroups: this.bottomGroups };
-        localStorage.setItem('smartapp_cfg_v3', JSON.stringify(cfg));
-      },
-      resetConfig(quiet=false){
-        const cfg = deepClone(DEFAULT_CONFIG);
-        this.topGroups = cfg.topGroups;
-        this.bottomGroups = cfg.bottomGroups;
-        this.saveConfig();
-        if(!quiet) alert('Configurazione ripristinata.');
-      },
-
-      // === CRUD TOP ===
-      addTopGroup(){
-        this.editTop.push({icon:"🔘",label:"Nuova categoria",color:this.PALETTE[0],_uid:uid(),items:[]});
-      },
-      removeTopGroup(gi){
-        if(!confirm('Eliminare questa categoria?')) return;
-        this.editTop.splice(gi,1);
-      },
-      addTopItem(gi){
-        const color = this.editTop[gi].color || this.PALETTE[0];
-        this.editTop[gi].items.push({icon:"•",label:"Nuovo articolo",price:0,color:color,_uid:uid()});
-      },
-      removeTopItem(gi,ii){
-        this.editTop[gi].items.splice(ii,1);
-      },
-
-      // === CRUD BOTTOM ===
-      addBottomGroup(){
-        this.editBottom.push({icon:"🔘",label:"Nuovo gruppo",color:this.PALETTE[2],_uid:uid(),items:[]});
-      },
-      removeBottomGroup(gi){
-        if(!confirm('Eliminare questo gruppo?')) return;
-        this.editBottom.splice(gi,1);
-      },
-      addBottomItem(gi){
-        const color = this.editBottom[gi].color || this.PALETTE[2];
-        this.editBottom[gi].items.push({icon:"•",label:"Nuova voce",price:0,color:color,applyToOrder:false,_uid:uid()});
-      },
-      removeBottomItem(gi,ii){
-        this.editBottom[gi].items.splice(ii,1);
-      }
-    }
-  }
-
-  PetiteVue.createApp({ App }).mount()
-  </script>
+    </script>
 </body>
 </html>
