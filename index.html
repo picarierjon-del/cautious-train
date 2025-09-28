@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v12 - Prezzo Ingredienti Modificabile)</title>
+    <title>Gestionale Pizzeria Avanzato (v13 - Correzione Bug)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -666,7 +666,7 @@
             }
             
             const savedIngredients = localStorage.getItem('pizzeriaIngredients');
-            // MODIFICATO: Aggiorna il caricamento per supportare oggetti ingrediente
+            // AGGIORNATO: Aggiorna il caricamento per supportare oggetti ingrediente
             if (savedIngredients) ingredients = JSON.parse(savedIngredients);
 
 
@@ -719,6 +719,7 @@
                         <i class="fas fa-${mod.icon}"></i>
                         <strong>${mod.nome}</strong>
                     `;
+                    // Passiamo il modificatore alla funzione per aprire la modal di selezione ingredienti
                     btn.addEventListener('click', () => handler(`MODIFIER_SELECTION`, 0.00, mod.mod));
                     bar.appendChild(btn);
                 });
@@ -745,7 +746,7 @@
             });
         }
 
-        // AGGIORNATA per includere sia le Aggiunte (dal menu) che gli Ingredienti (dalla nuova lista)
+        // AGGIORNATA: Usa l'array `ingredients` corretto e gestisce l'apertura
         function renderAddonsForSelection() {
             const list = document.getElementById('addons-list-container');
             list.innerHTML = '';
@@ -997,7 +998,6 @@
         }
 
         function renderActiveOrders() {
-            // ... [funzione renderActiveOrders rimane invariata] ...
             const container = document.getElementById('active-orders-container');
             container.innerHTML = '';
             
@@ -1103,7 +1103,7 @@
         }
 
 
-        // ---------------------- Funzioni di Modifica (AGGIORNATE per Ingrediente) ----------------------
+        // ---------------------- Funzioni di Modifica ----------------------
         
         function openEditModal(type, index, category = null) {
             const modal = document.getElementById('edit-modal');
@@ -1222,6 +1222,7 @@
                      
                      document.getElementById('addon-selection-title').textContent = `Seleziona Ingrediente da rendere "${modifier.toUpperCase()}"`;
                      
+                     // CHIAMATA ESSENZIALE: Renderizza la lista di ingredienti/aggiunte
                      renderAddonsForSelection();
                      document.getElementById('addons-selection-modal').classList.remove('hidden');
                 } else {
@@ -1283,6 +1284,7 @@
                 
                 document.getElementById('addon-selection-title').textContent = `Seleziona Ingrediente da rendere "${action.toUpperCase()}"`;
                 
+                // CHIAMATA ESSENZIALE: Renderizza la lista di ingredienti/aggiunte
                 renderAddonsForSelection();
                 document.getElementById('addons-selection-modal').classList.remove('hidden');
             }
@@ -1371,19 +1373,27 @@
             pendingModifier = '';
         }
 
-        // AGGIORNATA: Crea un oggetto Ingrediente con nome e prezzo
-        function addIngredient(name, price) {
+        // CORRETTO: La funzione riceve i dati direttamente dal listener del form
+        function addIngredient(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('ingredient-name').value.trim();
+            const price = document.getElementById('ingredient-price').value;
+            
+            if (!name || isNaN(parseFloat(price)) || parseFloat(price) < 0) {
+                 alert("Inserisci un nome e un prezzo valido (deve essere un numero >= 0) per l'ingrediente.");
+                 return;
+            }
+            
             const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
             const newIngredient = { nome: capitalizedName, prezzo: parseFloat(price) };
             
-            if (name && !ingredients.some(i => i.nome === capitalizedName)) {
+            if (!ingredients.some(i => i.nome === capitalizedName)) {
                 ingredients.push(newIngredient);
                 saveData();
                 renderSettings();
                 
-                if (document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
-                    renderAddonsForSelection();
-                }
+                document.getElementById('add-ingredient-form').reset(); // Reset dopo il salvataggio
                 
                 alert(`Ingrediente "${capitalizedName}" aggiunto con prezzo modificatore di €${newIngredient.prezzo.toFixed(2)}.`);
             } else {
@@ -1404,7 +1414,6 @@
         }
 
         function switchSection(sectionId) {
-            // ... [Funzione invariata] ...
             document.querySelectorAll('#main-content > div').forEach(sec => sec.classList.add('hidden'));
             document.getElementById(sectionId).classList.remove('hidden');
 
@@ -1419,7 +1428,6 @@
         }
         
         function changeOrderStatus(orderId) {
-            // ... [Funzione invariata] ...
             const orderIndex = activeOrders.findIndex(o => o.id === orderId);
             if (orderIndex === -1) return;
 
@@ -1436,37 +1444,47 @@
         }
 
         function deleteOrder(orderId) {
-            // ... [Funzione invariata] ...
             activeOrders = activeOrders.filter(o => o.id !== orderId);
             saveData();
             renderActiveOrders();
         }
         
-        function addMenuItem(type, name, price) {
-            // ... [Funzione invariata] ...
+        // CORRETTO: La funzione riceve i dati direttamente dal listener del form
+        function addMenuItem(e) {
+            e.preventDefault();
+            
+            const type = document.getElementById('product-type-select').value;
+            const name = document.getElementById('product-name').value.trim();
+            const price = document.getElementById('product-price').value;
+            
+             if (!name || !price || isNaN(parseFloat(price))) {
+                 alert("Inserisci un nome e un prezzo valido per il prodotto.");
+                 return;
+            }
+            
             if (!menu[type]) {
                 menu[type] = []; 
             }
-            if (name && price) {
-                menu[type].push({ nome: name, prezzo: parseFloat(price) });
-                saveData();
-                renderSettings();
-                
-                if (type === 'aggiunte') {
-                    const activeCategoryBtn = document.querySelector('.menu-btn.active-category:not(.mod-menu-btn)');
-                    if (activeCategoryBtn && activeCategoryBtn.dataset.category === type) {
-                        renderProducts(type, 'products-list', addItemToOrder, 'product-item'); 
-                    }
-                    if (document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
-                        renderAddonsForSelection();
-                    }
+            
+            menu[type].push({ nome: name, prezzo: parseFloat(price) });
+            saveData();
+            renderSettings();
+            
+            e.target.reset(); // Reset dopo il salvataggio
+
+            if (type === 'aggiunte') {
+                const activeCategoryBtn = document.querySelector('.menu-btn.active-category:not(.mod-menu-btn)');
+                if (activeCategoryBtn && activeCategoryBtn.dataset.category === type) {
+                    renderProducts(type, 'products-list', addItemToOrder, 'product-item'); 
                 }
-                alert(`Prodotto "${name}" aggiunto a ${type.toUpperCase()}`);
+                if (document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
+                    renderAddonsForSelection();
+                }
             }
+            alert(`Prodotto "${name}" aggiunto a ${type.toUpperCase()}`);
         }
 
         function deleteMenuItem(category, index) {
-            // ... [Funzione invariata] ...
             if (confirm(`Sei sicuro di voler eliminare "${menu[category][index].nome}"?`)) {
                 menu[category].splice(index, 1);
                 saveData();
@@ -1484,19 +1502,32 @@
             }
         }
 
-        function addFattorino(name) {
-            // ... [Funzione invariata] ...
-            if (name && !fattorini.includes(name)) {
+        // CORRETTO: La funzione riceve i dati direttamente dal listener del form
+        function addFattorino(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('driver-name').value.trim();
+            
+            if (!name) {
+                alert("Inserisci un nome valido per il fattorino.");
+                return;
+            }
+            
+            if (!fattorini.includes(name)) {
                 fattorini.push(name);
                 saveData();
                 renderSettings();
                 renderFattorini();
+                
+                e.target.reset(); // Reset dopo il salvataggio
+                
                 alert(`Fattorino "${name}" aggiunto.`);
+            } else {
+                 alert(`Il fattorino "${name}" esiste già.`);
             }
         }
 
         function deleteFattorino(index) {
-            // ... [Funzione invariata] ...
             if (confirm(`Sei sicuro di voler eliminare il fattorino "${fattorini[index]}"?`)) {
                 fattorini.splice(index, 1);
                 saveData();
@@ -1507,7 +1538,6 @@
 
         // Logica Modifica Ordine
         function openModificationModal(orderId) {
-            // ... [Funzione invariata] ...
             const orderIndex = activeOrders.findIndex(o => o.id === orderId);
             if (orderIndex === -1) return;
             
@@ -1524,7 +1554,6 @@
         }
 
         function addModificationItem(name, price) {
-            // ... [Funzione invariata] ...
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
             if (orderIndex === -1) return;
             
@@ -1549,7 +1578,6 @@
         }
 
         function saveModification() {
-            // ... [Funzione invariata] ...
             if (currentModifyingOrder) {
                 saveData();
                 alert(`Ordine #${currentModifyingOrder} modificato con successo!`);
@@ -1561,7 +1589,6 @@
         }
         
         function cancelModification() {
-            // ... [Funzione invariata] ...
             loadData(); 
             document.getElementById('modification-modal').classList.add('hidden');
             currentModifyingOrder = null;
@@ -1721,35 +1748,14 @@
                 switchSection('orders-list-section'); 
             });
 
-            document.getElementById('add-product-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const type = document.getElementById('product-type-select').value;
-                const name = document.getElementById('product-name').value;
-                const price = document.getElementById('product-price').value;
-                addMenuItem(type, name, price);
-                e.target.reset();
-            });
+            // CORRETTO: Chiamiamo la funzione di gestione all'interno del listener del form, passandogli l'evento
+            document.getElementById('add-product-form').addEventListener('submit', addMenuItem);
             
-            // Listener per aggiungere un Ingrediente modificabile (Ora con prezzo)
-            document.getElementById('add-ingredient-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const name = document.getElementById('ingredient-name').value.trim();
-                const price = document.getElementById('ingredient-price').value;
-                
-                if (name && price && !isNaN(parseFloat(price)) && parseFloat(price) >= 0) {
-                    addIngredient(name, price);
-                    e.target.reset();
-                } else {
-                    alert("Inserisci un nome e un prezzo valido (deve essere un numero >= 0) per l'ingrediente.");
-                }
-            });
+            // CORRETTO: Chiamiamo la funzione di gestione all'interno del listener del form, passandogli l'evento
+            document.getElementById('add-ingredient-form').addEventListener('submit', addIngredient);
 
-            document.getElementById('add-driver-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const name = document.getElementById('driver-name').value;
-                addFattorino(name);
-                e.target.reset();
-            });
+            // CORRETTO: Chiamiamo la funzione di gestione all'interno del listener del form, passandogli l'evento
+            document.getElementById('add-driver-form').addEventListener('submit', addFattorino);
             
             renderSettings();
         });
