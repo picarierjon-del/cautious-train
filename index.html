@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v13 - Correzione Bug)</title>
+    <title>Gestionale Pizzeria Avanzato (v14 - Rendering e Chiarimento Filtri)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -902,12 +902,13 @@
             });
         }
         
-        // AGGIORNATA: Permette la visualizzazione del prezzo modificatore per gli ingredienti
+        // AGGIORNATA: Funzione resa più robusta per il rendering delle Impostazioni
         function renderSettings() {
             const menuDisplay = document.getElementById('current-menu-display');
             const driversDisplay = document.getElementById('current-drivers-display');
             const ingredientsDisplay = document.getElementById('current-ingredients-display');
             
+            // **PULIZIA ESPLICITA E HEADER**
             menuDisplay.innerHTML = '<h4>Prodotti Attuali (clicca sul nome per modificare, ❌ per eliminare)</h4>';
             driversDisplay.innerHTML = '<h4>Fattorini Attuali (clicca sul nome per modificare, ❌ per eliminare)</h4>';
             ingredientsDisplay.innerHTML = '<h4>Ingredienti Modificabili (clicca sul nome per modificare, ❌ per eliminare)</h4>';
@@ -924,7 +925,11 @@
             
             // Render Prodotti
             menuCategories.forEach(category => {
-                menuDisplay.innerHTML += `<h5 style="margin-bottom: 0;">**${displayNames[category] || category.toUpperCase()}**</h5>`;
+                const categoryHeader = document.createElement('h5');
+                categoryHeader.style.marginBottom = '0';
+                categoryHeader.innerHTML = `**${displayNames[category] || category.toUpperCase()}**`;
+                menuDisplay.appendChild(categoryHeader);
+                
                 if (menu[category]) {
                     menu[category].forEach((item, index) => {
                         const div = document.createElement('div');
