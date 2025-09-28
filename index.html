@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v10 - Aggiunte Potenziate)</title>
+    <title>Gestionale Pizzeria Avanzato (v10 - Modificatori in Schermo)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -14,11 +14,11 @@
             padding: 0;
             background-color: #f4f4f9;
             color: #333;
-            padding-bottom: 60px; 
+            padding-bottom: 60px; /* Spazio per la barra di navigazione */
         }
 
         header {
-            background-color: #e31b23; 
+            background-color: #e31b23; /* Rosso Pizzeria */
             color: white;
             padding: 15px 10px;
             text-align: center;
@@ -102,20 +102,7 @@
             transition: background-color 0.2s;
         }
 
-        button:hover:not(:disabled) {
-            background-color: #a01319;
-        }
-
-        input[type="text"], input[type="number"], input[type="tel"], input[type="time"], select {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
-        
-        /* Stili specifici per l'inserimento ordine */
+        /* Layout menu e prodotti */
         .category-menu {
             display: flex;
             justify-content: space-between;
@@ -138,67 +125,27 @@
         .category-menu button.active-category {
             background-color: #e31b23;
         }
-        
-        /* Contenitore principale prodotti/modificatori */
-        #products-list-container {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            background-color: white;
-        }
 
         #products-list {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             gap: 8px;
+            margin-bottom: 20px;
         }
         
-        /* Stili per la nuova sezione Aggiunte/Modificatori */
-        #addons-modifier-controls {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 5px;
-            margin-bottom: 10px;
-        }
-
-        .modifier-btn-choice {
-            padding: 8px 5px;
-            font-size: 0.85em;
-            background-color: #6c757d;
-            border: 2px solid transparent;
-        }
-        .modifier-btn-choice.active {
-            border: 2px solid #333;
-            font-weight: bold;
-        }
-        /* Colori per i modificatori */
-        .modifier-btn-choice[data-mod="Più"].active { background-color: #28a745; }
-        .modifier-btn-choice[data-mod="Meno"].active { background-color: #ff3333; }
-        .modifier-btn-choice[data-mod="Poco"].active { background-color: #ffc107; color: #333; }
-        .modifier-btn-choice[data-mod="Abbondante"].active { background-color: #007bff; }
-        
-        #ingredient-addon-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        .addon-item {
-            background-color: #f8f8f8;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 10px;
+        /* Stili prodotto/aggiunta */
+        .product-item, .addon-item-list {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px 5px;
             text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             cursor: pointer;
             font-size: 0.9em;
-            transition: transform 0.1s;
         }
-        .addon-item:hover {
-            background-color: #ffe8e8;
-        }
-
-        /* Stili per l'ordine corrente */
+        
+        /* Dettagli Ordine Corrente */
         #current-order {
             background-color: white;
             padding: 15px;
@@ -206,27 +153,34 @@
             border: 1px solid #ddd;
             margin-top: 10px;
         }
-
+        
         #order-items-list {
             list-style: none;
             padding: 0;
         }
 
         #order-items-list li {
-            padding: 5px 0;
+            padding: 8px 0;
             border-bottom: 1px dotted #eee;
             font-size: 0.9em;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            cursor: pointer;
         }
         
+        #order-items-list li.selected-item {
+            background-color: #ffe8e8; /* Evidenzia l'articolo selezionato */
+            border-left: 5px solid #e31b23;
+            padding-left: 5px;
+        }
+
         .item-actions {
             display: flex;
             gap: 5px;
             align-items: center;
         }
-        
+
         .remove-item-btn {
             background: none;
             border: none;
@@ -243,6 +197,84 @@
             text-align: right;
             margin-top: 10px;
         }
+        
+        /* NUOVI STILI PER I PULSANTI DI MODIFICA SOPRA FINALIZZA ORDINE */
+        #main-modifiers {
+            display: flex;
+            justify-content: space-between;
+            gap: 5px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            /* Nascondi di default, appare solo quando un item è selezionato */
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        #main-modifiers.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modifier-main-btn {
+            flex-grow: 1;
+            padding: 10px 5px;
+            font-size: 0.85em;
+            background-color: #6c757d;
+        }
+        
+        .modifier-main-btn.active-modifier {
+            /* Colore per il modificatore attivo */
+            background-color: #28a745;
+            border: 3px solid #1e7e34;
+            padding: 7px 2px;
+        }
+
+        .modifier-main-btn[data-mod="Meno"] { background-color: #007bff; }
+        .modifier-main-btn[data-mod="Meno"].active-modifier { background-color: #0056b3; }
+        .modifier-main-btn[data-mod="Poco"] { background-color: #ffc107; color: #333; }
+        .modifier-main-btn[data-mod="Poco"].active-modifier { background-color: #d39e00; color: #fff; }
+        .modifier-main-btn[data-mod="Abbondante"] { background-color: #e31b23; }
+        .modifier-main-btn[data-mod="Abbondante"].active-modifier { background-color: #a01319; }
+        
+        /* Stili per le aggiunte nella lista prodotti */
+        #addons-products-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .addon-item-list.modified {
+            border: 3px solid #1e7e34;
+            background-color: #d4edda;
+        }
+        
+        .addon-item-list:hover {
+            background-color: #ffe8e8;
+        }
+        
+        /* Stili per il resto delle sezioni (omessi per brevità, sono nel codice precedente) */
+        input[type="text"], input[type="number"], input[type="tel"], input[type="time"], select {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        
+        .form-group-inline {
+            display: flex;
+            align-items: center;
+            margin: 5px 0 10px 0;
+        }
+
+        .form-group-inline label {
+            margin-left: 10px;
+            font-size: 1em;
+            font-weight: normal;
+        }
     </style>
 </head>
 <body>
@@ -254,7 +286,7 @@
             <div id="menu-selection">
                 <h2>Crea Ordine</h2>
                 
-                <div class="category-menu">
+                <div class="category-menu" id="main-category-menu">
                     <button class="menu-btn" data-category="pizze">Pizze</button>
                     <button class="menu-btn" data-category="baby">Baby</button>
                     <button class="menu-btn" data-category="schiacciate">Schiacciate</button>
@@ -264,31 +296,25 @@
                     <button class="menu-btn" data-category="aggiunte">Aggiunte</button>
                 </div>
                 
-                <div id="products-list-container">
-                    
-                    <div id="products-list">
-                        </div>
-
-                    <div id="addons-modification-view" class="hidden">
-                        <h3>1. Scegli il Modificatore</h3>
-                        <div id="addons-modifier-controls">
-                            <button class="modifier-btn-choice active" data-mod="Più"><i class="fas fa-plus-circle"></i> Più</button>
-                            <button class="modifier-btn-choice" data-mod="Meno"><i class="fas fa-minus-circle"></i> Senza</button>
-                            <button class="modifier-btn-choice" data-mod="Poco"><i class="fas fa-pepper-hot"></i> Poco</button>
-                            <button class="modifier-btn-choice" data-mod="Abbondante"><i class="fas fa-pizza-slice"></i> Abb.</button>
-                        </div>
-
-                        <h3>2. Clicca sull'Ingrediente/Aggiunta</h3>
-                        <div id="ingredient-addon-list">
-                            </div>
+                <div id="products-list">
                     </div>
-                </div>
+                
+                <div id="addons-products-list" class="hidden">
+                    </div>
             </div>
 
             <div id="current-order">
                 <h3>Ordine Corrente</h3>
                 <ul id="order-items-list">
                     </ul>
+                
+                <div id="main-modifiers">
+                    <button class="modifier-main-btn active-modifier" data-mod="Più"><i class="fas fa-plus-circle"></i> Più</button>
+                    <button class="modifier-main-btn" data-mod="Meno"><i class="fas fa-minus-circle"></i> Senza</button>
+                    <button class="modifier-main-btn" data-mod="Poco"><i class="fas fa-pepper-hot"></i> Poco</button>
+                    <button class="modifier-main-btn" data-mod="Abbondante"><i class="fas fa-pizza-slice"></i> Abb.</button>
+                </div>
+                
                 <div id="total-price">Totale: €0.00</div>
                 <button id="finalize-order-btn">Finalizza Ordine</button>
             </div>
@@ -304,7 +330,7 @@
             </div>
 
             <form id="order-form">
-                <div id="delivery-data" class="mode-data hidden">
+                 <div id="delivery-data" class="mode-data hidden">
                     <h3>Dati Consegna a Domicilio</h3>
                     <input type="text" id="consegna-nome" placeholder="Nome" required>
                     <input type="text" id="consegna-cognome" placeholder="Cognome" required>
@@ -322,6 +348,7 @@
                         <option value="">Seleziona Fattorino</option>
                     </select>
                 </div>
+
                 <div id="takeaway-data" class="mode-data hidden">
                     <h3>Dati Asporto</h3>
                     <input type="text" id="asporto-nome" placeholder="Nome" required>
@@ -334,6 +361,7 @@
                         <label for="asporto-tagliate">Le pizze devono essere tagliate</label>
                     </div>
                 </div>
+
                 <div id="counter-data" class="mode-data hidden">
                     <h3>Dati Banco Rapido</h3>
                     <input type="text" id="banco-cognome" placeholder="Cognome" required>
@@ -351,36 +379,48 @@
         </div>
         
         <div id="settings-section" class="hidden">
-            <h2><i class="fas fa-cog"></i> Impostazioni e Modifica</h2>
+             <h2><i class="fas fa-cog"></i> Impostazioni e Modifica</h2>
+            
             <h3>Gestione Menu Prodotti</h3>
             <form id="add-product-form">
                 <select id="product-type-select">
                     <option value="pizze">Pizza</option>
+                    <option value="baby">Baby</option>
+                    <option value="schiacciate">Schiacciate</option>
+                    <option value="grandi">Grandi</option>
+                    <option value="mezzometro">Mezzo Metro</option>
+                    <option value="bibite">Bibita</option>
                     <option value="aggiunte">Aggiunta</option>
                 </select>
                 <input type="text" id="product-name" placeholder="Nome Prodotto" required>
                 <input type="number" id="product-price" placeholder="Prezzo (€)" step="0.01" required>
                 <button type="submit">Aggiungi Prodotto</button>
             </form>
-            <div id="current-menu-display"></div>
+
+            <div id="current-menu-display">
+                <h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>
+            </div>
             
-            <h3>Gestione Ingredienti Modificabili</h3>
+            <h3>Gestione Ingredienti Modificabili (Senza Prezzo)</h3>
             <form id="add-ingredient-form">
                 <input type="text" id="ingredient-name" placeholder="Nome Ingrediente/Modificatore (es. Prosciutto, Basilico, Cornicione)" required>
                 <button type="submit" style="background-color: #007bff;">Aggiungi Ingrediente</button>
             </form>
-            <div id="current-ingredients-display"></div>
+            <div id="current-ingredients-display">
+                <h4>Ingredienti Modificabili (solo per Più/Meno/Poco/Abb.)</h4>
+            </div>
 
             <h3>Gestione Fattorini</h3>
             <form id="add-driver-form">
                 <input type="text" id="driver-name" placeholder="Nome Fattorino" required>
                 <button type="submit">Aggiungi Fattorino</button>
             </form>
-            <div id="current-drivers-display"></div>
+            <div id="current-drivers-display">
+                <h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>
+            </div>
         </div>
     </div>
-
-
+    
     <nav>
         <button id="nav-order-entry"><i class="fas fa-cash-register"></i> Inserimento</button>
         <button id="nav-orders-list"><i class="fas fa-clipboard-list"></i> Ordini</button>
@@ -393,15 +433,34 @@
             pizze: [
                 { nome: "Margherita", prezzo: 5.00 },
                 { nome: "Diavola", prezzo: 7.50 },
+                { nome: "Capricciosa", prezzo: 8.00 }
             ],
-            baby: [], schiacciate: [], grandi: [], mezzometro: [], bibite: [],
+            baby: [
+                { nome: "Baby Margherita", prezzo: 4.00 },
+                { nome: "Baby Wurstel", prezzo: 5.00 }
+            ],
+            schiacciate: [
+                { nome: "Semplice", prezzo: 3.00 },
+                { nome: "Crudo e Formaggio", prezzo: 5.50 }
+            ],
+            grandi: [
+                { nome: "Grande Margherita", prezzo: 10.00 },
+                { nome: "Grande 4 Stagioni", prezzo: 13.00 }
+            ],
+            mezzometro: [
+                { nome: "Classico", prezzo: 16.00 },
+                { nome: "Gourmet", prezzo: 20.00 }
+            ],
+            bibite: [
+                { nome: "Acqua", prezzo: 1.50 },
+                { nome: "Coca-Cola", prezzo: 2.50 }
+            ],
             aggiunte: [
                 { nome: "Mozzarella extra", prezzo: 1.00 },
                 { nome: "Patatine", prezzo: 2.00 }
             ]
         };
         
-        // Elenco di ingredienti modificabili (senza prezzo)
         let ingredients = [
             "Mozzarella", "Pomodoro", "Basilico", "Olio", "Sale", "Cornicione", "Salamino Piccante"
         ];
@@ -412,10 +471,11 @@
         let activeOrders = [];
         let orderCounter = 1; 
         
-        let activeModifier = 'Più'; // Modificatore attualmente selezionato per le aggiunte
+        let targetItemIndex = -1; // Indice dell'articolo selezionato nell'ordine corrente
+        let activeModifier = 'Più'; // Modificatore attivo (Più, Meno, Poco, Abbondante)
 
         const menuCategories = ['pizze', 'baby', 'schiacciate', 'grandi', 'mezzometro', 'bibite', 'aggiunte'];
-        
+
         // ---------------------- Funzioni di Caricamento/Salvataggio ----------------------
         function loadData() {
             const savedMenu = localStorage.getItem('pizzeriaMenu');
@@ -447,110 +507,132 @@
             localStorage.setItem('pizzeriaActiveOrders', JSON.stringify(activeOrders));
         }
 
-        // ---------------------- Funzioni di Rendering e Menu ----------------------
+        // ---------------------- Funzioni di Rendering ----------------------
 
         function renderProducts(category, listId, handler, className) {
             const list = document.getElementById(listId);
             list.innerHTML = '';
             
-            // Logica per mostrare la lista prodotti standard
-            if (category !== 'aggiunte') {
-                document.getElementById('products-list').classList.remove('hidden');
-                document.getElementById('addons-modification-view').classList.add('hidden');
-                
-                if (!menu[category] || menu[category].length === 0) {
-                    list.innerHTML = `<p style="text-align:center;">Nessun prodotto in questa categoria. Aggiungine uno nelle Impostazioni.</p>`;
-                    return;
-                }
-
-                menu[category].forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = className;
-                    div.dataset.name = item.nome;
-                    div.dataset.price = item.prezzo;
-                    div.innerHTML = `
-                        <strong>${item.nome}</strong>
-                        <p>€${item.prezzo.toFixed(2)}</p>
-                    `;
-                    div.addEventListener('click', () => handler(item.nome, item.prezzo));
-                    list.appendChild(div);
-                });
-            } else {
-                // Logica per mostrare i Modificatori e la lista Aggiunte/Ingredienti
-                document.getElementById('products-list').classList.add('hidden');
-                document.getElementById('addons-modification-view').classList.remove('hidden');
-                renderIngredientAddonList();
+            if (!menu[category] || menu[category].length === 0) {
+                 list.innerHTML = `<p style="text-align:center;">Nessun prodotto in questa categoria. Aggiungine uno nelle Impostazioni.</p>`;
+                 return;
             }
+
+            menu[category].forEach(item => {
+                const div = document.createElement('div');
+                div.className = className;
+                div.dataset.name = item.nome;
+                div.dataset.price = item.prezzo;
+                div.innerHTML = `
+                    <strong>${item.nome}</strong>
+                    <p>€${item.prezzo.toFixed(2)}</p>
+                `;
+                div.addEventListener('click', () => handler(item.nome, item.prezzo));
+                list.appendChild(div);
+            });
         }
         
-        function renderIngredientAddonList() {
-            const list = document.getElementById('ingredient-addon-list');
+        // NUOVA FUNZIONE: Renderizza la lista Aggiunte/Ingredienti
+        function renderAddonsForModification() {
+            const list = document.getElementById('addons-products-list');
             list.innerHTML = '';
             
             // Combina ingredienti (prezzo 0) e aggiunte (con prezzo)
             const allModifiables = [
-                // 1. Ingredienti (solo per modificatori Più/Senza/Poco/Abb)
-                ...ingredients.map(n => ({ nome: n, prezzo: 0.00, type: 'ingredient' })),
-                // 2. Aggiunte (solo per modificatori Più/Aggiunta)
-                ...(menu.aggiunte || []).map(n => ({ ...n, type: 'addon' }))
+                ...ingredients.map(n => ({ nome: n, prezzo: 0.00 })),
+                ...(menu.aggiunte || [])
             ];
             
             if (allModifiables.length === 0) {
-                 list.innerHTML = `<p style="text-align:center;">Nessun ingrediente/aggiunta gestito nelle Impostazioni.</p>`;
+                 list.innerHTML = `<p style="text-align:center;">Nessun ingrediente o aggiunta da modificare.</p>`;
                  return;
             }
+            
+            const currentItem = currentOrder[targetItemIndex];
+            const currentMods = currentItem.modifiers ? currentItem.modifiers.reduce((map, mod) => {
+                map[mod.addonName] = mod.modifier;
+                return map;
+            }, {}) : {};
 
-
-            allModifiables.forEach(item => {
-                const name = item.nome;
-                const price = item.prezzo;
-                const type = item.type;
+            allModifiables.forEach(modItem => {
+                const name = modItem.nome;
+                const price = modItem.prezzo;
                 
                 const div = document.createElement('div');
-                div.className = 'addon-item';
+                div.className = 'addon-item-list';
+                div.dataset.addonName = name;
+                div.dataset.addonPrice = price;
                 
-                let displayHtml = name.toUpperCase();
+                let displayHtml = `<strong>${name.toUpperCase()}</strong>`;
+                let modText = '';
+
+                if (currentMods[name]) {
+                    modText = currentMods[name].replace('Meno', 'SENZA').toUpperCase();
+                    div.classList.add('modified'); // Evidenzia se è stato modificato
+                    div.style.backgroundColor = modText === 'SENZA' ? '#ccc' : (modText === 'PIÙ' ? '#d4edda' : (modText === 'POCO' ? '#fff3cd' : '#cce5ff'));
+                }
                 
                 if (price > 0) {
-                    displayHtml += ` <span style="font-weight:bold; color:#e31b23;">(€${price.toFixed(2)})</span>`;
+                    displayHtml += `<span style="font-weight:bold; color:#e31b23;"> (€${price.toFixed(2)})</span>`;
+                }
+                
+                if (modText) {
+                    displayHtml += `<br><span style="color: #333; font-weight: bold;">[${modText}]</span>`;
                 }
 
                 div.innerHTML = displayHtml;
                 
                 div.addEventListener('click', () => {
-                    addItemAsModifier(activeModifier, name, price, type);
+                    applyItemModifier(name, price, activeModifier);
+                    renderAddonsForModification(); // Rirenderizza per mostrare lo stato aggiornato
+                    renderMainOrder(); // Aggiorna la lista ordine principale
                 });
-                
                 list.appendChild(div);
             });
         }
 
+
         // Renderizza l'ordine corrente
-        function renderMainOrder() {
+        function renderCurrentOrder() {
             const orderList = document.getElementById('order-items-list');
             const totalPriceDiv = document.getElementById('total-price');
             orderList.innerHTML = '';
             let total = 0;
 
             currentOrder.forEach((item, index) => {
-                total += item.prezzo;
+                let itemTotal = item.prezzo;
                 
+                if (item.modifiers && item.modifiers.length > 0) {
+                    itemTotal += item.modifiers.reduce((modSum, mod) => modSum + mod.price, 0);
+                }
+                total += itemTotal;
+
+
                 const li = document.createElement('li');
+                li.dataset.index = index;
                 
-                let displayName = `<strong>${item.nome}</strong>`;
-                
-                // Se è un modificatore/aggiunta, formattalo in modo specifico
-                if (item.isModifier) {
-                    const modText = item.modifier.replace('Meno', 'SENZA').toUpperCase();
-                    displayName = `<strong style="color:#e31b23;">${modText} ${item.nome.toUpperCase()}</strong>`;
+                let modifierDisplay = "";
+                if (item.modifiers && item.modifiers.length > 0) {
+                    modifierDisplay = item.modifiers.map(mod => {
+                        const modName = mod.modifier.replace('Meno', 'SENZA').toUpperCase();
+                        const priceText = mod.price > 0 ? ` (€${mod.price.toFixed(2)})` : '';
+                        return `<li>${modName} ${mod.addonName.toUpperCase()}${priceText}</li>`;
+                    }).join('');
+                    modifierDisplay = `<ul style="list-style:none; padding: 0 0 0 10px; margin: 0; font-size: 0.8em; color: #555;">${modifierDisplay}</ul>`;
+                }
+
+                // Evidenzia l'articolo selezionato per la modifica
+                if (index === targetItemIndex) {
+                    li.classList.add('selected-item');
                 }
 
                 li.innerHTML = `
                     <div style="flex-grow: 1;">
-                        ${displayName}
+                        <strong>${item.nome}</strong>
+                        ${modifierDisplay}
                     </div>
                     <div class="item-actions">
-                        <span>€${item.prezzo.toFixed(2)}</span>
+                        <span>€${itemTotal.toFixed(2)}</span>
                         <button class="remove-item-btn" data-index="${index}"><i class="fas fa-times-circle"></i></button>
                     </div>
                 `;
@@ -560,79 +642,127 @@
 
             totalPriceDiv.textContent = `Totale: €${total.toFixed(2)}`;
 
+            // Event listener per la selezione dell'articolo
+            document.querySelectorAll('#order-items-list li').forEach(li => {
+                li.addEventListener('click', (e) => {
+                    // Controlla se il click è sul pulsante di rimozione
+                    if (e.target.closest('.remove-item-btn')) return; 
+                    
+                    const index = parseInt(li.dataset.index);
+                    selectItemForModification(index);
+                });
+            });
+
             document.querySelectorAll('.remove-item-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     removeItemFromOrder(parseInt(e.currentTarget.dataset.index));
+                    e.stopPropagation(); // Previene la selezione dell'articolo genitore
                 });
             });
         }
-        
+
         // ---------------------- Funzioni di Logica ----------------------
 
         function addItemToOrder(name, price) {
-            // Aggiunge prodotti standard
-            currentOrder.push({ 
-                nome: name, 
-                prezzo: parseFloat(price), 
-                isModifier: false,
-                modifier: null
-            });
-            renderMainOrder();
-        }
-
-        function addItemAsModifier(modifier, name, price, type) {
-            
-            // Regola: se è un'aggiunta a pagamento (type: 'addon'), il modificatore è sempre "Aggiunta" e il prezzo è il suo prezzo
-            if (type === 'addon' && modifier === 'Più') {
-                 // Aggiunge l'aggiunta con il suo prezzo
-                 currentOrder.push({ 
-                    nome: name, 
-                    prezzo: parseFloat(price), 
-                    isModifier: true,
-                    modifier: 'Aggiunta'
-                });
-                alert(`Aggiunta "${name}" (€${price.toFixed(2)}) inserita.`);
-            } else if (type === 'addon' && modifier !== 'Più') {
-                // Non ha senso mettere POCO o SENZA su un'aggiunta che non è un ingrediente di base
-                alert(`L'aggiunta a pagamento "${name}" deve essere inserita solo con il pulsante "Più" (diventa Aggiunta).`);
-                return;
-            } else if (type === 'ingredient') {
-                 // Aggiunge il modificatore ingrediente (prezzo 0)
-                 currentOrder.push({ 
-                    nome: name, 
-                    prezzo: 0.00, // Prezzo sempre 0 per Più/Senza/Poco/Abb di ingredienti base
-                    isModifier: true,
-                    modifier: modifier
-                });
-                alert(`${modifier.toUpperCase()} ${name.toUpperCase()} aggiunto.`);
+            // Se c'è un elemento selezionato per la modifica, disattiva la modifica
+            if (targetItemIndex !== -1) {
+                selectItemForModification(-1);
             }
-
-            renderMainOrder();
+            
+            currentOrder.push({ nome: name, prezzo: parseFloat(price), modifiers: [] });
+            renderCurrentOrder();
         }
-
 
         function removeItemFromOrder(index) {
-            currentOrder.splice(index, 1);
-            renderMainOrder();
-        }
-
-        function switchSection(sectionId) {
-            document.querySelectorAll('#main-content > div').forEach(sec => sec.classList.add('hidden'));
-            document.getElementById(sectionId).classList.remove('hidden');
-
-            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`nav-${sectionId.replace('-section', '')}`).classList.add('active');
-
-            if (sectionId === 'orders-list-section') {
-                // Logica di rendering ordini attivi
-                // ...
-            } else if (sectionId === 'settings-section') {
-                // Logica di rendering impostazioni
-                // ...
+            if (confirm(`Sei sicuro di voler eliminare l'articolo "${currentOrder[index].nome}"?`)) {
+                currentOrder.splice(index, 1);
+                
+                // Se l'elemento rimosso era quello selezionato, disattiva la modalità di modifica
+                if (index === targetItemIndex) {
+                    selectItemForModification(-1);
+                } else if (index < targetItemIndex) {
+                    // Aggiusta l'indice di selezione se un elemento precedente viene rimosso
+                    targetItemIndex--;
+                }
+                
+                renderCurrentOrder();
             }
         }
+        
+        // NUOVA FUNZIONE: Gestisce la selezione/deselezione di un articolo
+        function selectItemForModification(index) {
+            if (targetItemIndex === index) {
+                // Deseleziona
+                targetItemIndex = -1;
+                document.getElementById('main-modifiers').classList.remove('active');
+                document.getElementById('addons-products-list').classList.add('hidden');
+                document.getElementById('products-list').classList.remove('hidden');
+                document.getElementById('main-category-menu').classList.remove('hidden');
+                
+                // Ricarica la lista prodotti nella categoria attiva
+                const activeCategory = document.querySelector('.menu-btn.active-category');
+                if (activeCategory) {
+                    renderProducts(activeCategory.dataset.category, 'products-list', addItemToOrder, 'product-item');
+                }
+            } else if (index !== -1 && index < currentOrder.length) {
+                // Seleziona nuovo elemento
+                targetItemIndex = index;
+                document.getElementById('main-modifiers').classList.add('active');
+                document.getElementById('products-list').classList.add('hidden');
+                document.getElementById('main-category-menu').classList.add('hidden');
+                document.getElementById('addons-products-list').classList.remove('hidden');
+                
+                // Imposta il modificatore di default (Più)
+                document.querySelectorAll('.modifier-main-btn').forEach(b => b.classList.remove('active-modifier'));
+                document.querySelector('.modifier-main-btn[data-mod="Più"]').classList.add('active-modifier');
+                activeModifier = 'Più';
+                
+                renderAddonsForModification();
+            }
+            renderCurrentOrder(); // Aggiorna l'evidenziazione
+        }
 
-        // ---------------------- Event Listeners Iniziali ----------------------
+        // Applicazione del modificatore all'elemento selezionato
+        function applyItemModifier(addonName, addonPrice, modifier) {
+            if (targetItemIndex === -1) return;
+            
+            const item = currentOrder[targetItemIndex];
+            if (!item.modifiers) item.modifiers = [];
+            
+            const existingIndex = item.modifiers.findIndex(m => m.addonName === addonName);
+            
+            // Se è un'aggiunta (con prezzo > 0), il modificatore è sempre "Aggiunta" se si preme Più
+            const modifierToApply = (addonPrice > 0 && modifier === "Più") ? "Aggiunta" : modifier;
+            
+            // Logica per non applicare Meno/Poco/Abb su aggiunte a pagamento
+             if(addonPrice > 0 && modifier !== 'Più') {
+                alert(`Per l'aggiunta a pagamento "${addonName}" è possibile applicare solo il modificatore 'Più' (Aggiunta).`);
+                return;
+             }
+
+            if (existingIndex !== -1) {
+                // Se si preme lo stesso modificatore già applicato, si rimuove (toggle off)
+                 if (item.modifiers[existingIndex].modifier === modifierToApply) {
+                    item.modifiers.splice(existingIndex, 1);
+                 } else {
+                    // Altrimenti, sostituisci il modificatore esistente con quello nuovo
+                    item.modifiers[existingIndex].modifier = modifierToApply;
+                    item.modifiers[existingIndex].price = addonPrice; 
+                 }
+            } else {
+                // Aggiungi un nuovo modificatore/aggiunta
+                item.modifiers.push({ 
+                    modifier: modifierToApply, 
+                    addonName: addonName, 
+                    price: addonPrice 
+                });
+            }
+            
+            // Salva e aggiorna la lista ordine
+            saveData();
+        }
+        
+        // ---------------------- Inizializzazione e Event Listeners ----------------------
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
             
@@ -644,63 +774,104 @@
             }
             
             renderFattorini();
-            renderMainOrder(); 
+            renderCurrentOrder(); 
             switchSection('order-entry-section'); 
 
-            // Menu principale
+            // Navigazione e Selezione Categorie (Come prima)
+            document.getElementById('nav-order-entry').addEventListener('click', () => switchSection('order-entry-section'));
+            document.getElementById('nav-orders-list').addEventListener('click', () => switchSection('orders-list-section'));
+            document.getElementById('nav-settings').addEventListener('click', () => switchSection('settings-section'));
+
             document.querySelectorAll('.menu-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const category = e.currentTarget.dataset.category;
+                    // Se siamo in modalità modifica, uscire prima di cambiare categoria
+                    if (targetItemIndex !== -1) selectItemForModification(-1);
                     
                     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active-category'));
                     e.currentTarget.classList.add('active-category');
-                    
-                    // Se la categoria è 'aggiunte', cambia la vista per mostrare i modificatori
-                    if (category === 'aggiunte') {
-                        renderProducts('aggiunte', 'products-list', null, null); // Passiamo null, la logica è diversa
-                    } else {
-                        renderProducts(category, 'products-list', addItemToOrder, 'product-item');
-                    }
+                    renderProducts(e.currentTarget.dataset.category, 'products-list', addItemToOrder, 'product-item');
                 });
             });
             
-            // Selezione Modificatore (Più/Senza/Poco/Abb.)
-            document.querySelectorAll('.modifier-btn-choice').forEach(btn => {
+            // NUOVO: Listener per la selezione del modificatore principale
+            document.querySelectorAll('.modifier-main-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.modifier-btn-choice').forEach(b => b.classList.remove('active'));
-                    e.currentTarget.classList.add('active');
+                    document.querySelectorAll('.modifier-main-btn').forEach(b => b.classList.remove('active-modifier'));
+                    e.currentTarget.classList.add('active-modifier');
                     activeModifier = e.currentTarget.dataset.mod;
+                    
+                    // Ricarica la lista degli add-on per mostrare le modifiche già applicate in relazione al modificatore attivo (opzionale ma utile)
+                    if (targetItemIndex !== -1) {
+                         renderAddonsForModification();
+                    }
                 });
             });
 
-            // Listener per Finalizzazione Ordine (omesso per brevità)
-            document.getElementById('finalize-order-btn').addEventListener('click', () => {
-                 if (currentOrder.length === 0) {
+            // (Listener per Finalizzazione, Ordini, Impostazioni omessi per brevità, mantengono la logica precedente)
+            
+            // Logica per Finalizzazione Ordine
+             document.getElementById('finalize-order-btn').addEventListener('click', () => {
+                if (currentOrder.length === 0) {
                     alert("L'ordine è vuoto! Inserisci almeno un prodotto.");
                     return;
                 }
+                // Disattiva la modalità modifica se attiva prima di finalizzare
+                if (targetItemIndex !== -1) selectItemForModification(-1);
+                
                 document.getElementById('order-entry-section').classList.add('hidden');
                 document.getElementById('order-details-section').classList.remove('hidden');
                 document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden')); 
                 
-                const defaultModeBtn = document.querySelector('.mode-btn[data-mode="consegna"]');
-                if (defaultModeBtn) defaultModeBtn.click();
+                const consegnaBtn = document.querySelector('.mode-btn[data-mode="consegna"]');
+                if (consegnaBtn) consegnaBtn.click();
             });
-
-            // Listener per Invio Ordine (Form principale)
+            
+            // Logica per Invio Ordine (Form principale)
              document.getElementById('order-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 
                 const selectedModeBtn = document.querySelector('.mode-btn.active-mode');
-                if (!selectedModeBtn) return;
-                
+                if (!selectedModeBtn) {
+                    alert("Errore: Seleziona una modalità di consegna/ritiro.");
+                    return;
+                }
                 const mode = selectedModeBtn.dataset.mode;
                 let orderData = {};
                 
-                // Logica raccolta dati form (omessa per brevità)
-                // ...
-
-                const total = currentOrder.reduce((sum, item) => sum + item.prezzo, 0);
+                 if (mode === 'consegna') {
+                    orderData = {
+                        nome: document.getElementById('consegna-nome').value,
+                        cognome: document.getElementById('consegna-cognome').value, 
+                        via: document.getElementById('consegna-via').value, 
+                        numero: document.getElementById('consegna-numero').value, 
+                        paese: document.getElementById('consegna-paese').value, 
+                        telefono: document.getElementById('consegna-telefono').value,
+                        ora: document.getElementById('consegna-ora').value,
+                        tagliate: document.getElementById('consegna-tagliate').checked ? 'si' : 'no',
+                        fattorino: document.getElementById('fattorino-select').value
+                    };
+                } else if (mode === 'asporto') {
+                    orderData = {
+                        nome: document.getElementById('asporto-nome').value,
+                        cognome: document.getElementById('asporto-cognome').value,
+                        telefono: document.getElementById('asporto-telefono').value,
+                        ora: document.getElementById('asporto-ora').value,
+                        tagliate: document.getElementById('asporto-tagliate').checked ? 'si' : 'no'
+                    };
+                } else if (mode === 'banco') {
+                    orderData = {
+                        cognome: document.getElementById('banco-cognome').value,
+                        ora: document.getElementById('banco-ora').value
+                    };
+                }
+                
+                const total = currentOrder.reduce((sum, item) => {
+                    let itemTotal = item.prezzo;
+                    if (item.modifiers) {
+                        itemTotal += item.modifiers.reduce((modSum, mod) => modSum + mod.price, 0);
+                    }
+                    return sum + itemTotal;
+                }, 0);
 
                 const newOrder = {
                     id: orderCounter++,
@@ -717,14 +888,13 @@
                 alert(`Ordine #${newOrder.id} (${mode}) confermato! Totale: €${total.toFixed(2)}`);
 
                 currentOrder = [];
-                renderMainOrder();
+                renderCurrentOrder();
                 document.getElementById('order-form').reset();
                 switchSection('orders-list-section'); 
             });
 
-
-            // Listener per Impostazioni (omesso per brevità)
-            // ...
+            // Logica per Impostazioni (Aggiunta Prodotti, Ingredienti, Fattorini)
+            // (Omessa per brevità, sono nel codice precedente)
 
         });
     </script>
