@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Smart - App Ordini Completa</title>
+    <title>Super Smart - Versione Integrata</title>
     <style>
         /*
         ===================================
-        CSS: Stili Globali e Layout
+        CSS: Stili e Grafica
         ===================================
         */
         body {
@@ -42,11 +42,7 @@
             margin-top: 30px;
         }
 
-        /*
-        ===================================
-        CSS: Opzioni di Servizio (Domicilio/Asporto/Banco)
-        ===================================
-        */
+        /* Opzioni di Servizio (Consegna/Asporto/Banco) */
         #servizio-options {
             display: flex;
             justify-content: space-around;
@@ -67,11 +63,6 @@
             text-align: center;
         }
 
-        .servizio-btn:hover {
-            border-color: #007bff;
-            background-color: #f4f8ff;
-        }
-
         .servizio-btn.attivo {
             background-color: #007bff;
             color: white;
@@ -79,11 +70,7 @@
             box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
         }
 
-        /*
-        ===================================
-        CSS: Lista Prodotti
-        ===================================
-        */
+        /* Lista Prodotti */
         .prodotto-item {
             display: flex;
             justify-content: space-between;
@@ -97,21 +84,17 @@
             transition: background-color 0.2s, border-color 0.2s;
         }
 
-        .prodotto-item:hover, .prodotto-item.selezionato {
+        .prodotto-item.selezionato {
             background-color: #e6f3ff;
             border-color: #007bff;
             font-weight: 600;
         }
 
-        /*
-        ===================================
-        CSS: Modificatori Rapidi (I 4 Pulsantini)
-        ===================================
-        */
+        /* Modificatori Rapidi (Più, Senza, Poco, Abbondante) */
         #quick-modifiers-container {
             margin: 25px 0;
             padding: 20px;
-            border: 2px dashed #ff9800; /* Evidenziazione per la funzionalità chiave */
+            border: 2px dashed #ff9800;
             border-radius: 10px;
             background-color: #fff8e1;
         }
@@ -131,13 +114,8 @@
             font-size: 1em;
             font-weight: 700;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-            text-align: center;
             color: white;
-        }
-
-        .modificatore-btn:active {
-            transform: translateY(1px);
+            text-align: center;
         }
 
         .modificatore-btn[data-azione="piu"] { background-color: #28a745; }
@@ -151,20 +129,6 @@
             margin-bottom: 3px;
         }
         
-        /*
-        ===================================
-        CSS: Altro
-        ===================================
-        */
-        #riepilogo-ordine {
-            min-height: 80px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            background-color: #f9f9f9;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-
         #btn-impostazioni-avanzate {
             background-color: #6c757d;
             color: white;
@@ -175,6 +139,15 @@
             float: right;
             margin-top: -5px;
             font-size: 0.9em;
+        }
+
+        #riepilogo-ordine {
+            min-height: 80px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            margin-top: 20px;
         }
     </style>
 </head>
@@ -206,7 +179,7 @@
         
         <div id="quick-modifiers-container">
             <h3>3. Modifiche Rapide Ingredienti</h3>
-            <p>Seleziona un ingrediente **dopo** aver scelto il tipo di modifica qui sotto.</p>
+            <p>Sostituisce il pulsante "Aggiunte": seleziona un ingrediente **dopo** aver scelto la modifica.</p>
             <div class="pulsanti-modificatori">
                 
                 <button class="modificatore-btn" data-azione="piu">
@@ -229,8 +202,7 @@
 
         <h2>4. Riepilogo Ordine e Dettagli</h2>
         <div id="riepilogo-ordine">
-            <p>Modalità di servizio: **Consegna a Domicilio**</p>
-            <p>Nessun articolo modificato. Seleziona un prodotto e usa i modificatori rapidi.</p>
+            <p>In attesa di selezione...</p>
         </div>
     </div>
 
@@ -263,20 +235,19 @@
                             <ul>${modificheList}</ul>
                         `;
                     } else {
-                        modificheHtml = `<p><strong>Articolo:</strong> ${articoloSelezionato.nome} (Nessuna modifica rapida)</p>`;
+                        modificheHtml = `<p><strong>Articolo:</strong> ${articoloSelezionato.nome} (Nessuna modifica rapida applicata)</p>`;
                     }
                 }
 
                 riepilogoOrdine.innerHTML = `
                     <p>Modalità di servizio: **${servizioAttivo.toUpperCase().replace('-', ' ')}**</p>
-                    ${modificheHtml || '<p>Nessun articolo selezionato.</p>'}
+                    ${modificheHtml || '<p>Seleziona un prodotto e una modalità di servizio.</p>'}
                 `;
             }
 
-            // --- GESTIONE SCELTA SERVIZIO (Consegna/Asporto/Banco) ---
+            // --- GESTIONE SCELTA SERVIZIO ---
             servizioOptions.forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    // Rimuove la classe attivo da tutti e la aggiunge solo al cliccato
                     servizioOptions.forEach(b => b.classList.remove('attivo'));
                     e.currentTarget.classList.add('attivo');
                     servizioAttivo = e.currentTarget.getAttribute('data-mode');
@@ -287,65 +258,53 @@
             // --- GESTIONE SELEZIONE PRODOTTO ---
             listaProdotti.querySelectorAll('.prodotto-item').forEach(item => {
                 item.addEventListener('click', () => {
-                    // Deseleziona tutti gli altri
                     listaProdotti.querySelectorAll('.prodotto-item').forEach(p => p.classList.remove('selezionato'));
-                    
-                    // Seleziona l'articolo cliccato
                     item.classList.add('selezionato');
                     
                     // Inizializza l'oggetto articoloSelezionato
                     articoloSelezionato = {
                         id: item.getAttribute('data-id'),
                         nome: item.getAttribute('data-nome'),
-                        modifiche: {} // Reset modifiche per il nuovo articolo
+                        modifiche: {} // Oggetto per tenere traccia delle modifiche
                     };
                     
                     aggiornaRiepilogo();
-                    alert(`Hai selezionato: ${articoloSelezionato.nome}. Ora usa i pulsanti di Modifica Rapida!`);
                 });
             });
 
-            // --- GESTIONE PULSANTI MODIFICATORI RAPIDI (Più, Senza, Poco, Abbondante) ---
+            // --- GESTIONE PULSANTI MODIFICATORI RAPIDI ---
             modificatoriBtns.forEach(button => {
-                button.addEventListener('click', gestisciClickModificatore);
+                button.addEventListener('click', (event) => {
+                    const azione = event.currentTarget.getAttribute('data-azione');
+                    const azioneTesto = event.currentTarget.textContent.trim();
+
+                    if (!articoloSelezionato) {
+                        alert('ERRORE: Devi PRIMA selezionare un prodotto al punto 2.');
+                        return;
+                    }
+
+                    // Chiediamo all'utente l'ingrediente su cui applicare la modifica
+                    const ingredienteScelto = prompt(`Azione "${azioneTesto.toUpperCase()}" selezionata. Inserisci l'ingrediente da modificare (es. "mozzarella"):`);
+
+                    if (ingredienteScelto && ingredienteScelto.trim() !== '') {
+                        articoloSelezionato.modifiche[ingredienteScelto.trim().toLowerCase()] = azione; 
+                        aggiornaRiepilogo();
+                    } else if (ingredienteScelto !== null) {
+                         alert('Operazione annullata. Riprova.');
+                    }
+                });
             });
-
-            function gestisciClickModificatore(event) {
-                const azione = event.currentTarget.getAttribute('data-azione');
-                const azioneTesto = event.currentTarget.textContent.trim();
-
-                if (!articoloSelezionato) {
-                    alert('ERRORE: Devi PRIMA selezionare un prodotto per applicare una modifica rapida.');
-                    return;
-                }
-
-                // Simula la richiesta all'utente dell'ingrediente su cui applicare la modifica
-                const ingredienteScelto = prompt(`Azione "${azioneTesto.toUpperCase()}" selezionata. Inserisci l'ingrediente da modificare (es. "mozzarella"):`);
-
-                if (ingredienteScelto && ingredienteScelto.trim() !== '') {
-                    applicaModificaRapida(articoloSelezionato, ingredienteScelto.trim(), azione, azioneTesto);
-                } else if (ingredienteScelto !== null) {
-                     alert('Operazione annullata. Riprova specificando un ingrediente.');
-                }
-            }
-
-            function applicaModificaRapida(articolo, ingrediente, azione) {
-                // Aggiorna la logica dell'articolo con la nuova modifica
-                articolo.modifiche[ingrediente.toLowerCase()] = azione; 
-                aggiornaRiepilogo();
-            }
 
             // --- GESTIONE IMPOSTAZIONI AVANZATE (Le 1400 Righe) ---
             document.getElementById('btn-impostazioni-avanzate').addEventListener('click', () => {
                 alert(
                     'FUNZIONE DI MODIFICA AVANZATA (1400 RIGHE):\n\n' +
-                    'Questa è l\'interfaccia per modificare OGNI aggiunta nella sua versione più completa ' +
-                    ' (tutti i dettagli della configurazione che si estendono per 1400 righe di dati).\n\n' +
-                    '(In una vera app, qui si aprirebbe un editor avanzato tipo griglia/tabella).'
+                    'Questa interfaccia permette di modificare ogni aggiunta nella sua versione più completa ' +
+                    '(il dataset avanzato).'
                 );
             });
 
-            // Inizializza il riepilogo all'apertura
+            // Inizializza il riepilogo
             aggiornaRiepilogo();
         });
     </script>
