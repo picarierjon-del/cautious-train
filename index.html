@@ -1,17 +1,9 @@
-Assolutamente! Ho apportato le seguenti modifiche per migliorare l'interfaccia e la flessibilità del tuo gestionale:
- * Ho rimosso la scritta "Gestione Ordini Pizzeria" come richiesto.
- * Ho aggiunto una nuova categoria di prodotti chiamata "Formati" nel menu principale e nel pannello di modifica ordine.
- * Ho inserito i nuovi formati di pizza: Baby, Schiacciate, Grandi e Mezzo Metro.
- * Ho reso questa nuova categoria "Formati" completamente gestibile nel pannello Impostazioni, proprio come le "Pizze" e le "Aggiunte".
-Ora puoi definire un prezzo per ogni formato e modificare la lista a tuo piacimento!
-Ecco il codice aggiornato:
-Codice Gestionale Pizzeria Aggiornato
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v6 - Formati)</title>
+    <title>Gestionale Pizzeria Avanzato (v7 - Categorie Separate)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -33,10 +25,9 @@ Codice Gestionale Pizzeria Aggiornato
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
-        /* Rimosso H1 per nascondere la scritta come richiesto, l'ho spostato nel body solo per coerenza del codice */
+        /* Rimosso H1 come richiesto */
         header h1 {
-            font-size: 1.2em;
-            margin: 0;
+            display: none; 
         }
 
         #main-content {
@@ -341,7 +332,10 @@ Codice Gestionale Pizzeria Aggiornato
                 
                 <div class="category-menu">
                     <button class="menu-btn" data-category="pizze">Pizze</button>
-                    <button class="menu-btn" data-category="formati">Formati</button>
+                    <button class="menu-btn" data-category="baby">Baby</button>
+                    <button class="menu-btn" data-category="schiacciate">Schiacciate</button>
+                    <button class="menu-btn" data-category="grandi">Grandi</button>
+                    <button class="menu-btn" data-category="mezzometro">Mezzo Metro</button>
                     <button class="menu-btn" data-category="bibite">Bibite</button>
                     <button class="menu-btn" data-category="aggiunte">Aggiunte</button>
                 </div>
@@ -425,7 +419,10 @@ Codice Gestionale Pizzeria Aggiornato
             <form id="add-product-form">
                 <select id="product-type-select">
                     <option value="pizze">Pizza</option>
-                    <option value="formati">Formato (Baby, Mezzo Metro, ecc.)</option>
+                    <option value="baby">Baby</option>
+                    <option value="schiacciate">Schiacciate</option>
+                    <option value="grandi">Grandi</option>
+                    <option value="mezzometro">Mezzo Metro</option>
                     <option value="bibite">Bibita</option>
                     <option value="aggiunte">Aggiunta</option>
                 </select>
@@ -457,7 +454,10 @@ Codice Gestionale Pizzeria Aggiornato
                 <h3>Aggiungi Prodotti</h3>
                 <div class="category-menu">
                     <button class="menu-btn mod-menu-btn" data-category="pizze">Pizze</button>
-                    <button class="menu-btn mod-menu-btn" data-category="formati">Formati</button>
+                    <button class="menu-btn mod-menu-btn" data-category="baby">Baby</button>
+                    <button class="menu-btn mod-menu-btn" data-category="schiacciate">Schiacciate</button>
+                    <button class="menu-btn mod-menu-btn" data-category="grandi">Grandi</button>
+                    <button class="menu-btn mod-menu-btn" data-category="mezzometro">Mezzo Metro</button>
                     <button class="menu-btn mod-menu-btn" data-category="bibite">Bibite</button>
                     <button class="menu-btn mod-menu-btn" data-category="aggiunte">Aggiunte</button>
                 </div>
@@ -499,12 +499,22 @@ Codice Gestionale Pizzeria Aggiornato
                 { nome: "Diavola", prezzo: 7.50 },
                 { nome: "Capricciosa", prezzo: 8.00 }
             ],
-            // NUOVA CATEGORIA FORMATI
-            formati: [
-                { nome: "Baby", prezzo: 4.00 },
-                { nome: "Schiacciate", prezzo: 6.00 },
-                { nome: "Grandi", prezzo: 10.00 },
-                { nome: "Mezzo Metro", prezzo: 16.00 }
+            // NUOVE CATEGORIE RICHIESTE COME PULSANTI SEPARATI
+            baby: [
+                { nome: "Baby Margherita", prezzo: 4.00 },
+                { nome: "Baby Wurstel", prezzo: 5.00 }
+            ],
+            schiacciate: [
+                { nome: "Semplice", prezzo: 3.00 },
+                { nome: "Crudo e Formaggio", prezzo: 5.50 }
+            ],
+            grandi: [
+                { nome: "Grande Margherita", prezzo: 10.00 },
+                { nome: "Grande 4 Stagioni", prezzo: 13.00 }
+            ],
+            mezzometro: [
+                { nome: "Classico", prezzo: 16.00 },
+                { nome: "Gourmet", prezzo: 20.00 }
             ],
             bibite: [
                 { nome: "Acqua", prezzo: 1.50 },
@@ -525,10 +535,24 @@ Codice Gestionale Pizzeria Aggiornato
         let targetItemIndex = -1;
         let pendingModifier = '';
 
+        // Elenco delle chiavi del menu, usato per iterare sulle categorie nelle impostazioni
+        const menuCategories = ['pizze', 'baby', 'schiacciate', 'grandi', 'mezzometro', 'bibite', 'aggiunte'];
+
         // ---------------------- Funzioni di Caricamento/Salvataggio ----------------------
         function loadData() {
             const savedMenu = localStorage.getItem('pizzeriaMenu');
-            if (savedMenu) menu = JSON.parse(savedMenu);
+            if (savedMenu) {
+                // Sovrascrivo solo i contenuti, ma mantengo la struttura delle categorie (inclusi i nuovi)
+                const loadedMenu = JSON.parse(savedMenu);
+                menuCategories.forEach(cat => {
+                    if (loadedMenu[cat]) {
+                        menu[cat] = loadedMenu[cat];
+                    } else if (!menu[cat]) {
+                        // Se una categoria è stata aggiunta dopo l'ultimo salvataggio (come le nuove qui) la inizializzo vuota se non c'era
+                        menu[cat] = [];
+                    }
+                });
+            }
 
             const savedFattorini = localStorage.getItem('pizzeriaFattorini');
             if (savedFattorini) fattorini = JSON.parse(savedFattorini);
@@ -553,8 +577,10 @@ Codice Gestionale Pizzeria Aggiornato
             const list = document.getElementById(listId);
             list.innerHTML = '';
             
-            // Gestione del caso in cui la categoria non esista (potrebbe succedere se un utente la elimina manualmente)
-            if (!menu[category]) return; 
+            if (!menu[category] || menu[category].length === 0) {
+                 list.innerHTML = `<p style="text-align:center;">Nessun prodotto in questa categoria. Aggiungine uno nelle Impostazioni.</p>`;
+                 return;
+            }
 
             menu[category].forEach(item => {
                 const div = document.createElement('div');
@@ -575,7 +601,7 @@ Codice Gestionale Pizzeria Aggiornato
             list.innerHTML = '';
             
             if (!menu.aggiunte || menu.aggiunte.length === 0) {
-                 list.innerHTML = `<p>Nessuna aggiunta disponibile nelle impostazioni.</p>`;
+                 list.innerHTML = `<p style="text-align:center;">Nessuna aggiunta disponibile nelle impostazioni.</p>`;
                  return;
             }
 
@@ -781,9 +807,19 @@ Codice Gestionale Pizzeria Aggiornato
             menuDisplay.innerHTML = '<h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>';
             driversDisplay.innerHTML = '<h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>';
 
-            // AGGIUNTA DI 'FORMATI' TRA LE CATEGORIE VISUALIZZATE
-            ['pizze', 'formati', 'bibite', 'aggiunte'].forEach(category => {
-                menuDisplay.innerHTML += `<h5>**${category.toUpperCase()}**</h5>`;
+            // Mappa per visualizzare i nomi in modo leggibile (Capitalized)
+            const displayNames = {
+                pizze: 'PIZZE',
+                baby: 'BABY',
+                schiacciate: 'SCHIACCIATE',
+                grandi: 'GRANDI',
+                mezzometro: 'MEZZO METRO',
+                bibite: 'BIBITE',
+                aggiunte: 'AGGIUNTE'
+            };
+            
+            menuCategories.forEach(category => {
+                menuDisplay.innerHTML += `<h5>**${displayNames[category] || category.toUpperCase()}**</h5>`;
                 if (menu[category]) {
                     menu[category].forEach((item, index) => {
                         const div = document.createElement('div');
@@ -794,7 +830,7 @@ Codice Gestionale Pizzeria Aggiornato
                         menuDisplay.appendChild(div);
                     });
                 } else {
-                     menu[category] = []; // Inizializza se mancante (prevenzione errore)
+                     menu[category] = [];
                 }
             });
 
@@ -817,6 +853,12 @@ Codice Gestionale Pizzeria Aggiornato
                     }
                 });
             });
+            
+            // Aggiorna le opzioni della select in Impostazioni
+            const selectType = document.getElementById('product-type-select');
+            selectType.innerHTML = menuCategories.map(cat => 
+                `<option value="${cat}">${displayNames[cat] || cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`
+            ).join('');
         }
 
         // ---------------------- Funzioni di Logica ----------------------
@@ -850,6 +892,7 @@ Codice Gestionale Pizzeria Aggiornato
                 if (confirm(`Vuoi eliminare definitivamente l'articolo "${orderItems[index].nome}"?`)) {
                     orderItems.splice(index, 1);
                     activeOrders[orderIndex].total = orderItems.reduce((sum, item) => sum + item.prezzo, 0);
+                    saveData(); // Salvataggio dopo l'eliminazione
                     renderModificationOrder();
                 }
             } else {
@@ -880,6 +923,7 @@ Codice Gestionale Pizzeria Aggiornato
 
             // Ricacalcola il totale
             activeOrders[orderIndex].total = activeOrders[orderIndex].items.reduce((sum, item) => sum + item.prezzo, 0);
+            saveData(); // Salvataggio dopo la modifica
 
             // Chiudi entrambi i modal e aggiorna l'ordine di modifica
             document.getElementById('addons-selection-modal').classList.add('hidden');
@@ -928,7 +972,7 @@ Codice Gestionale Pizzeria Aggiornato
         
         function addMenuItem(type, name, price) {
             if (!menu[type]) {
-                menu[type] = []; // Crea la categoria se non esiste
+                menu[type] = []; 
             }
             if (name && price) {
                 menu[type].push({ nome: name, prezzo: parseFloat(price) });
@@ -1001,6 +1045,7 @@ Codice Gestionale Pizzeria Aggiornato
 
             activeOrders[orderIndex].items.push({ nome: name, prezzo: parseFloat(price), modifier: "", addonName: "" });
             activeOrders[orderIndex].total = activeOrders[orderIndex].items.reduce((sum, item) => sum + item.prezzo, 0);
+            saveData(); 
 
             renderModificationOrder();
         }
@@ -1017,6 +1062,7 @@ Codice Gestionale Pizzeria Aggiornato
         }
         
         function cancelModification() {
+            // Ricarica i dati dall'ultimo salvataggio per annullare le modifiche non salvate
             loadData(); 
             document.getElementById('modification-modal').classList.add('hidden');
             currentModifyingOrder = null;
@@ -1027,6 +1073,7 @@ Codice Gestionale Pizzeria Aggiornato
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
             
+            // Imposta 'Pizze' come categoria iniziale
             const defaultCategoryBtn = document.querySelector('.menu-btn[data-category="pizze"]:not(.mod-menu-btn)');
             if (defaultCategoryBtn) {
                 defaultCategoryBtn.classList.add('active-category');
@@ -1037,6 +1084,7 @@ Codice Gestionale Pizzeria Aggiornato
             renderMainOrder(); 
             switchSection('order-entry-section'); 
 
+            // Navigazione
             document.getElementById('nav-order-entry').addEventListener('click', () => switchSection('order-entry-section'));
             document.getElementById('nav-orders-list').addEventListener('click', () => switchSection('orders-list-section'));
             document.getElementById('nav-settings').addEventListener('click', () => switchSection('settings-section'));
@@ -1077,7 +1125,10 @@ Codice Gestionale Pizzeria Aggiornato
                 document.getElementById('order-entry-section').classList.add('hidden');
                 document.getElementById('order-details-section').classList.remove('hidden');
                 document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden')); 
-                document.querySelector('.mode-btn[data-mode="consegna"]').click();
+                
+                // Clicca automaticamente su 'Consegna' all'inizio
+                const consegnaBtn = document.querySelector('.mode-btn[data-mode="consegna"]');
+                if (consegnaBtn) consegnaBtn.click();
             });
 
             // Selezione Modalità 
@@ -1086,31 +1137,18 @@ Codice Gestionale Pizzeria Aggiornato
                     document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active-mode'));
                     e.currentTarget.classList.add('active-mode');
                     
+                    // Rimuove 'required' da tutti i campi per evitare validazione su campi nascosti
                     document.querySelectorAll('.mode-data input, .mode-data select').forEach(input => input.removeAttribute('required'));
                     document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden')); 
                     
                     const mode = e.currentTarget.dataset.mode;
-
-                    if (mode === 'consegna') {
-                        document.getElementById('delivery-data').classList.remove('hidden');
-                        document.getElementById('consegna-nome').setAttribute('required', 'required');
-                        document.getElementById('consegna-cognome').setAttribute('required', 'required');
-                        document.getElementById('consegna-via').setAttribute('required', 'required');
-                        document.getElementById('consegna-numero').setAttribute('required', 'required');
-                        document.getElementById('consegna-paese').setAttribute('required', 'required');
-                        document.getElementById('consegna-telefono').setAttribute('required', 'required');
-                        document.getElementById('consegna-ora').setAttribute('required', 'required');
-                        document.getElementById('fattorino-select').setAttribute('required', 'required');
-                    } else if (mode === 'asporto') {
-                        document.getElementById('takeaway-data').classList.remove('hidden');
-                        document.getElementById('asporto-nome').setAttribute('required', 'required');
-                        document.getElementById('asporto-cognome').setAttribute('required', 'required');
-                        document.getElementById('asporto-telefono').setAttribute('required', 'required');
-                        document.getElementById('asporto-ora').setAttribute('required', 'required');
-                    } else if (mode === 'banco') {
-                        document.getElementById('counter-data').classList.remove('hidden');
-                        document.getElementById('banco-cognome').setAttribute('required', 'required');
-                        document.getElementById('banco-ora').setAttribute('required', 'required');
+                    const dataDiv = document.getElementById(`${mode.replace('consegna', 'delivery').replace('asporto', 'takeaway').replace('banco', 'counter')}-data`);
+                    
+                    if (dataDiv) {
+                        dataDiv.classList.remove('hidden');
+                        
+                        // Imposta 'required' solo per i campi della modalità attiva
+                        dataDiv.querySelectorAll('input:not([type="checkbox"]), select').forEach(input => input.setAttribute('required', 'required'));
                     }
                 });
             });
@@ -1191,8 +1229,10 @@ Codice Gestionale Pizzeria Aggiornato
                 addFattorino(name);
                 e.target.reset();
             });
+            
+            // Inizializza la select delle impostazioni all'inizio
+            renderSettings();
         });
     </script>
 </body>
 </html>
-
