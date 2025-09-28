@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v9 - Modificatori Immediati e Costo Fisso)</title>
+    <title>Gestionale Pizzeria Avanzato (v10 - Modificatori Unificati)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -179,23 +179,34 @@
             font-size: 0.9em;
         }
         
-        /* Stili per i pulsanti modificatori immediati */
+        /* Stili per i pulsanti modificatori immediati (nella barra superiore) */
+        .modifier-immediate-btn-bar {
+            grid-column: 1 / -1; /* Occupa tutta la larghezza */
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
         .modifier-immediate-btn {
+            flex-grow: 1;
             background-color: white;
             color: #333;
             border: 1px solid #ddd;
-            padding: 15px 5px;
+            padding: 10px 5px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 0.9em;
+            font-size: 0.85em;
             transition: background-color 0.2s;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
         
         .modifier-immediate-btn i {
-             font-size: 1.5em;
-             margin-bottom: 5px;
+             font-size: 1.2em;
+             margin-bottom: 3px;
         }
         
         /* Colori per i pulsanti Modificatori */
@@ -209,7 +220,7 @@
         /* Stili per le aggiunte/ingredienti nella modal secondaria */
         #addons-list-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             gap: 8px;
             margin-top: 10px;
         }
@@ -221,7 +232,7 @@
             padding: 10px;
             text-align: center;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: 0.8em;
         }
 
         .product-item:hover, .addon-item:hover {
@@ -512,7 +523,7 @@
 
     <div id="addons-selection-modal" class="modal hidden">
         <div id="addons-selection-content">
-            <h3>Seleziona Ingrediente o Aggiunta da Modificare</h3>
+            <h3 id="addon-selection-title">Seleziona Ingrediente o Aggiunta da Modificare</h3>
             <div id="addons-list-container">
                 </div>
             <button id="cancel-addon-selection" style="background-color: #6c757d; margin-top: 15px;">Annulla</button>
@@ -564,7 +575,7 @@
             "Mozzarella", "Pomodoro", "Basilico", "Olio", "Sale", "Cornicione", "Salamino Piccante"
         ];
 
-        // NUOVA COSTANTE PER IL PREZZO FISSO DEL MODIFICATORE
+        // COSTANTE PER IL PREZZO FISSO DEL MODIFICATORE
         const MODIFIER_PRICE = 0.50; 
 
 
@@ -574,10 +585,11 @@
         let orderCounter = 1; 
         let currentModifyingOrder = null;
         
+        // Stato per l'applicazione del modificatore rapido
         let targetItemIndex = -1;
         let pendingModifier = '';
 
-        // Elenco delle chiavi del menu, usato per iterare sulle categorie nelle impostazioni
+        // Elenco delle chiavi del menu
         const menuCategories = ['pizze', 'baby', 'schiacciate', 'grandi', 'mezzometro', 'bibite', 'aggiunte'];
 
         // ---------------------- Funzioni di Caricamento/Salvataggio ----------------------
@@ -594,7 +606,6 @@
                 });
             }
             
-            // Carica gli ingredienti modificabili
             const savedIngredients = localStorage.getItem('pizzeriaIngredients');
             if (savedIngredients) ingredients = JSON.parse(savedIngredients);
 
@@ -612,7 +623,7 @@
 
         function saveData() {
             localStorage.setItem('pizzeriaMenu', JSON.stringify(menu));
-            localStorage.setItem('pizzeriaIngredients', JSON.stringify(ingredients)); // Salva gli ingredienti
+            localStorage.setItem('pizzeriaIngredients', JSON.stringify(ingredients)); 
             localStorage.setItem('pizzeriaFattorini', JSON.stringify(fattorini));
             localStorage.setItem('pizzeriaActiveOrders', JSON.stringify(activeOrders));
         }
@@ -624,9 +635,13 @@
             list.innerHTML = '';
             
             if (category === 'aggiunte') {
-                // Se la categoria è 'aggiunte', mostra i pulsanti modificatori e le aggiunte con prezzo
+                // Se la categoria è 'aggiunte', mostra SOLO i pulsanti modificatori in linea
                 
-                // Pulsanti Modificatori Immediati (come prodotti)
+                // Contenitore per i 4 pulsanti in linea orizzontale
+                const bar = document.createElement('div');
+                bar.className = 'modifier-immediate-btn-bar';
+                list.appendChild(bar);
+
                 const modifiers = [
                     { nome: "PIÙ", icon: "plus-circle", mod: "Più", color: "#28a745" },
                     { nome: "SENZA", icon: "minus-circle", mod: "Meno", color: "#6c757d" },
@@ -638,36 +653,20 @@
                     const btn = document.createElement('button');
                     btn.className = 'modifier-immediate-btn';
                     btn.dataset.modifier = mod.mod;
+                    btn.dataset.mod = mod.mod; // Usiamo data-mod per coerenza con l'handler
                     btn.style.borderColor = mod.color;
                     btn.style.color = mod.color;
                     btn.innerHTML = `
                         <i class="fas fa-${mod.icon}"></i>
                         <strong>${mod.nome}</strong>
                     `;
-                    // L'handler è lo stesso, ma passiamo un parametro speciale per aprire il modal
+                    // Tutti i pulsanti modificatori aprono la selezione ingredienti/aggiunte
                     btn.addEventListener('click', () => handler(`MODIFIER_SELECTION`, 0.00, mod.mod));
-                    list.appendChild(btn);
+                    bar.appendChild(btn);
                 });
                 
-                // Aggiunte con Prezzo
-                if (menu.aggiunte && menu.aggiunte.length > 0) {
-                    menu.aggiunte.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = className;
-                        div.dataset.name = item.nome;
-                        div.dataset.price = item.prezzo;
-                        div.innerHTML = `
-                            <strong>${item.nome}</strong>
-                            <p>€${item.prezzo.toFixed(2)}</p>
-                        `;
-                        div.addEventListener('click', () => handler(item.nome, item.prezzo));
-                        list.appendChild(div);
-                    });
-                }
-                
-                if (list.innerHTML === '') {
-                    list.innerHTML = `<p style="text-align:center;">Nessun prodotto in questa categoria. Aggiungine uno nelle Impostazioni.</p>`;
-                }
+                // NOTA: I prodotti aggiuntivi a pagamento (es. Mozzarella Extra) NON vengono mostrati
+                // qui per rispettare la richiesta di avere solo i 4 pulsanti in questa schermata.
                 
                 return;
             }
@@ -865,7 +864,6 @@
                 let notes = '';
                 let fattorinoControl = '';
                 
-                // Calcola il totale della card (è già calcolato, ma meglio riutilizzare la proprietà order.total)
                 const totalWithModifiers = order.total;
 
 
@@ -957,6 +955,7 @@
         }
         
         function renderSettings() {
+             // ... [funzione renderSettings rimane invariata] ... 
             const menuDisplay = document.getElementById('current-menu-display');
             const driversDisplay = document.getElementById('current-drivers-display');
             const ingredientsDisplay = document.getElementById('current-ingredients-display');
@@ -1039,21 +1038,13 @@
             if (name === "MODIFIER_SELECTION" && modifier) {
                  // Caso 1: Click su un pulsante Modificatore Immediato (Più, Meno, Poco, Abbondante)
                 
-                // Controlla se ci sono pizze nell'ordine
                 const pizzaItems = currentOrder.filter(item => menuCategories.slice(0, 5).includes(getCategory(item.nome)));
                 
                 if (pizzaItems.length === 0) {
                      alert("Seleziona prima una pizza o un prodotto modificabile nell'ordine!");
-                     // Per gli item non modificabili (come le bibite), questo non dovrebbe accadere, ma per semplicità
-                     // ci assicuriamo che ci sia almeno un elemento nell'ordine per poter essere modificato.
                      return;
                 }
                 
-                // Se c'è un solo elemento (che è una pizza) o l'ultimo aggiunto è una pizza, usiamo quello come target
-                // Altrimenti, forziamo l'apertura del modal modifiche (anche se in questo contesto l'utente dovrà usare il modal di modifica articolo)
-                // MA per semplicità, se c'è almeno un elemento, usiamo l'ultimo.
-                
-                // Determina l'indice dell'ultimo articolo in currentOrder
                 const lastItemIndex = currentOrder.length - 1;
                 
                 if (lastItemIndex >= 0) {
@@ -1061,17 +1052,12 @@
                      targetItemIndex = lastItemIndex;
                      pendingModifier = modifier;
                      
+                     // Aggiorna il titolo del modal con il modificatore selezionato
+                     document.getElementById('addon-selection-title').textContent = `Seleziona Ingrediente da rendere "${modifier.toUpperCase()}"`;
+                     
                      // Apri il modal di selezione ingredienti
                      renderAddonsForSelection();
                      document.getElementById('addons-selection-modal').classList.remove('hidden');
-                     
-                     // Se l'elemento aggiunto non è nell'ordine di modifica, apriamo il modal per il currentOrder
-                     // MA l'architettura attuale non prevede l'aggiunta di modificatori direttamente al currentOrder tramite `applyAddonModifier` se non si passa da `handleModificationItemChange`
-                     // Dobbiamo re-indirizzare `applyAddonModifier` per lavorare sul `currentOrder` se siamo in `order-entry-section`
-                     
-                     // Per ora, l'aggiunta rapida da Aggiunte applicherà il modificatore all'ULTIMO ELEMENTO AGGIUNTO.
-                     // Aggiungeremo una logica in applyAddonModifier per capire se lavorare su currentOrder o activeOrders.
-                     
                 } else {
                      alert("Nessun articolo nell'ordine da modificare.");
                 }
@@ -1100,6 +1086,7 @@
         }
         
         function changeFattorino(orderId, newFattorino) {
+             // ... [funzione changeFattorino rimane invariata] ...
             const orderIndex = activeOrders.findIndex(o => o.id === orderId);
             if (orderIndex === -1) return;
             
@@ -1115,6 +1102,7 @@
             const orderItems = activeOrders[orderIndex].items;
 
             if (action === 'Elimina') {
+                 // ... [logica eliminazione rimane invariata] ...
                 if (confirm(`Vuoi eliminare definitivamente l'articolo "${orderItems[index].nome}"?`)) {
                     orderItems.splice(index, 1);
                     // Ricalcola il totale INCLUSI i modificatori rimasti
@@ -1132,15 +1120,17 @@
                 targetItemIndex = index;
                 pendingModifier = action;
                 
+                // Aggiorna il titolo del modal con il modificatore selezionato
+                document.getElementById('addon-selection-title').textContent = `Seleziona Ingrediente da rendere "${action.toUpperCase()}"`;
+                
                 renderAddonsForSelection();
                 document.getElementById('addons-selection-modal').classList.remove('hidden');
             }
         }
         
-        // Applica il modificatore dopo la selezione dell'aggiunta/ingrediente nel modal secondario
+        // AGGIORNATA: Logica per il costo fisso
         function applyAddonModifier(addonName, addonPrice) {
             
-            // Determina su quale array di ordini lavorare (currentOrder o activeOrders)
             const isModifyingActiveOrder = currentModifyingOrder !== null;
             const targetOrderArray = isModifyingActiveOrder 
                 ? activeOrders.find(o => o.id === currentModifyingOrder).items 
@@ -1150,12 +1140,10 @@
             
             const item = targetOrderArray[targetItemIndex];
             
-            // Assicurati che l'array modificatori esista
             if (!item.modifiers) {
                 item.modifiers = [];
             }
             
-            // Cerca un modificatore esistente per questo ingrediente
             const existingIndex = item.modifiers.findIndex(m => m.addonName === addonName);
             
             let priceToApply = 0.00;
@@ -1167,8 +1155,9 @@
                  priceToApply = addonPrice;
             } else {
                  // Se l'elemento non ha prezzo (ingrediente base):
+                 // Applica il costo fisso di 0.50€ a PIÙ, POCO e ABBONDANTE
                  if (modifierToApply === "Più" || modifierToApply === "Poco" || modifierToApply === "Abbondante") {
-                     priceToApply = MODIFIER_PRICE; // Applica il costo fisso
+                     priceToApply = MODIFIER_PRICE; 
                  }
                  // Per "Meno" (Senza), priceToApply rimane 0.00
             }
@@ -1217,8 +1206,9 @@
             pendingModifier = '';
         }
 
+        // ... [altre funzioni di logica (addIngredient, switchSection, changeOrderStatus, etc.) rimangono invariate] ...
         function addIngredient(name) {
-            const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+             const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
             if (name && !ingredients.includes(capitalizedName)) {
                 ingredients.push(capitalizedName);
                 saveData();
@@ -1288,6 +1278,7 @@
                 if (type === 'aggiunte') {
                     const activeCategoryBtn = document.querySelector('.menu-btn.active-category:not(.mod-menu-btn)');
                     if (activeCategoryBtn && activeCategoryBtn.dataset.category === type) {
+                        // NON renderizziamo i prodotti, ma solo i pulsanti modificatori
                         renderProducts(type, 'products-list', addItemToOrder, 'product-item'); 
                     }
                     if (document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
@@ -1360,7 +1351,6 @@
             
             if (name === "MODIFIER_SELECTION") {
                  // Non permettiamo l'aggiunta rapida di modificatori dal modal modifica ordine
-                 // L'utente deve usare i pulsanti a fianco dell'articolo già presente.
                  alert("Per aggiungere un modificatore, usa i pulsanti Più/Meno/Poco/Abb. accanto all'articolo nell'ordine.");
                  return;
             }
