@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v10 - Modificatori Unificati)</title>
+    <title>Gestionale Pizzeria Avanzato (v11 - Modifica Prodotto/Ingrediente)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -354,6 +354,44 @@
             max-width: 90%;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
+        
+        /* Stili per la visualizzazione e modifica degli elementi nelle Impostazioni */
+        .settings-item-list div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            cursor: pointer; /* Indica che è cliccabile per la modifica */
+        }
+        
+        .settings-item-list div:last-child {
+            border-bottom: none;
+        }
+        
+        .delete-item-btn {
+            color: #e31b23;
+            cursor: pointer;
+            padding-left: 10px;
+            font-size: 1.2em;
+        }
+        
+        .edit-trigger {
+            flex-grow: 1; /* Permette al nome di occupare lo spazio */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-right: 10px;
+        }
+        
+        /* Modal Modifica Prodotto */
+        #edit-modal {
+            z-index: 2010;
+        }
+        
+        #edit-modal input {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -467,17 +505,17 @@
                 <button type="submit">Aggiungi Prodotto</button>
             </form>
 
-            <div id="current-menu-display">
-                <h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>
+            <div id="current-menu-display" class="settings-item-list">
+                <h4>Prodotti Attuali (clicca sul nome per modificare, ❌ per eliminare)</h4>
                 </div>
             
-            <h3>Gestione Ingredienti Modificabili (Senza Prezzo)</h3>
+            <h3>Gestione Ingredienti Modificabili (Senza Prezzo Base)</h3>
             <form id="add-ingredient-form">
                 <input type="text" id="ingredient-name" placeholder="Nome Ingrediente/Modificatore (es. Prosciutto, Basilico, Cornicione)" required>
                 <button type="submit" style="background-color: #007bff;">Aggiungi Ingrediente</button>
             </form>
-            <div id="current-ingredients-display">
-                <h4>Ingredienti Modificabili (solo per Più/Meno/Poco/Abb.)</h4>
+            <div id="current-ingredients-display" class="settings-item-list">
+                <h4>Ingredienti Modificabili (clicca sul nome per modificare, ❌ per eliminare)</h4>
                 </div>
 
             <h3>Gestione Fattorini</h3>
@@ -485,8 +523,8 @@
                 <input type="text" id="driver-name" placeholder="Nome Fattorino" required>
                 <button type="submit">Aggiungi Fattorino</button>
             </form>
-            <div id="current-drivers-display">
-                <h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>
+            <div id="current-drivers-display" class="settings-item-list">
+                <h4>Fattorini Attuali (clicca sul nome per modificare, ❌ per eliminare)</h4>
                 </div>
         </div>
     </div>
@@ -527,6 +565,28 @@
             <div id="addons-list-container">
                 </div>
             <button id="cancel-addon-selection" style="background-color: #6c757d; margin-top: 15px;">Annulla</button>
+        </div>
+    </div>
+    
+    <div id="edit-modal" class="modal hidden">
+        <div id="edit-content" class="modal-content">
+            <h2>Modifica <span id="edit-type-label"></span></h2>
+            <form id="edit-form">
+                <input type="hidden" id="edit-hidden-type">
+                <input type="hidden" id="edit-hidden-category">
+                <input type="hidden" id="edit-hidden-index">
+                
+                <label for="edit-name-input">Nome:</label>
+                <input type="text" id="edit-name-input" required>
+                
+                <div id="edit-price-group">
+                    <label for="edit-price-input">Prezzo (€):</label>
+                    <input type="number" id="edit-price-input" step="0.01">
+                </div>
+                
+                <button type="submit" style="background-color: #28a745;">Salva Modifiche</button>
+                <button type="button" id="cancel-edit-btn" style="background-color: #6c757d;">Annulla</button>
+            </form>
         </div>
     </div>
 
@@ -665,10 +725,7 @@
                     bar.appendChild(btn);
                 });
                 
-                // NOTA: I prodotti aggiuntivi a pagamento (es. Mozzarella Extra) NON vengono mostrati
-                // qui per rispettare la richiesta di avere solo i 4 pulsanti in questa schermata.
-                
-                return;
+                return; 
             }
             
             // Rendering normale per le altre categorie
@@ -848,8 +905,104 @@
                 select.appendChild(option);
             });
         }
+        
+        // MODIFICATA: Aggiunge il trigger di modifica per nome/prezzo
+        function renderSettings() {
+            const menuDisplay = document.getElementById('current-menu-display');
+            const driversDisplay = document.getElementById('current-drivers-display');
+            const ingredientsDisplay = document.getElementById('current-ingredients-display');
+            
+            menuDisplay.innerHTML = '<h4>Prodotti Attuali (clicca sul nome per modificare, ❌ per eliminare)</h4>';
+            driversDisplay.innerHTML = '<h4>Fattorini Attuali (clicca sul nome per modificare, ❌ per eliminare)</h4>';
+            ingredientsDisplay.innerHTML = '<h4>Ingredienti Modificabili (clicca sul nome per modificare, ❌ per eliminare)</h4>';
+
+            const displayNames = {
+                pizze: 'PIZZE',
+                baby: 'BABY',
+                schiacciate: 'SCHIACCIATE',
+                grandi: 'GRANDI',
+                mezzometro: 'MEZZO METRO',
+                bibite: 'BIBITE',
+                aggiunte: 'AGGIUNTE'
+            };
+            
+            // Render Prodotti
+            menuCategories.forEach(category => {
+                menuDisplay.innerHTML += `<h5 style="margin-bottom: 0;">**${displayNames[category] || category.toUpperCase()}**</h5>`;
+                if (menu[category]) {
+                    menu[category].forEach((item, index) => {
+                        const div = document.createElement('div');
+                        div.innerHTML = `
+                            <span class="edit-trigger" data-type="menu" data-category="${category}" data-index="${index}">
+                                ${item.nome} <span style="font-weight: bold;">€${item.prezzo.toFixed(2)}</span>
+                            </span>
+                            <span class="delete-item-btn" data-category="${category}" data-index="${index}"><i class="fas fa-times-circle"></i></span>
+                        `;
+                        menuDisplay.appendChild(div);
+                    });
+                } else {
+                     menu[category] = [];
+                }
+            });
+
+            // Render Ingredienti
+            ingredients.forEach((ing, index) => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <span class="edit-trigger" data-type="ingredient" data-index="${index}">
+                        ${ing} <span style="font-style: italic; color: #aaa;">(Modificabile)</span>
+                    </span>
+                    <span class="delete-item-btn" data-type="ingredient" data-index="${index}"><i class="fas fa-times-circle"></i></span>
+                `;
+                ingredientsDisplay.appendChild(div);
+            });
+
+            // Render Fattorini
+            fattorini.forEach((driver, index) => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <span class="edit-trigger" data-type="fattorino" data-index="${index}">
+                        ${driver}
+                    </span>
+                    <span class="delete-item-btn" data-type="fattorino" data-index="${index}"><i class="fas fa-times-circle"></i></span>
+                `;
+                driversDisplay.appendChild(div);
+            });
+
+            // Listener per la cancellazione
+            document.querySelectorAll('.delete-item-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Evita di attivare il trigger di modifica
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    if (e.currentTarget.dataset.type === 'fattorino') {
+                        deleteFattorino(index);
+                    } else if (e.currentTarget.dataset.type === 'ingredient') {
+                        deleteIngredient(index);
+                    } else {
+                        deleteMenuItem(e.currentTarget.dataset.category, index);
+                    }
+                });
+            });
+            
+            // NUOVO: Listener per la modifica (cliccare sul nome)
+             document.querySelectorAll('.edit-trigger').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const type = e.currentTarget.dataset.type;
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    const category = e.currentTarget.dataset.category;
+                    openEditModal(type, index, category);
+                });
+            });
+            
+            // Aggiorna le opzioni della select in Impostazioni
+            const selectType = document.getElementById('product-type-select');
+            selectType.innerHTML = menuCategories.map(cat => 
+                `<option value="${cat}">${displayNames[cat] || cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`
+            ).join('');
+        }
 
         function renderActiveOrders() {
+            // ... [funzione renderActiveOrders rimane invariata] ...
             const container = document.getElementById('active-orders-container');
             container.innerHTML = '';
             
@@ -953,87 +1106,102 @@
                 });
             });
         }
+
+
+        // ---------------------- Funzioni di Modifica (NUOVE) ----------------------
         
-        function renderSettings() {
-             // ... [funzione renderSettings rimane invariata] ... 
-            const menuDisplay = document.getElementById('current-menu-display');
-            const driversDisplay = document.getElementById('current-drivers-display');
-            const ingredientsDisplay = document.getElementById('current-ingredients-display');
-            
-            menuDisplay.innerHTML = '<h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>';
-            driversDisplay.innerHTML = '<h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>';
-            ingredientsDisplay.innerHTML = '<h4>Ingredienti Modificabili (solo per Più/Meno/Poco/Abb.)</h4>';
+        function openEditModal(type, index, category = null) {
+            const modal = document.getElementById('edit-modal');
+            const typeLabel = document.getElementById('edit-type-label');
+            const nameInput = document.getElementById('edit-name-input');
+            const priceInput = document.getElementById('edit-price-input');
+            const priceGroup = document.getElementById('edit-price-group');
 
-            const displayNames = {
-                pizze: 'PIZZE',
-                baby: 'BABY',
-                schiacciate: 'SCHIACCIATE',
-                grandi: 'GRANDI',
-                mezzometro: 'MEZZO METRO',
-                bibite: 'BIBITE',
-                aggiunte: 'AGGIUNTE'
-            };
+            // Campi nascosti
+            document.getElementById('edit-hidden-type').value = type;
+            document.getElementById('edit-hidden-index').value = index;
+            document.getElementById('edit-hidden-category').value = category || '';
+
+            nameInput.value = '';
+            priceInput.value = '';
+            priceGroup.classList.remove('hidden');
+
+            if (type === 'menu') {
+                const item = menu[category][index];
+                typeLabel.textContent = `Prodotto (${category.toUpperCase()})`;
+                nameInput.value = item.nome;
+                priceInput.value = item.prezzo.toFixed(2);
+                priceInput.setAttribute('required', 'required');
+            } else if (type === 'ingredient') {
+                const item = ingredients[index];
+                typeLabel.textContent = `Ingrediente Modificabile`;
+                nameInput.value = item;
+                priceGroup.classList.add('hidden'); // Nasconde il campo prezzo
+                priceInput.removeAttribute('required');
+            } else if (type === 'fattorino') {
+                const item = fattorini[index];
+                typeLabel.textContent = `Fattorino`;
+                nameInput.value = item;
+                priceGroup.classList.add('hidden'); // Nasconde il campo prezzo
+                priceInput.removeAttribute('required');
+            }
+
+            modal.classList.remove('hidden');
+            nameInput.focus();
+        }
+        
+        function saveEdit(e) {
+            e.preventDefault();
             
-            // Render Prodotti
-            menuCategories.forEach(category => {
-                menuDisplay.innerHTML += `<h5>**${displayNames[category] || category.toUpperCase()}**</h5>`;
-                if (menu[category]) {
-                    menu[category].forEach((item, index) => {
-                        const div = document.createElement('div');
-                        div.innerHTML = `
-                            <span>${item.nome} - €${item.prezzo.toFixed(2)}</span>
-                            <span class="delete-item-btn" data-category="${category}" data-index="${index}"><i class="fas fa-times-circle"></i></span>
-                        `;
-                        menuDisplay.appendChild(div);
-                    });
-                } else {
-                     menu[category] = [];
+            const type = document.getElementById('edit-hidden-type').value;
+            const index = parseInt(document.getElementById('edit-hidden-index').value);
+            const category = document.getElementById('edit-hidden-category').value;
+            const newName = document.getElementById('edit-name-input').value.trim();
+            const newPrice = parseFloat(document.getElementById('edit-price-input').value);
+
+            if (!newName) {
+                alert("Il nome non può essere vuoto.");
+                return;
+            }
+
+            if (type === 'menu') {
+                if (isNaN(newPrice) || newPrice < 0) {
+                     alert("Il prezzo non è valido.");
+                     return;
                 }
-            });
+                menu[category][index].nome = newName;
+                menu[category][index].prezzo = newPrice;
+                alert(`Prodotto "${newName}" modificato.`);
 
-            // Render Ingredienti
-            ingredients.forEach((ing, index) => {
-                const div = document.createElement('div');
-                div.innerHTML = `
-                    <span>${ing}</span>
-                    <span class="delete-item-btn" data-type="ingredient" data-index="${index}"><i class="fas fa-times-circle"></i></span>
-                `;
-                ingredientsDisplay.appendChild(div);
-            });
-
-            // Render Fattorini
-            fattorini.forEach((driver, index) => {
-                const div = document.createElement('div');
-                div.innerHTML = `
-                    <span>${driver}</span>
-                    <span class="delete-item-btn" data-type="fattorino" data-index="${index}"><i class="fas fa-times-circle"></i></span>
-                `;
-                driversDisplay.appendChild(div);
-            });
-
-            document.querySelectorAll('.delete-item-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const index = parseInt(e.currentTarget.dataset.index);
-                    if (e.currentTarget.dataset.type === 'fattorino') {
-                        deleteFattorino(index);
-                    } else if (e.currentTarget.dataset.type === 'ingredient') {
-                        deleteIngredient(index);
-                    } else {
-                        deleteMenuItem(e.currentTarget.dataset.category, index);
+            } else if (type === 'ingredient') {
+                ingredients[index] = newName.charAt(0).toUpperCase() + newName.slice(1).toLowerCase(); // Mantiene la capitalizzazione
+                alert(`Ingrediente "${newName}" modificato.`);
+                
+            } else if (type === 'fattorino') {
+                // Aggiorna anche l'elenco dei fattorini negli ordini esistenti per coerenza
+                const oldName = fattorini[index];
+                fattorini[index] = newName;
+                activeOrders.forEach(order => {
+                    if (order.mode === 'consegna' && order.data.fattorino === oldName) {
+                        order.data.fattorino = newName;
                     }
                 });
-            });
+                alert(`Fattorino "${newName}" modificato.`);
+            }
+
+            saveData();
             
-            // Aggiorna le opzioni della select in Impostazioni
-            const selectType = document.getElementById('product-type-select');
-            selectType.innerHTML = menuCategories.map(cat => 
-                `<option value="${cat}">${displayNames[cat] || cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`
-            ).join('');
+            // Aggiorna tutte le visualizzazioni che usano questi dati
+            renderSettings();
+            renderFattorini();
+            renderActiveOrders(); // Per aggiornare i nomi dei fattorini negli ordini
+            
+            document.getElementById('edit-modal').classList.add('hidden');
         }
 
-        // ---------------------- Funzioni di Logica ----------------------
 
-        // AGGIORNATA per gestire il click sui pulsanti modificatori immediati
+        // ---------------------- Funzioni di Logica (rimanenti) ----------------------
+
         function addItemToOrder(name, price, modifier = null) {
             if (name === "MODIFIER_SELECTION" && modifier) {
                  // Caso 1: Click su un pulsante Modificatore Immediato (Più, Meno, Poco, Abbondante)
@@ -1086,7 +1254,6 @@
         }
         
         function changeFattorino(orderId, newFattorino) {
-             // ... [funzione changeFattorino rimane invariata] ...
             const orderIndex = activeOrders.findIndex(o => o.id === orderId);
             if (orderIndex === -1) return;
             
@@ -1102,7 +1269,6 @@
             const orderItems = activeOrders[orderIndex].items;
 
             if (action === 'Elimina') {
-                 // ... [logica eliminazione rimane invariata] ...
                 if (confirm(`Vuoi eliminare definitivamente l'articolo "${orderItems[index].nome}"?`)) {
                     orderItems.splice(index, 1);
                     // Ricalcola il totale INCLUSI i modificatori rimasti
@@ -1128,7 +1294,7 @@
             }
         }
         
-        // AGGIORNATA: Logica per il costo fisso
+        // Logica per il costo fisso
         function applyAddonModifier(addonName, addonPrice) {
             
             const isModifyingActiveOrder = currentModifyingOrder !== null;
@@ -1206,13 +1372,18 @@
             pendingModifier = '';
         }
 
-        // ... [altre funzioni di logica (addIngredient, switchSection, changeOrderStatus, etc.) rimangono invariate] ...
         function addIngredient(name) {
              const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
             if (name && !ingredients.includes(capitalizedName)) {
                 ingredients.push(capitalizedName);
                 saveData();
                 renderSettings();
+                
+                // Aggiorna il modal ingredienti se aperto
+                if (document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
+                    renderAddonsForSelection();
+                }
+                
                 alert(`Ingrediente "${capitalizedName}" aggiunto.`);
             }
         }
@@ -1276,9 +1447,9 @@
                 
                 // Se stiamo aggiungendo un'aggiunta a pagamento, aggiorniamo il modal modificatori
                 if (type === 'aggiunte') {
+                    // Controlla se la categoria è attiva nella schermata di inserimento ordine
                     const activeCategoryBtn = document.querySelector('.menu-btn.active-category:not(.mod-menu-btn)');
                     if (activeCategoryBtn && activeCategoryBtn.dataset.category === type) {
-                        // NON renderizziamo i prodotti, ma solo i pulsanti modificatori
                         renderProducts(type, 'products-list', addItemToOrder, 'product-item'); 
                     }
                     if (document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
@@ -1329,6 +1500,7 @@
 
         // Logica Modifica Ordine
         function openModificationModal(orderId) {
+            // ... [funzione openModificationModal rimane invariata] ...
             const orderIndex = activeOrders.findIndex(o => o.id === orderId);
             if (orderIndex === -1) return;
             
@@ -1346,6 +1518,7 @@
         }
 
         function addModificationItem(name, price) {
+            // ... [funzione addModificationItem rimane invariata] ...
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
             if (orderIndex === -1) return;
             
@@ -1373,6 +1546,7 @@
         }
 
         function saveModification() {
+            // ... [funzione saveModification rimane invariata] ...
             if (currentModifyingOrder) {
                 saveData();
                 alert(`Ordine #${currentModifyingOrder} modificato con successo!`);
@@ -1384,6 +1558,7 @@
         }
         
         function cancelModification() {
+            // ... [funzione cancelModification rimane invariata] ...
             // Ricarica i dati dall'ultimo salvataggio per annullare le modifiche non salvate
             loadData(); 
             document.getElementById('modification-modal').classList.add('hidden');
@@ -1438,6 +1613,13 @@
                 targetItemIndex = -1;
                 pendingModifier = '';
             });
+            
+            // Listener per Modifica Prodotto/Ingrediente/Fattorino
+            document.getElementById('edit-form').addEventListener('submit', saveEdit);
+            document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+                document.getElementById('edit-modal').classList.add('hidden');
+            });
+            
             
             document.getElementById('finalize-order-btn').addEventListener('click', () => {
                 if (currentOrder.length === 0) {
@@ -1548,7 +1730,7 @@
                 e.target.reset();
             });
             
-            // Nuovo Listener per aggiungere un Ingrediente modificabile
+            // Listener per aggiungere un Ingrediente modificabile
             document.getElementById('add-ingredient-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const name = document.getElementById('ingredient-name').value.trim();
