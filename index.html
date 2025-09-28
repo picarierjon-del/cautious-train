@@ -1,9 +1,17 @@
+Assolutamente! Ho apportato le seguenti modifiche per migliorare l'interfaccia e la flessibilità del tuo gestionale:
+ * Ho rimosso la scritta "Gestione Ordini Pizzeria" come richiesto.
+ * Ho aggiunto una nuova categoria di prodotti chiamata "Formati" nel menu principale e nel pannello di modifica ordine.
+ * Ho inserito i nuovi formati di pizza: Baby, Schiacciate, Grandi e Mezzo Metro.
+ * Ho reso questa nuova categoria "Formati" completamente gestibile nel pannello Impostazioni, proprio come le "Pizze" e le "Aggiunte".
+Ora puoi definire un prezzo per ogni formato e modificare la lista a tuo piacimento!
+Ecco il codice aggiornato:
+Codice Gestionale Pizzeria Aggiornato
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v4)</title>
+    <title>Gestionale Pizzeria Avanzato (v6 - Formati)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -23,6 +31,12 @@
             padding: 15px 10px;
             text-align: center;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Rimosso H1 per nascondere la scritta come richiesto, l'ho spostato nel body solo per coerenza del codice */
+        header h1 {
+            font-size: 1.2em;
+            margin: 0;
         }
 
         #main-content {
@@ -133,6 +147,12 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 15px;
+            flex-wrap: wrap; /* Permette il wrap dei pulsanti */
+        }
+        
+        .category-menu button {
+            flex-basis: calc(50% - 5px); /* Due pulsanti per riga */
+            margin-bottom: 5px;
         }
 
         .category-menu button, .delivery-mode-selection button {
@@ -168,8 +188,26 @@
             cursor: pointer;
             font-size: 0.9em;
         }
+        
+        /* Stili per le aggiunte nella modal secondaria */
+        #addons-list-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
 
-        .product-item:hover {
+        .addon-item {
+            background-color: #f8f8f8;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .product-item:hover, .addon-item:hover {
             background-color: #ffe8e8;
         }
 
@@ -200,7 +238,7 @@
         /* Stili per le modifiche (modificatori) */
         .modification-row {
             display: grid;
-            grid-template-columns: 1fr repeat(5, auto); /* Nome + 5 pulsanti (Più, Senza, Poco, Abbondante, Elimina) */
+            grid-template-columns: 1fr repeat(5, auto); /* Nome + 5 pulsanti */
             align-items: center;
             gap: 3px;
             padding: 5px 0;
@@ -211,11 +249,11 @@
         }
 
         .modifier-btn {
-            background-color: #17a2b8; /* Blu per modificatori */
             padding: 5px 5px;
             font-size: 0.7em;
             width: auto;
             margin: 2px 0;
+            background-color: #17a2b8; /* Blu di default */
         }
         
         .delete-mod-btn {
@@ -223,9 +261,9 @@
             padding: 5px 5px;
         }
         
-        /* Modifiche per i pulsanti Più/Senza/Poco/Abbondante */
+        /* Colori Modificatori */
         .modifier-btn[data-mod="Più"] { background-color: #28a745; }
-        .modifier-btn[data-mod="Senza"] { background-color: #6c757d; }
+        .modifier-btn[data-mod="Meno"] { background-color: #6c757d; }
         .modifier-btn[data-mod="Poco"] { background-color: #ffc107; color: #333; }
         .modifier-btn[data-mod="Abbondante"] { background-color: #007bff; }
 
@@ -253,55 +291,8 @@
             margin-top: 10px;
         }
 
-        /* Stili per gli ordini attivi */
-        #active-orders-container .order-card {
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        .order-card h4 {
-            margin: 0 0 10px 0;
-            color: #e31b23;
-        }
-        
-        .order-card .fattorino-assign {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-        }
-        
-        .order-card .fattorino-assign select {
-            width: 70%;
-            margin: 0 5px 0 10px;
-            padding: 8px;
-        }
-        
-        .order-card .fattorino-assign label {
-            width: 30%;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-
-        .order-card ul {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 10px;
-            font-size: 0.9em;
-        }
-
-        .order-card .status-btn, .order-card .modify-btn {
-            width: auto;
-            padding: 8px 12px;
-            margin-right: 5px;
-            font-size: 0.8em;
-        }
-
-        /* Stili per la sezione di modifica */
-        #modification-modal {
+        /* Stili per i Modal (principale e secondario) */
+        .modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -314,7 +305,7 @@
             align-items: center;
         }
 
-        #modification-content {
+        .modal-content {
             background-color: #f4f4f9;
             padding: 20px;
             border-radius: 10px;
@@ -323,16 +314,25 @@
             overflow-y: auto;
         }
         
-        #modification-content h2 {
-            margin-top: 0;
+        /* Modal secondario per le aggiunte */
+        #addons-selection-modal {
+            z-index: 2010; /* Deve stare sopra al modal principale */
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        #addons-selection-content {
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 90%;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Gestione Ordini Pizzeria</h1>
-    </header>
+        </header>
 
     <div id="main-content">
         <div id="order-entry-section">
@@ -341,6 +341,7 @@
                 
                 <div class="category-menu">
                     <button class="menu-btn" data-category="pizze">Pizze</button>
+                    <button class="menu-btn" data-category="formati">Formati</button>
                     <button class="menu-btn" data-category="bibite">Bibite</button>
                     <button class="menu-btn" data-category="aggiunte">Aggiunte</button>
                 </div>
@@ -424,6 +425,7 @@
             <form id="add-product-form">
                 <select id="product-type-select">
                     <option value="pizze">Pizza</option>
+                    <option value="formati">Formato (Baby, Mezzo Metro, ecc.)</option>
                     <option value="bibite">Bibita</option>
                     <option value="aggiunte">Aggiunta</option>
                 </select>
@@ -447,14 +449,15 @@
         </div>
     </div>
 
-    <div id="modification-modal" class="hidden">
-        <div id="modification-content">
+    <div id="modification-modal" class="modal hidden">
+        <div id="modification-content" class="modal-content">
             <h2>Modifica Ordine #<span id="mod-order-id"></span></h2>
             
             <div id="modification-menu-selection">
                 <h3>Aggiungi Prodotti</h3>
                 <div class="category-menu">
                     <button class="menu-btn mod-menu-btn" data-category="pizze">Pizze</button>
+                    <button class="menu-btn mod-menu-btn" data-category="formati">Formati</button>
                     <button class="menu-btn mod-menu-btn" data-category="bibite">Bibite</button>
                     <button class="menu-btn mod-menu-btn" data-category="aggiunte">Aggiunte</button>
                 </div>
@@ -463,13 +466,22 @@
             </div>
 
             <div id="modification-order-details">
-                <h3>Ordine Attuale (usa i pulsanti per modificare le aggiunte)</h3>
+                <h3>Ordine Attuale (usa i pulsanti per applicare modifiche)</h3>
                 <ul id="modification-items-list">
                     </ul>
                 <div id="modification-total-price">Totale: €0.00</div>
                 <button id="save-modification-btn" style="background-color: #28a745; margin-top: 15px;">Salva Modifiche</button>
                 <button id="cancel-modification-btn" style="background-color: #6c757d;">Annulla Modifiche</button>
             </div>
+        </div>
+    </div>
+
+    <div id="addons-selection-modal" class="modal hidden">
+        <div id="addons-selection-content">
+            <h3>Seleziona l'Aggiunta da Modificare</h3>
+            <div id="addons-list-container">
+                </div>
+            <button id="cancel-addon-selection" style="background-color: #6c757d; margin-top: 15px;">Annulla</button>
         </div>
     </div>
 
@@ -487,6 +499,13 @@
                 { nome: "Diavola", prezzo: 7.50 },
                 { nome: "Capricciosa", prezzo: 8.00 }
             ],
+            // NUOVA CATEGORIA FORMATI
+            formati: [
+                { nome: "Baby", prezzo: 4.00 },
+                { nome: "Schiacciate", prezzo: 6.00 },
+                { nome: "Grandi", prezzo: 10.00 },
+                { nome: "Mezzo Metro", prezzo: 16.00 }
+            ],
             bibite: [
                 { nome: "Acqua", prezzo: 1.50 },
                 { nome: "Coca-Cola", prezzo: 2.50 }
@@ -501,7 +520,10 @@
         let currentOrder = [];
         let activeOrders = [];
         let orderCounter = 1; 
-        let currentModifyingOrder = null; 
+        let currentModifyingOrder = null;
+        
+        let targetItemIndex = -1;
+        let pendingModifier = '';
 
         // ---------------------- Funzioni di Caricamento/Salvataggio ----------------------
         function loadData() {
@@ -531,6 +553,9 @@
             const list = document.getElementById(listId);
             list.innerHTML = '';
             
+            // Gestione del caso in cui la categoria non esista (potrebbe succedere se un utente la elimina manualmente)
+            if (!menu[category]) return; 
+
             menu[category].forEach(item => {
                 const div = document.createElement('div');
                 div.className = className;
@@ -545,7 +570,33 @@
             });
         }
 
-        // Renderizza l'ordine con i NUOVI modificatori Più, Senza, Poco, Abbondante
+        function renderAddonsForSelection() {
+            const list = document.getElementById('addons-list-container');
+            list.innerHTML = '';
+            
+            if (!menu.aggiunte || menu.aggiunte.length === 0) {
+                 list.innerHTML = `<p>Nessuna aggiunta disponibile nelle impostazioni.</p>`;
+                 return;
+            }
+
+            menu.aggiunte.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'addon-item';
+                div.dataset.addonName = item.nome;
+                div.dataset.addonPrice = item.prezzo;
+                div.textContent = item.nome;
+                
+                div.addEventListener('click', (e) => {
+                    const addonName = e.currentTarget.dataset.addonName;
+                    const addonPrice = parseFloat(e.currentTarget.dataset.addonPrice);
+                    applyAddonModifier(addonName, addonPrice);
+                });
+                list.appendChild(div);
+            });
+        }
+
+
+        // Renderizza l'ordine con i modificatori (Più, Meno, Poco, Abbondante)
         function renderCurrentOrder(orderList, totalPriceDiv, orderArray, allowModification) {
             orderList.innerHTML = '';
             let total = 0;
@@ -557,20 +608,22 @@
                 li.style.borderBottom = '1px dotted #eee';
                 
                 if (allowModification) {
-                    const modifier = item.modifier || "";
+                    const modifierText = item.modifier ? ` (${item.modifier}: ${item.addonName})` : "";
+
                     li.className = 'modification-row';
                     li.innerHTML = `
-                        <span>${item.nome} <span class="modifier-text">${modifier}</span></span>
+                        <span>${item.nome} <span class="modifier-text">${modifierText}</span></span>
                         <button class="modifier-btn" data-index="${index}" data-mod="Più"><i class="fas fa-plus-circle"></i> Più</button>
-                        <button class="modifier-btn" data-index="${index}" data-mod="Senza"><i class="fas fa-ban"></i> Senza</button>
+                        <button class="modifier-btn" data-index="${index}" data-mod="Meno"><i class="fas fa-minus-circle"></i> Meno</button>
                         <button class="modifier-btn" data-index="${index}" data-mod="Poco"><i class="fas fa-pepper-hot"></i> Poco</button>
                         <button class="modifier-btn" data-index="${index}" data-mod="Abbondante"><i class="fas fa-pizza-slice"></i> Abbondante</button>
                         <button class="delete-mod-btn" data-index="${index}" data-mod="Elimina"><i class="fas fa-trash-alt"></i></button>
                     `;
                 } else {
-                    const modifier = item.modifier ? ` (${item.modifier})` : "";
+                    const modifierText = item.modifier ? ` (${item.modifier}: ${item.addonName})` : "";
+
                     li.innerHTML = `
-                        <span>${item.nome}${modifier}</span>
+                        <span>${item.nome}${modifierText}</span>
                         <span>€${item.prezzo.toFixed(2)} 
                             <button class="remove-item-btn" data-index="${index}"><i class="fas fa-times-circle"></i></button>
                         </span>
@@ -589,7 +642,6 @@
                     });
                 });
             } else {
-                // Listener per i pulsanti Più/Senza/Poco/Abbondante/Elimina nel modal di modifica
                 document.querySelectorAll('#modification-items-list .modifier-btn, #modification-items-list .delete-mod-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         handleModificationItemChange(parseInt(e.currentTarget.dataset.index), e.currentTarget.dataset.mod);
@@ -670,8 +722,8 @@
                 }
 
                 const itemsList = order.items.map(item => {
-                    const modifier = item.modifier ? ` (${item.modifier})` : "";
-                    return `<li>${item.nome}${modifier} - €${item.prezzo.toFixed(2)}</li>`;
+                    const modifierText = item.modifier ? ` (${item.modifier}: ${item.addonName})` : "";
+                    return `<li>${item.nome}${modifierText} - €${item.prezzo.toFixed(2)}</li>`;
                 }).join('');
 
                 card.innerHTML = `
@@ -723,23 +775,27 @@
             });
         }
         
-        // La funzione renderSettings gestisce già l'eliminazione delle 'aggiunte'
         function renderSettings() {
             const menuDisplay = document.getElementById('current-menu-display');
             const driversDisplay = document.getElementById('current-drivers-display');
             menuDisplay.innerHTML = '<h4>Prodotti Attuali (clicca su ❌ per eliminare)</h4>';
             driversDisplay.innerHTML = '<h4>Fattorini Attuali (clicca su ❌ per eliminare)</h4>';
 
-            ['pizze', 'bibite', 'aggiunte'].forEach(category => {
+            // AGGIUNTA DI 'FORMATI' TRA LE CATEGORIE VISUALIZZATE
+            ['pizze', 'formati', 'bibite', 'aggiunte'].forEach(category => {
                 menuDisplay.innerHTML += `<h5>**${category.toUpperCase()}**</h5>`;
-                menu[category].forEach((item, index) => {
-                    const div = document.createElement('div');
-                    div.innerHTML = `
-                        <span>${item.nome} - €${item.prezzo.toFixed(2)}</span>
-                        <span class="delete-item-btn" data-category="${category}" data-index="${index}"><i class="fas fa-times-circle"></i></span>
-                    `;
-                    menuDisplay.appendChild(div);
-                });
+                if (menu[category]) {
+                    menu[category].forEach((item, index) => {
+                        const div = document.createElement('div');
+                        div.innerHTML = `
+                            <span>${item.nome} - €${item.prezzo.toFixed(2)}</span>
+                            <span class="delete-item-btn" data-category="${category}" data-index="${index}"><i class="fas fa-times-circle"></i></span>
+                        `;
+                        menuDisplay.appendChild(div);
+                    });
+                } else {
+                     menu[category] = []; // Inizializza se mancante (prevenzione errore)
+                }
             });
 
             fattorini.forEach((driver, index) => {
@@ -766,7 +822,7 @@
         // ---------------------- Funzioni di Logica ----------------------
 
         function addItemToOrder(name, price) {
-            currentOrder.push({ nome: name, prezzo: parseFloat(price), modifier: "" });
+            currentOrder.push({ nome: name, prezzo: parseFloat(price), modifier: "", addonName: "" });
             renderMainOrder();
         }
 
@@ -783,6 +839,7 @@
             saveData();
         }
 
+        // Gestisce la pressione dei pulsanti di modifica (APRE IL MODAL AGGIUNTE)
         function handleModificationItemChange(index, action) {
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
             if (orderIndex === -1) return;
@@ -790,23 +847,48 @@
             const orderItems = activeOrders[orderIndex].items;
 
             if (action === 'Elimina') {
-                orderItems.splice(index, 1);
-            } else if (action === 'Più') {
-                // Se l'azione è Più, non è un modificatore, ma un duplicato con modificatore vuoto
-                // Per simulare "Più" come nell'esempio, aggiungo un duplicato dell'oggetto.
-                // Se invece 'Più' è inteso come modificatore di quantità, mantengo il testo.
-                orderItems[index].modifier = action; 
-            } else if (action === orderItems[index].modifier) {
-                 // Cliccare due volte sullo stesso modificatore lo resetta
-                orderItems[index].modifier = "";
+                if (confirm(`Vuoi eliminare definitivamente l'articolo "${orderItems[index].nome}"?`)) {
+                    orderItems.splice(index, 1);
+                    activeOrders[orderIndex].total = orderItems.reduce((sum, item) => sum + item.prezzo, 0);
+                    renderModificationOrder();
+                }
             } else {
-                orderItems[index].modifier = action;
+                // Modificatore: apriamo la tendina delle aggiunte
+                targetItemIndex = index;
+                pendingModifier = action;
+                
+                renderAddonsForSelection();
+                document.getElementById('addons-selection-modal').classList.remove('hidden');
             }
+        }
+        
+        // Applica il modificatore dopo la selezione dell'aggiunta nel modal secondario
+        function applyAddonModifier(addonName, addonPrice) {
+            const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
+            if (orderIndex === -1 || targetItemIndex === -1) return;
             
-            activeOrders[orderIndex].total = orderItems.reduce((sum, item) => sum + item.prezzo, 0);
+            const item = activeOrders[orderIndex].items[targetItemIndex];
+            
+            // Se il modificatore è già applicato su questa aggiunta, lo resetto
+            if (item.modifier === pendingModifier && item.addonName === addonName) {
+                item.modifier = "";
+                item.addonName = "";
+            } else {
+                item.modifier = pendingModifier;
+                item.addonName = addonName; 
+            }
 
+            // Ricacalcola il totale
+            activeOrders[orderIndex].total = activeOrders[orderIndex].items.reduce((sum, item) => sum + item.prezzo, 0);
+
+            // Chiudi entrambi i modal e aggiorna l'ordine di modifica
+            document.getElementById('addons-selection-modal').classList.add('hidden');
+            targetItemIndex = -1;
+            pendingModifier = '';
+            
             renderModificationOrder();
         }
+
 
         function switchSection(sectionId) {
             document.querySelectorAll('#main-content > div').forEach(sec => sec.classList.add('hidden'));
@@ -845,10 +927,16 @@
         }
         
         function addMenuItem(type, name, price) {
-            if (menu[type] && name && price) {
+            if (!menu[type]) {
+                menu[type] = []; // Crea la categoria se non esiste
+            }
+            if (name && price) {
                 menu[type].push({ nome: name, prezzo: parseFloat(price) });
                 saveData();
                 renderSettings();
+                if (type === 'aggiunte' && document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
+                    renderAddonsForSelection();
+                }
                 alert(`Prodotto "${name}" aggiunto a ${type.toUpperCase()}`);
             }
         }
@@ -858,7 +946,11 @@
                 menu[category].splice(index, 1);
                 saveData();
                 renderSettings();
-                // Ricarica la lista prodotti se la categoria attiva è quella modificata
+
+                if (category === 'aggiunte' && document.getElementById('addons-selection-modal').classList.contains('hidden') === false) {
+                    renderAddonsForSelection();
+                }
+
                 const activeCategoryBtn = document.querySelector('.menu-btn.active-category:not(.mod-menu-btn)');
                 if (activeCategoryBtn && activeCategoryBtn.dataset.category === category) {
                     renderProducts(category, 'products-list', addItemToOrder, 'product-item'); 
@@ -895,6 +987,7 @@
             
             renderModificationOrder();
             
+            // Reset la selezione del menu di modifica a 'pizze'
             renderProducts('pizze', 'modification-products-list', addModificationItem, 'product-item');
             document.querySelectorAll('.mod-menu-btn').forEach(b => b.classList.remove('active-category'));
             document.querySelector('.mod-menu-btn[data-category="pizze"]').classList.add('active-category');
@@ -906,8 +999,7 @@
             const orderIndex = activeOrders.findIndex(o => o.id === currentModifyingOrder);
             if (orderIndex === -1) return;
 
-            // Uso "Più" per aggiungere un duplicato come richiesto dal pulsante
-            activeOrders[orderIndex].items.push({ nome: name, prezzo: parseFloat(price), modifier: "" });
+            activeOrders[orderIndex].items.push({ nome: name, prezzo: parseFloat(price), modifier: "", addonName: "" });
             activeOrders[orderIndex].total = activeOrders[orderIndex].items.reduce((sum, item) => sum + item.prezzo, 0);
 
             renderModificationOrder();
@@ -925,7 +1017,6 @@
         }
         
         function cancelModification() {
-            // Ricarica i dati per annullare le modifiche non salvate
             loadData(); 
             document.getElementById('modification-modal').classList.add('hidden');
             currentModifyingOrder = null;
@@ -950,6 +1041,7 @@
             document.getElementById('nav-orders-list').addEventListener('click', () => switchSection('orders-list-section'));
             document.getElementById('nav-settings').addEventListener('click', () => switchSection('settings-section'));
 
+            // Menu principale
             document.querySelectorAll('.menu-btn:not(.mod-menu-btn)').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     document.querySelectorAll('.menu-btn:not(.mod-menu-btn)').forEach(b => b.classList.remove('active-category'));
@@ -958,6 +1050,7 @@
                 });
             });
             
+            // Menu nel modal di modifica
             document.querySelectorAll('.mod-menu-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     document.querySelectorAll('.mod-menu-btn').forEach(b => b.classList.remove('active-category'));
@@ -968,6 +1061,13 @@
 
             document.getElementById('save-modification-btn').addEventListener('click', saveModification);
             document.getElementById('cancel-modification-btn').addEventListener('click', cancelModification);
+            
+            // Listener per annullare la selezione aggiunte
+            document.getElementById('cancel-addon-selection').addEventListener('click', () => {
+                document.getElementById('addons-selection-modal').classList.add('hidden');
+                targetItemIndex = -1;
+                pendingModifier = '';
+            });
             
             document.getElementById('finalize-order-btn').addEventListener('click', () => {
                 if (currentOrder.length === 0) {
@@ -986,7 +1086,6 @@
                     document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active-mode'));
                     e.currentTarget.classList.add('active-mode');
                     
-                    // Rimuovi 'required' da tutti i campi prima di settare quelli giusti
                     document.querySelectorAll('.mode-data input, .mode-data select').forEach(input => input.removeAttribute('required'));
                     document.querySelectorAll('.mode-data').forEach(div => div.classList.add('hidden')); 
                     
@@ -1016,7 +1115,7 @@
                 });
             });
 
-            // Invio Ordine (Form principale) - Logica AGGIORNATA
+            // Invio Ordine (Form principale)
             document.getElementById('order-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 
@@ -1096,3 +1195,4 @@
     </script>
 </body>
 </html>
+
