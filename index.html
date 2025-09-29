@@ -23,15 +23,22 @@
         .mod-btn.gray { border-color: #6b7280; color: #6b7280; }
         .mod-btn.yellow { border-color: #facc15; color: #facc15; }
         .mod-btn.blue { border-color: #3b82f6; color: #3b82f6; }
-        .mod-btn.active { border-color: #e31b23; background-color: #ffecec; }
+        /* Aggiungo un'ombreggiatura più evidente per i modificatori attivi (selezionati) */
+        .mod-btn.active { border-color: #e31b23; background-color: #ffecec; box-shadow: 0 0 0 3px #e31b23; }
+        .mod-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .item { background: #fff; border: 1px solid #ddd; border-radius: 10px; text-align: center; padding: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
         .item:hover { background: #ffecec; }
         .item strong { display: block; margin-bottom: 4px; }
+
         .order-box { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 20px; }
         .order-box ul { list-style: none; padding: 0; margin: 0; }
-        .order-box .order-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dotted #ddd; font-size: .9rem; }
-        .order-box .modifiers-list { list-style: none; padding-left: 15px; font-size: 0.8rem; margin-top: 2px; }
+        .order-box .order-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; font-size: .9rem; cursor: pointer; }
+        /* Stile per l'elemento selezionato nel carrello */
+        .order-box .order-item.selected { background-color: #fff3f4; border: 2px solid #e31b23; padding: 6px 0; border-radius: 4px;}
+        .order-box .modifiers-list { list-style: none; padding-left: 15px; font-size: 0.8rem; margin-top: 2px; margin-bottom: 4px;}
+
         .total { font-weight: 700; margin-top: 8px; text-align: right; }
         .final-btn { width: 100%; margin-top: 12px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 12px; font-size: 1rem; font-weight: 700; }
         .final-btn:disabled { background: #ccc; cursor: not-allowed; }
@@ -64,10 +71,11 @@
         <div class="mod-row">
             <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                     :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeModCat===cat}"
-                    @click="activeModCat=cat">{{cat.toUpperCase()}}</button>
+                    @click="activeModCat=cat" :disabled="selectedItemIndex === null">{{cat.toUpperCase()}}</button>
         </div>
         <div class="grid" v-if="modifiers[activeModCat]">
-            <div class="item" v-for="m in modifiers[activeModCat]" :key="m.nome" @click="addExtra(m)">
+            <div class="item" v-for="m in modifiers[activeModCat]" :key="m.nome" @click="addExtra(m)" 
+                 :style="{opacity: selectedItemIndex === null ? 0.5 : 1, cursor: selectedItemIndex === null ? 'not-allowed' : 'pointer'}">
                 <strong>{{m.nome}}</strong>
                 <span v-if="m.prezzo > 0">€{{m.prezzo.toFixed(2)}}</span>
             </div>
@@ -81,12 +89,16 @@
         </div>
 
         <div class="order-box">
-            <h3>Ordine Corrente</h3>
+            <h3>Ordine Corrente 
+                <span v-if="selectedItemIndex !== null" style="color: #e31b23; font-size: 0.8rem; font-weight: 400;">
+                    (Selezionato: {{order[selectedItemIndex].nome}})
+                </span>
+            </h3>
             <ul>
-                <li v-for="(i,idx) in order" :key="idx">
-                    <div class="order-item">
+                <li v-for="(i,idx) in order" :key="idx" @click="selectItem(idx)">
+                    <div class="order-item" :class="{selected: selectedItemIndex === idx}">
                         <span>{{i.nome}}</span>
-                        <span>€{{(i.prezzo + i.modifiers.reduce((s,m)=>s+m.prezzo,0)).toFixed(2)}} <button @click="removeItem(idx)" style="border:none;background:none;color:#e31b23">✖️</button></span>
+                        <span>€{{(i.prezzo + i.modifiers.reduce((s,m)=>s+m.prezzo,0)).toFixed(2)}} <button @click.stop="removeItem(idx)" style="border:none;background:none;color:#e31b23">✖️</button></span>
                     </div>
                     <ul v-if="i.modifiers && i.modifiers.length > 0" class="modifiers-list">
                         <li v-for="mod in i.modifiers">
@@ -226,6 +238,7 @@
         activeModCat: 'Più',
         order:[],
         total:0,
+        selectedItemIndex: null, // Nuovo stato per tracciare l'elemento selezionato nell'ordine
         modes:[
             {id:"consegna",label:"Consegna a domicilio",icon:"fa-solid fa-truck"},
             {id:"asporto",label:"Asporto",icon:"fa-solid fa-bag-shopping"},
@@ -237,15 +250,9 @@
         address:'',
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
         
-        // Nuove proprietà per la gestione dinamica delle categorie
-        newMenuCat: '',
-        newProdCat: '',
-        newName: '',
-        newPrice: '',
-        newModCat: '',
-        newModProdCat: '',
-        newModName: '',
-        newModPrice: 0,
+        // Proprietà per la gestione dinamica delle categorie
+        newMenuCat: '', newProdCat: '', newName: '', newPrice: '',
+        newModCat: '', newModProdCat: '', newModName: '', newModPrice: 0,
 
         saveData(){
             localStorage.setItem('pz_menu',JSON.stringify(this.menu));
@@ -255,24 +262,44 @@
 
         addItem(p){
             this.order.push({...p, modifiers: []});
+            this.selectedItemIndex = this.order.length - 1; // Seleziona il prodotto appena aggiunto
             this.calc();
+        },
+        
+        // Nuova funzione per selezionare l'elemento nel carrello
+        selectItem(index) {
+            this.selectedItemIndex = index;
         },
 
         addExtra(mod){
-            if(!this.order.length) {
-                alert("Aggiungi prima un prodotto all'ordine.");
+            if(this.selectedItemIndex === null || this.order.length === 0) {
+                alert("Seleziona prima un prodotto dall'ordine corrente (cliccando sul prodotto nel riquadro 'Ordine Corrente').");
                 return;
             }
-            const lastItem = this.order[this.order.length - 1];
-            if (lastItem.modifiers.some(m => m.nome === mod.nome)) {
-                alert("Questo modificatore è già stato aggiunto.");
-                return;
+            
+            const selectedItem = this.order[this.selectedItemIndex];
+            
+            // Controlla se il modificatore è già presente
+            if (selectedItem.modifiers.some(m => m.nome === mod.nome)) {
+                
+                // Se è già presente, lo rimuoviamo (funzione toggle)
+                selectedItem.modifiers = selectedItem.modifiers.filter(m => m.nome !== mod.nome);
+                
+            } else {
+                // Altrimenti, lo aggiungiamo
+                selectedItem.modifiers.push(mod);
             }
-            lastItem.modifiers.push(mod);
+            
             this.calc();
         },
 
         removeItem(i){
+            // Assicurati che l'elemento selezionato sia deselezionato o spostato se l'elemento corrente viene rimosso
+            if (this.selectedItemIndex === i) {
+                this.selectedItemIndex = null;
+            } else if (this.selectedItemIndex > i) {
+                this.selectedItemIndex--;
+            }
             this.order.splice(i,1);
             this.calc();
         },
@@ -293,7 +320,12 @@
             const ord={id,items:[...this.order],total:this.total,mode:this.mode,customer:this.customer,phone:this.phone,address:this.address,status:'In preparazione'};
             this.orders.push(ord);
             this.saveData();
-            this.order=[];this.total=0;this.step=1;this.customer=this.phone=this.address='';this.mode='';
+            this.order=[];
+            this.total=0;
+            this.step=1;
+            this.customer=this.phone=this.address='';
+            this.mode='';
+            this.selectedItemIndex = null; // Resetta lo stato di selezione
             alert("Ordine #"+id+" salvato!");
             this.view='ordini';
         },
