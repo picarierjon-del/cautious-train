@@ -23,7 +23,6 @@
         .mod-btn.gray { border-color: #6b7280; color: #6b7280; }
         .mod-btn.yellow { border-color: #facc15; color: #facc15; }
         .mod-btn.blue { border-color: #3b82f6; color: #3b82f6; }
-        /* Aggiungo un'ombreggiatura più evidente per i modificatori attivi (selezionati) */
         .mod-btn.active { border-color: #e31b23; background-color: #ffecec; box-shadow: 0 0 0 3px #e31b23; }
         .mod-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -35,9 +34,11 @@
         .order-box { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 20px; }
         .order-box ul { list-style: none; padding: 0; margin: 0; }
         .order-box .order-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; font-size: .9rem; cursor: pointer; }
-        /* Stile per l'elemento selezionato nel carrello */
         .order-box .order-item.selected { background-color: #fff3f4; border: 2px solid #e31b23; padding: 6px 0; border-radius: 4px;}
         .order-box .modifiers-list { list-style: none; padding-left: 15px; font-size: 0.8rem; margin-top: 2px; margin-bottom: 4px;}
+        .order-box .modifiers-list li { display: flex; justify-content: space-between;}
+        .mod-remove-btn { border:none;background:none;color:#b91c1c; font-weight: 700; cursor: pointer; padding: 0; margin-left: 5px;}
+
 
         .total { font-weight: 700; margin-top: 8px; text-align: right; }
         .final-btn { width: 100%; margin-top: 12px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 12px; font-size: 1rem; font-weight: 700; }
@@ -101,8 +102,9 @@
                         <span>€{{(i.prezzo + i.modifiers.reduce((s,m)=>s+m.prezzo,0)).toFixed(2)}} <button @click.stop="removeItem(idx)" style="border:none;background:none;color:#e31b23">✖️</button></span>
                     </div>
                     <ul v-if="i.modifiers && i.modifiers.length > 0" class="modifiers-list">
-                        <li v-for="mod in i.modifiers">
-                            * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+                        <li v-for="(mod, modIdx) in i.modifiers" :key="modIdx">
+                            <span>* {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span></span>
+                            <button class="mod-remove-btn" @click.stop="removeModifier(idx, modIdx)">❌</button>
                         </li>
                     </ul>
                 </li>
@@ -238,7 +240,7 @@
         activeModCat: 'Più',
         order:[],
         total:0,
-        selectedItemIndex: null, // Nuovo stato per tracciare l'elemento selezionato nell'ordine
+        selectedItemIndex: null, // Stato per tracciare l'elemento selezionato nell'ordine
         modes:[
             {id:"consegna",label:"Consegna a domicilio",icon:"fa-solid fa-truck"},
             {id:"asporto",label:"Asporto",icon:"fa-solid fa-bag-shopping"},
@@ -266,7 +268,6 @@
             this.calc();
         },
         
-        // Nuova funzione per selezionare l'elemento nel carrello
         selectItem(index) {
             this.selectedItemIndex = index;
         },
@@ -279,17 +280,16 @@
             
             const selectedItem = this.order[this.selectedItemIndex];
             
-            // Controlla se il modificatore è già presente
-            if (selectedItem.modifiers.some(m => m.nome === mod.nome)) {
-                
-                // Se è già presente, lo rimuoviamo (funzione toggle)
-                selectedItem.modifiers = selectedItem.modifiers.filter(m => m.nome !== mod.nome);
-                
-            } else {
-                // Altrimenti, lo aggiungiamo
-                selectedItem.modifiers.push(mod);
-            }
+            // LOGICA AGGIORNATA: Aggiunge il modificatore senza controllo di duplicati.
+            // Ogni modificatore è una riga indipendente.
+            selectedItem.modifiers.push(mod);
             
+            this.calc();
+        },
+        
+        // Nuova funzione per rimuovere un modificatore specifico
+        removeModifier(itemIndex, modIndex) {
+            this.order[itemIndex].modifiers.splice(modIndex, 1);
             this.calc();
         },
 
@@ -306,6 +306,7 @@
 
         calc(){
             this.total = this.order.reduce((sum, item) => {
+                // Calcola il totale del prodotto + il totale dei suoi modificatori
                 const modTotal = item.modifiers.reduce((modSum, mod) => modSum + mod.prezzo, 0);
                 return sum + item.prezzo + modTotal;
             }, 0);
