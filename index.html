@@ -36,7 +36,7 @@
         .order-box .order-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; font-size: .9rem; cursor: pointer; }
         .order-box .order-item.selected { background-color: #fff3f4; border: 2px solid #e31b23; padding: 6px 0; border-radius: 4px;}
         .order-box .modifiers-list { list-style: none; padding-left: 15px; font-size: 0.8rem; margin-top: 2px; margin-bottom: 4px;}
-        .order-box .modifiers-list li { display: flex; justify-content: space-between;}
+        .order-box .modifiers-list li { display: flex; justify-content: space-between; align-items: center;}
         .mod-remove-btn { border:none;background:none;color:#b91c1c; font-weight: 700; cursor: pointer; padding: 0; margin-left: 5px;}
 
 
@@ -75,7 +75,7 @@
                     @click="activeModCat=cat" :disabled="selectedItemIndex === null">{{cat.toUpperCase()}}</button>
         </div>
         <div class="grid" v-if="modifiers[activeModCat]">
-            <div class="item" v-for="m in modifiers[activeModCat]" :key="m.nome" @click="addExtra(m)" 
+            <div class="item" v-for="m in modifiers[activeModCat]" :key="m.nome + m.prezzo" @click="addExtra(m)" 
                  :style="{opacity: selectedItemIndex === null ? 0.5 : 1, cursor: selectedItemIndex === null ? 'not-allowed' : 'pointer'}">
                 <strong>{{m.nome}}</strong>
                 <span v-if="m.prezzo > 0">€{{m.prezzo.toFixed(2)}}</span>
@@ -234,6 +234,7 @@
     PetiteVue.createApp({
         view:'inserimento',
         step:1,
+        // Inizializzazione o recupero dati dal localStorage
         menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Capricciosa","prezzo":8}],"Bibite":[{"nome":"Acqua","prezzo":1.5},{"nome":"Cola","prezzo":2.5}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2}],"Senza":[{"nome":"Senza olive","prezzo":0}]}'),
         activeCat:'Pizze',
@@ -252,7 +253,7 @@
         address:'',
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
         
-        // Proprietà per la gestione dinamica delle categorie
+        // Proprietà per la gestione dinamica delle categorie e prodotti
         newMenuCat: '', newProdCat: '', newName: '', newPrice: '',
         newModCat: '', newModProdCat: '', newModName: '', newModPrice: 0,
 
@@ -280,21 +281,20 @@
             
             const selectedItem = this.order[this.selectedItemIndex];
             
-            // LOGICA AGGIORNATA: Aggiunge il modificatore senza controllo di duplicati.
-            // Ogni modificatore è una riga indipendente.
+            // LOGICA CORRETTA: Aggiunge sempre il modificatore, permettendo voci multiple
             selectedItem.modifiers.push(mod);
             
             this.calc();
         },
         
-        // Nuova funzione per rimuovere un modificatore specifico
+        // Funzione per rimuovere un modificatore specifico
         removeModifier(itemIndex, modIndex) {
             this.order[itemIndex].modifiers.splice(modIndex, 1);
             this.calc();
         },
 
         removeItem(i){
-            // Assicurati che l'elemento selezionato sia deselezionato o spostato se l'elemento corrente viene rimosso
+            // Gestione dello stato di selezione dopo la rimozione
             if (this.selectedItemIndex === i) {
                 this.selectedItemIndex = null;
             } else if (this.selectedItemIndex > i) {
@@ -306,7 +306,6 @@
 
         calc(){
             this.total = this.order.reduce((sum, item) => {
-                // Calcola il totale del prodotto + il totale dei suoi modificatori
                 const modTotal = item.modifiers.reduce((modSum, mod) => modSum + mod.prezzo, 0);
                 return sum + item.prezzo + modTotal;
             }, 0);
@@ -347,7 +346,8 @@
             }
         },
 
-        // Gestione Categorie Menu
+        // --- Funzioni di Gestione Impostazioni ---
+
         addMenuCategory() {
             if (this.newMenuCat && !this.menu[this.newMenuCat]) {
                 this.menu[this.newMenuCat] = [];
@@ -366,7 +366,6 @@
             }
         },
 
-        // Gestione Prodotti
         addProd(){
             if(!this.newProdCat||!this.newName||!this.newPrice)return;
             this.menu[this.newProdCat].push({nome:this.newName,prezzo:this.newPrice});
@@ -382,7 +381,6 @@
             }
         },
         
-        // Gestione Categorie Modificatori
         addModCategory() {
             if (this.newModCat && !this.modifiers[this.newModCat]) {
                 this.modifiers[this.newModCat] = [];
@@ -401,7 +399,6 @@
             }
         },
 
-        // Gestione Modificatori
         addMod(){
             if(!this.newModProdCat || !this.newModName) return;
             this.modifiers[this.newModProdCat].push({nome: this.newModName, prezzo: this.newModPrice});
