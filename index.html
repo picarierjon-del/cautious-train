@@ -41,7 +41,6 @@
         .item { background: #fff; border: 1px solid #ddd; border-radius: 10px; text-align: center; padding: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
         .item:hover { background: #ffecec; }
         .item.active-menu-selection { border: 3px solid #3b82f6; box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);} 
-        .item strong { display: block; margin-bottom: 4px; }
         .item.disabled { background: #f0f0f0; color: #999; cursor: not-allowed; opacity: 0.7; }
         .item.disabled:hover { background: #f0f0f0; }
 
@@ -160,9 +159,11 @@
 
         <div class="grid" v-if="filteredModifiersForActiveCat.length > 0">
             <div class="item" v-for="m in filteredModifiersForActiveCat" :key="m.nome + m.prezzo" @click="addExtra(m)" 
-                 :style="{opacity: selectedItemIndex === null || (order[selectedItemIndex] && (order[selectedItemIndex].isMeter || order[selectedItemIndex].isHalfPizza)) ? 0.5 : 1, cursor: selectedItemIndex === null || (order[selectedItemIndex] && (order[selectedItemIndex].isMeter || order[selectedItemIndex].isHalfPizza)) ? 'not-allowed' : 'pointer'}">
+                 :class="{disabled: m.isFinished}"
+                 :style="{opacity: (selectedItemIndex === null || (order[selectedItemIndex] && (order[selectedItemIndex].isMeter || order[selectedItemIndex].isHalfPizza)) || m.isFinished) ? 0.5 : 1, cursor: (selectedItemIndex === null || (order[selectedItemIndex] && (order[selectedItemIndex].isMeter || order[selectedItemIndex].isHalfPizza)) || m.isFinished) ? 'not-allowed' : 'pointer'}">
                 <strong>{{m.nome}}</strong>
-                <span v-if="m.prezzo > 0">€{{m.prezzo.toFixed(2)}}</span>
+                <span v-if="m.isFinished" style="color:#b91c1c; font-weight:700;">(FINITO)</span>
+                <span v-else-if="m.prezzo > 0">€{{m.prezzo.toFixed(2)}}</span>
             </div>
         </div>
         <div v-else-if="activeModCat && modifierSearchTerm" style="text-align: center; margin: 10px 0; color: #6b7280;">Nessun modificatore trovato in '{{activeModCat}}'.</div>
@@ -199,7 +200,7 @@
                             <span>
                                 <span :class="['mod-icon', getModifierCategory(mod.nome)]">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                 {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
-                                </span>
+                            </span>
                             <button class="mod-remove-btn" @click.stop="removeModifier(idx, modIdx)">❌</button>
                         </li>
                     </ul>
@@ -260,6 +261,7 @@
             <button class="filter-btn" :class="{active: activeStatusFilter === 'Tutti'}" @click="activeStatusFilter = 'Tutti'">Tutti</button>
             <button class="filter-btn" :class="{active: activeStatusFilter === 'In preparazione'}" @click="activeStatusFilter = 'In preparazione'">In Prep.</button>
             <button class="filter-btn" :class="{active: activeStatusFilter === 'Pronto'}" @click="activeStatusFilter = 'Pronto'">Pronto</button>
+            <button class="filter-btn" :class="{active: activeStatusFilter === 'In Consegna / Ritirato'}" @click="activeStatusFilter = 'In Consegna / Ritirato'">Consegna/Ritiro</button>
         </div>
         
         <div v-if="!filteredActiveOrders.length">Nessun ordine attivo con il filtro selezionato.</div>
@@ -467,7 +469,13 @@
             <h4>{{cat}}</h4>
             <div class="settings-list">
                 <div class="settings-item" v-for="(m, i) in mods" :key="i">
-                    <span>{{m.nome}} <span v-if="m.prezzo > 0">(+€{{m.prezzo.toFixed(2)}})</span></span>
+                    <span>{{m.nome}} 
+                        <span v-if="m.prezzo > 0">(+€{{m.prezzo.toFixed(2)}})</span>
+                        <span v-if="m.isFinished" style="color:#b91c1c; font-weight:700;"> (FINITO)</span>
+                    </span>
+                    <button :style="{background: m.isFinished ? '#10b981' : '#facc15'}" @click="toggleFinishedMod(cat, i)">
+                        {{ m.isFinished ? 'Rendi Disponibile' : 'Segna Finito' }}
+                    </button>
                     <button class="remove" @click="deleteMod(cat, i)">❌</button>
                 </div>
             </div>
@@ -541,6 +549,7 @@
                     </div>
                     <div class="grid" v-if="modifiers[tempModCat]" style="grid-template-columns: repeat(2, 1fr); gap: 5px;">
                         <div class="item" v-for="m in modifiers[tempModCat]" :key="m.nome" @click="addMeterModifier(secIdx, m); updateMeterPrice()" 
+                             :class="{disabled: m.isFinished}"
                              style="padding: 8px; border-radius: 6px; font-size: 0.9rem;">
                             <strong>{{ m.nome }}</strong>
                             <span v-if="m.prezzo > 0">€{{ m.prezzo.toFixed(2)}}</span>
@@ -596,6 +605,7 @@
                     </select>
                     <div class="grid" v-if="modifiers[tempModCat]" style="grid-template-columns: repeat(2, 1fr); gap: 5px;">
                         <div class="item" v-for="m in modifiers[tempModCat]" :key="m.nome" @click="addHalfPizzaModifier(1, m); updateHalfPizzaPrice()" 
+                             :class="{disabled: m.isFinished}"
                              style="padding: 8px; border-radius: 6px; font-size: 0.9rem;">
                             <strong>{{ m.nome }}</strong>
                             <span v-if="m.prezzo > 0">€{{ m.prezzo.toFixed(2)}}</span>
@@ -636,6 +646,7 @@
                     </select>
                     <div class="grid" v-if="modifiers[tempModCat]" style="grid-template-columns: repeat(2, 1fr); gap: 5px;">
                         <div class="item" v-for="m in modifiers[tempModCat]" :key="m.nome" @click="addHalfPizzaModifier(2, m); updateHalfPizzaPrice()" 
+                             :class="{disabled: m.isFinished}"
                              style="padding: 8px; border-radius: 6px; font-size: 0.9rem;">
                             <strong>{{ m.nome }}</strong>
                             <span v-if="m.prezzo > 0">€{{ m.prezzo.toFixed(2)}}</span>
@@ -1149,6 +1160,10 @@
                 alert("Seleziona prima un prodotto normale dall'ordine corrente.");
                 return;
             }
+            if(mod.isFinished) {
+                 alert(`Il modificatore '${mod.nome}' è esaurito.`);
+                 return;
+            }
             // Controllo per il filtro modificatori, solo se è attivo
             if (!this.filteredModifiersForActiveCat.some(m => m.nome === mod.nome)) return;
 
@@ -1206,6 +1221,10 @@
             }
         },
         addMeterModifier(sectionIndex, mod) {
+            if(mod.isFinished) {
+                 alert(`Il modificatore '${mod.nome}' è esaurito.`);
+                 return;
+            }
             this.tempMeterItem.sections[sectionIndex].modifiers.push(JSON.parse(JSON.stringify(mod)));
         },
         removeMeterModifier(sectionIndex, modIndex) {
@@ -1262,6 +1281,10 @@
             this.calculateItemTotal(this.tempHalfPizzaItem);
         },
         addHalfPizzaModifier(halfNum, mod) {
+            if(mod.isFinished) {
+                 alert(`Il modificatore '${mod.nome}' è esaurito.`);
+                 return;
+            }
             const modList = halfNum === 1 ? 'modifiers1' : 'modifiers2';
             this.tempHalfPizzaItem[modList].push(JSON.parse(JSON.stringify(mod)));
         },
@@ -1446,7 +1469,7 @@
                 hour: this.hour,
                 driver: this.mode === 'consegna' ? this.driver : '', 
                 status: 'In preparazione', 
-                acconto: this.accontoRicevuto || 0 // NUOVO: Salva l'acconto
+                acconto: this.accontoRicevuto || 0 
             };
 
             if (this.editingOrderId) {
@@ -1465,24 +1488,24 @@
             this.resetCurrentOrderState();
             this.showModal = false;
             this.view = 'ordini';
-            // CORREZIONE BUG: Il return qui interrompeva il flusso prima del salvataggio. Rimosso.
         },
         
-        // Gestione Stato Ordini e Archiviazione 
+        // Gestione Stato Ordini e Archiviazione (Modificato per archiviare correttamente)
         advance(o){
-            const st=["In preparazione","Pronto","Completato"];
+            const st=["In preparazione","Pronto","In Consegna / Ritirato"];
             const i=st.indexOf(o.status);
-            if(i<st.length-1){
+            
+            if(i < st.length - 1){
                 o.status=st[i+1];
-                
-                if (o.status === 'Completato') {
-                    this.archiveOrder(o);
-                    this.orders.splice(this.orders.findIndex(order => order.id === o.id), 1);
-                    this.calculateDriverStats(); 
-                }
-                
-                this.saveData();
+            } else if (i === st.length - 1) {
+                // Questo è l'ultimo stato (In Consegna / Ritirato). Archivia l'ordine.
+                this.archiveOrder(o);
+                this.orders.splice(this.orders.findIndex(order => order.id === o.id), 1);
+                this.calculateDriverStats(); 
+                alert(`Ordine #${o.id} completato e archiviato!`);
             }
+            
+            this.saveData();
         },
 
         archiveOrder(order) {
@@ -1500,8 +1523,8 @@
 
             let confirmationMessage = "Vuoi eliminare definitivamente l'ordine #" + id + "?";
             
-            if (o.status !== 'Completato') {
-                confirmationMessage = "ATTENZIONE: L'ordine #" + id + " è in stato '" + o.status + "'. Se è stato completato e ritirato, avanzalo a 'Completato' per salvare i dati di vendita.\n\n" + confirmationMessage + " (PERDERAI i dati di vendita)";
+            if (o.status !== 'In Consegna / Ritirato') {
+                confirmationMessage = "ATTENZIONE: L'ordine #" + id + " è in stato '" + o.status + "'. Se è stato completato e ritirato, avanzalo all'ultimo stato per archiviare i dati di vendita.\n\n" + confirmationMessage + " (PERDERAI i dati di vendita)";
             }
             
             if(confirm(confirmationMessage)) {
@@ -1746,6 +1769,13 @@
             item.isFinished = !item.isFinished;
             this.saveData();
         },
+        
+        // NUOVO: Toggle disponibilità per i modificatori
+        toggleFinishedMod(cat, i) {
+            const item = this.modifiers[cat][i];
+            item.isFinished = !item.isFinished;
+            this.saveData();
+        },
 
         addZone() { 
             if (this.newZoneName && this.newZonePrice >= 0) {
@@ -1839,7 +1869,8 @@
                  alert("Un modificatore con questo nome esiste già in questa categoria.");
                  return;
             }
-            this.modifiers[this.newModProdCat].push({nome: name, prezzo: parseFloat(this.newModPrice)});
+            // NUOVO: Aggiungiamo isFinished: false di default
+            this.modifiers[this.newModProdCat].push({nome: name, prezzo: parseFloat(this.newModPrice), isFinished: false});
             this.saveData();
             this.newModName = '';
             this.newModPrice = 0;
