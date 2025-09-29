@@ -267,7 +267,7 @@
             <p><strong>Cliente: {{o.customer}}</strong></p>
             <p>Data: **{{ formatDate(o.date) }}** | Ritiro/Consegna: **{{o.hour}}**</p>
             
-            <div v-if="o.mode === 'consegna'" style="margin-bottom: 8px;">
+            <div v-if="o.mode === 'consegna'" style="margin-bottom: 8px; padding-top: 5px; border-top: 1px dotted #ccc;">
                 <label style="font-size: 0.9rem; font-weight: 600;">Fattorino Assegnato:</label>
                 <select @change="updateActiveOrderDriver(o.id, $event.target.value)" style="padding: 6px; border-radius: 4px; width: 100%;">
                     <option value="">Nessuno</option>
@@ -280,6 +280,7 @@
                 </p>
             </div>
             <p v-else-if="o.phone">📞 {{o.phone}}</p>
+            <p v-else-if="o.driver" style="font-size: 0.9rem;">Fattorino (Asporto/Banco): **{{o.driver}}**</p>
             
             <p v-if="o.notes" style="font-size: 0.9rem; margin-top: 8px;">**Note:** {{o.notes}}</p>
             
@@ -337,7 +338,7 @@
                 <button class="delete" @click="delOrder(o.id)">Elimina</button>
                 
                 <button class="final-btn" style="width: 100%; margin-right: 0;" @click="closeOrderAndArchive(o)">
-                    <i class="fa-solid fa-box-archive"></i> Chiudi Ordine & Archivia
+                    <i class="fa-solid fa-box-archive"></i> **Chiudi Ordine & Archivia**
                 </button>
             </div>
         </div>
@@ -366,21 +367,21 @@
         </div>
 
         <h3 style="color:#6b7280;">Ordini Completati</h3>
-        <div v-if="!archive.length">Nessun ordine completato oggi.</div>
+        <div v-if="!filteredArchive.length">Nessun ordine completato oggi.</div>
         <div class="archive-order-card" v-for="o in filteredArchive.slice().reverse()" :key="o.id">
             <h5>#{{o.id}} – {{new Date(o.archivedDate).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
             <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})
                 <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6; margin-left: 10px;">Tavolo/Ritiro: {{o.tableNumber}}</span>
-                <span v-if="o.driver" style="font-size: 0.8rem; color: #10b981; margin-left: 10px;">Fattorino: {{o.driver}}</span>
             </p>
             <div class="archive-actions" style="margin-top: 5px; display: flex; align-items: center; justify-content: flex-end;">
-                 <div v-if="o.mode === 'consegna'" style="display: flex; align-items: center; gap: 5px;">
-                     <label style="font-size: 0.8rem;">Modifica Fattorino:</label>
-                     <select @change="updateArchiveDriver(o.id, $event.target.value)" style="padding: 4px; border-radius: 4px; font-size: 0.8rem;">
+                 <div v-if="o.mode === 'consegna'" style="display: flex; align-items: center; gap: 5px; flex-grow: 1;">
+                     <label style="font-size: 0.8rem; white-space: nowrap;">Fattorino:</label>
+                     <select @change="updateArchiveDriver(o.id, $event.target.value)" style="padding: 4px; border-radius: 4px; font-size: 0.8rem; flex-grow: 1;">
                          <option value="">Nessuno</option>
                          <option v-for="driver in availableDrivers" :value="driver" :selected="o.driver === driver">{{ driver }}</option>
                      </select>
                  </div>
+                 <span v-else-if="o.driver" style="font-size: 0.8rem; color: #10b981;">Fattorino: {{o.driver}}</span>
                 <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
             </div>
         </div>
@@ -876,7 +877,7 @@
                 return this.orderStatuses[currentIdx + 1];
             }
             // L'ultimo stato è ora "Chiudi Ordine & Archivia"
-            return "Chiudi Ordine & Archivia";
+            return "Completa e Archivia";
         },
 
         // Funzione di Formattazione Data per la Visualizzazione
@@ -1369,7 +1370,7 @@
             this.tableNumber = orderToEdit.tableNumber || ''; 
             this.date = orderToEdit.date || getTodayDateString(); 
             this.hour = orderToEdit.hour;
-            this.driver = orderToEdit.driver || ''; 
+            this.driver = orderToEdit.driver || ''; // Mantiene il driver esistente
 
             this.calc();
             this.view = 'inserimento';
@@ -1417,11 +1418,13 @@
             if (modeId === 'consegna') {
                 this.tableNumber = ''; 
                 this.updateDeliveryCost();
+                // Se era in modifica e il driver è assegnato, lo teniamo, altrimenti lo resettiamo
+                this.driver = this.editingOrderId ? (this.orders.find(o => o.id === this.editingOrderId)?.driver || '') : '';
             } else {
                 this.deliveryCost = 0;
                 this.zoneName = '';
                 this.town = ''; 
-                this.driver = ''; // Il fattorino viene assegnato solo per le consegne
+                this.driver = ''; // Il fattorino viene assegnato solo per le consegne o modificato appositamente
             }
             this.calc();
         },
@@ -1483,8 +1486,8 @@
                 tableNumber: this.tableNumber.trim(), 
                 date: this.date, 
                 hour: this.hour,
-                // Assegnazione fattorino solo se è una consegna. Se è una modifica, mantiene il driver esistente (o lo imposta a '' se non lo è).
-                driver: this.mode === 'consegna' ? (this.editingOrderId ? (this.orders.find(o => o.id === this.editingOrderId).driver || '') : '') : '',
+                // Il driver viene gestito al momento dell'inserimento/modifica/avanzamento, non qui (a meno che non sia una nuova consegna)
+                driver: this.mode === 'consegna' ? (this.editingOrderId ? (this.orders.find(o => o.id === this.editingOrderId)?.driver || '') : '') : '',
                 status: 'In preparazione', 
                 acconto: this.accontoRicevuto || 0 
             };
@@ -1493,7 +1496,7 @@
                 const index = this.orders.findIndex(o => o.id === this.editingOrderId);
                 if (index !== -1) {
                     ord.status = this.orders[index].status; 
-                    // Se stiamo modificando, prendiamo il driver assegnato nell'ordine attivo
+                    // Se stiamo modificando, manteniamo il driver assegnato nell'ordine attivo
                     ord.driver = this.orders[index].driver;
                     this.orders.splice(index, 1, ord);
                     alert("Ordine #" + ord.id + " aggiornato!");
@@ -1537,9 +1540,11 @@
 
             // Archiviazione
             this.archiveOrder(o);
+            // Rimozione dall'elenco ordini attivi
             this.orders.splice(this.orders.findIndex(order => order.id === o.id), 1);
-            this.calculateDriverStats(); 
+            
             this.saveData();
+            this.calculateDriverStats(); 
             alert(`Ordine #${o.id} completato e archiviato!`);
         },
 
@@ -1547,7 +1552,6 @@
             const archivedOrder = JSON.parse(JSON.stringify(order));
             archivedOrder.archivedDate = new Date().toISOString(); 
             this.archive.push(archivedOrder);
-            this.saveData();
         },
 
         delOrder(id){
