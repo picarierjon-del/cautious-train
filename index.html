@@ -47,6 +47,7 @@
         .settings input[type="text"], .settings input[type="number"] { width: 100%; padding: 8px; margin: 4px 0; border: 1px solid #ccc; border-radius: 6px; }
         .settings button { margin-top: 6px; margin-right: 4px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
         .settings button.remove { background: #b91c1c; }
+        .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 6px; }
     </style>
 </head>
 <body>
@@ -72,7 +73,7 @@
             </div>
         </div>
         
-        <div class="grid">
+        <div class="grid" v-if="menu[activeCat]">
             <div class="item" v-for="p in menu[activeCat]" :key="p.nome" @click="addItem(p)">
                 <strong>{{p.nome}}</strong>
                 €{{p.prezzo.toFixed(2)}}
@@ -140,34 +141,64 @@
     </section>
 
     <section v-show="view==='impostazioni'" class="settings">
-        <h2>Impostazioni Menu</h2>
+        <h2>Impostazioni Categorie</h2>
+        <h3>Gestione Categorie Menu</h3>
+        <div class="settings-list">
+            <div class="settings-item" v-for="cat in Object.keys(menu)" :key="cat">
+                <span>{{cat}}</span>
+                <button class="remove" @click="deleteMenuCategory(cat)">Elimina</button>
+            </div>
+        </div>
+        <form @submit.prevent="addMenuCategory">
+            <input type="text" v-model="newMenuCat" placeholder="Nuova Categoria Menu" required>
+            <button type="submit">Aggiungi Categoria</button>
+        </form>
+
+        <h3>Gestione Prodotti</h3>
         <div v-for="(items,cat) in menu" :key="cat">
-            <h3>{{cat}}</h3>
-            <div v-for="(p,i) in items" :key="i">
-                {{p.nome}} – €{{p.prezzo.toFixed(2)}}
-                <button class="remove" @click="deleteProd(cat,i)">❌</button>
+            <h4>{{cat}}</h4>
+            <div class="settings-list">
+                <div class="settings-item" v-for="(p,i) in items" :key="i">
+                    <span>{{p.nome}} – €{{p.prezzo.toFixed(2)}}</span>
+                    <button class="remove" @click="deleteProd(cat,i)">❌</button>
+                </div>
             </div>
         </div>
         <h3>Aggiungi Prodotto</h3>
-        <input type="text" v-model="newCat" placeholder="Categoria">
-        <input type="text" v-model="newName" placeholder="Nome prodotto">
-        <input type="number" step="0.01" v-model.number="newPrice" placeholder="Prezzo">
+        <input type="text" v-model="newProdCat" placeholder="Categoria esistente" required>
+        <input type="text" v-model="newName" placeholder="Nome prodotto" required>
+        <input type="number" step="0.01" v-model.number="newPrice" placeholder="Prezzo" required>
         <button @click="addProd">Aggiungi</button>
 
         <hr style="margin: 20px 0;">
 
         <h2>Impostazioni Modificatori</h2>
+        <h3>Gestione Categorie Modificatori</h3>
+        <div class="settings-list">
+            <div class="settings-item" v-for="cat in Object.keys(modifiers)" :key="cat">
+                <span>{{cat}}</span>
+                <button class="remove" @click="deleteModCategory(cat)">Elimina</button>
+            </div>
+        </div>
+        <form @submit.prevent="addModCategory">
+            <input type="text" v-model="newModCat" placeholder="Nuova Categoria Modificatori" required>
+            <button type="submit">Aggiungi Categoria</button>
+        </form>
+
+        <h3>Gestione Modificatori</h3>
         <div v-for="(mods,cat) in modifiers" :key="cat">
-            <h3>{{cat}}</h3>
-            <div v-for="(m,i) in mods" :key="i">
-                {{m.nome}} <span v-if="m.prezzo > 0">– €{{m.prezzo.toFixed(2)}}</span>
-                <button class="remove" @click="deleteMod(cat,i)">❌</button>
+            <h4>{{cat}}</h4>
+            <div class="settings-list">
+                <div class="settings-item" v-for="(m,i) in mods" :key="i">
+                    <span>{{m.nome}} <span v-if="m.prezzo > 0">– €{{m.prezzo.toFixed(2)}}</span></span>
+                    <button class="remove" @click="deleteMod(cat,i)">❌</button>
+                </div>
             </div>
         </div>
         <h3>Aggiungi Modificatore</h3>
-        <input type="text" v-model="newModCat" placeholder="Categoria (es. Più, Senza)">
-        <input type="text" v-model="newModName" placeholder="Nome modificatore">
-        <input type="number" step="0.01" v-model.number="newModPrice" placeholder="Prezzo">
+        <input type="text" v-model="newModProdCat" placeholder="Categoria esistente" required>
+        <input type="text" v-model="newModName" placeholder="Nome modificatore" required>
+        <input type="number" step="0.01" v-model.number="newModPrice" placeholder="Prezzo" required>
         <button @click="addMod">Aggiungi</button>
     </section>
 </main>
@@ -199,8 +230,16 @@
         phone:'',
         address:'',
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
-        newCat:'',newName:'',newPrice:'',
-        newModCat:'', newModName:'', newModPrice: 0,
+        
+        // Nuove proprietà per la gestione dinamica delle categorie
+        newMenuCat: '',
+        newProdCat: '',
+        newName: '',
+        newPrice: '',
+        newModCat: '',
+        newModProdCat: '',
+        newModName: '',
+        newModPrice: 0,
 
         saveData(){
             localStorage.setItem('pz_menu',JSON.stringify(this.menu));
@@ -269,12 +308,35 @@
             }
         },
 
+        // Gestione Categorie Menu
+        addMenuCategory() {
+            if (this.newMenuCat && !this.menu[this.newMenuCat]) {
+                this.menu[this.newMenuCat] = [];
+                this.saveData();
+                this.newMenuCat = '';
+            } else {
+                alert("Inserisci una categoria valida o il nome è già in uso.");
+            }
+        },
+
+        deleteMenuCategory(cat) {
+            if (confirm("Sei sicuro di voler eliminare la categoria '" + cat + "' e tutti i suoi prodotti?")) {
+                delete this.menu[cat];
+                this.activeCat = Object.keys(this.menu)[0] || '';
+                this.saveData();
+            }
+        },
+
+        // Gestione Prodotti
         addProd(){
-            if(!this.newCat||!this.newName||!this.newPrice)return;
-            if(!this.menu[this.newCat])this.menu[this.newCat]=[];
-            this.menu[this.newCat].push({nome:this.newName,prezzo:this.newPrice});
+            if(!this.newProdCat||!this.newName||!this.newPrice)return;
+            if(!this.menu[this.newProdCat]) {
+                alert("Categoria non trovata. Per favore, aggiungi prima la categoria.");
+                return;
+            }
+            this.menu[this.newProdCat].push({nome:this.newName,prezzo:this.newPrice});
             this.saveData();
-            this.newCat=this.newName='';this.newPrice='';
+            this.newProdCat=''; this.newName='';this.newPrice='';
         },
 
         deleteProd(cat,i){
@@ -285,12 +347,35 @@
             }
         },
         
+        // Gestione Categorie Modificatori
+        addModCategory() {
+            if (this.newModCat && !this.modifiers[this.newModCat]) {
+                this.modifiers[this.newModCat] = [];
+                this.saveData();
+                this.newModCat = '';
+            } else {
+                alert("Inserisci una categoria valida o il nome è già in uso.");
+            }
+        },
+        
+        deleteModCategory(cat) {
+            if (confirm("Sei sicuro di voler eliminare la categoria di modificatori '" + cat + "' e tutti i suoi elementi?")) {
+                delete this.modifiers[cat];
+                this.activeModCat = Object.keys(this.modifiers)[0] || '';
+                this.saveData();
+            }
+        },
+
+        // Gestione Modificatori
         addMod(){
-            if(!this.newModCat || !this.newModName) return;
-            if(!this.modifiers[this.newModCat]) this.modifiers[this.newModCat] = [];
-            this.modifiers[this.newModCat].push({nome: this.newModName, prezzo: this.newModPrice});
+            if(!this.newModProdCat || !this.newModName) return;
+            if(!this.modifiers[this.newModProdCat]) {
+                 alert("Categoria non trovata. Per favore, aggiungi prima la categoria.");
+                return;
+            }
+            this.modifiers[this.newModProdCat].push({nome: this.newModName, prezzo: this.newModPrice});
             this.saveData();
-            this.newModCat = this.newModName = '';
+            this.newModProdCat = this.newModName = '';
             this.newModPrice = 0;
         },
 
