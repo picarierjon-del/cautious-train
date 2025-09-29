@@ -257,14 +257,7 @@
         <h2>Ordini Attivi</h2>
         <input type="search" v-model="activeOrderSearchTerm" placeholder="Cerca per Cliente, Tavolo, Indirizzo..." class="search-input">
 
-        <div class="filter-row">
-            <button class="filter-btn" :class="{active: activeStatusFilter === 'Tutti'}" @click="activeStatusFilter = 'Tutti'">Tutti</button>
-            <button class="filter-btn" :class="{active: activeStatusFilter === 'In preparazione'}" @click="activeStatusFilter = 'In preparazione'">In Prep.</button>
-            <button class="filter-btn" :class="{active: activeStatusFilter === 'Pronto'}" @click="activeStatusFilter = 'Pronto'">Pronto</button>
-            <button class="filter-btn" :class="{active: activeStatusFilter === 'In Consegna / Ritirato'}" @click="activeStatusFilter = 'In Consegna / Ritirato'">Consegna/Ritiro</button>
-        </div>
-        
-        <div v-if="!filteredActiveOrders.length">Nessun ordine attivo con il filtro selezionato.</div>
+        <div v-if="!filteredActiveOrders.length">Nessun ordine attivo trovato.</div>
         <div class="order-card" v-for="o in filteredActiveOrders" :key="o.id"
              :class="{'warning-urgent': isUrgent(o), 'warning-near': isNear(o) && !isUrgent(o)}">
             <h4>
@@ -273,13 +266,23 @@
             </h4>
             <p><strong>Cliente: {{o.customer}}</strong></p>
             <p>Data: **{{ formatDate(o.date) }}** | Ritiro/Consegna: **{{o.hour}}**</p>
-            <p v-if="o.mode === 'consegna' && o.driver">Fattorino Assegnato: <strong>{{o.driver}}</strong></p>
-            <p v-if="o.phone">📞 {{o.phone}}</p>
-            <p v-if="o.mode === 'consegna'">
-                📍 {{o.address}} {{o.streetNumber}}, **{{o.zone}}** ({{o.town}})
-                <br>Costo Consegna: €{{o.deliveryCost.toFixed(2)}}
-            </p>
+            
+            <div v-if="o.mode === 'consegna'" style="margin-bottom: 8px;">
+                <label style="font-size: 0.9rem; font-weight: 600;">Fattorino Assegnato:</label>
+                <select @change="updateActiveOrderDriver(o.id, $event.target.value)" style="padding: 6px; border-radius: 4px; width: 100%;">
+                    <option value="">Nessuno</option>
+                    <option v-for="driver in availableDrivers" :value="driver" :selected="o.driver === driver">{{ driver }}</option>
+                </select>
+                <p v-if="o.phone" style="margin-top: 5px;">📞 {{o.phone}}</p>
+                <p v-if="o.mode === 'consegna'">
+                    📍 {{o.address}} {{o.streetNumber}}, **{{o.zone}}** ({{o.town}})
+                    <br>Costo Consegna: €{{o.deliveryCost.toFixed(2)}}
+                </p>
+            </div>
+            <p v-else-if="o.phone">📞 {{o.phone}}</p>
+            
             <p v-if="o.notes" style="font-size: 0.9rem; margin-top: 8px;">**Note:** {{o.notes}}</p>
+            
             <ul class="order-items">
                 <li v-for="it in o.items">
                     <span v-if="it.isHalfPizza">🍕 {{it.nome}} ({{it.gusto1}} / {{it.gusto2}})</span>
@@ -328,10 +331,14 @@
             <p><strong>Totale: €{{o.total.toFixed(2)}}</strong></p>
             <div class="order-actions">
                 <button class="edit" @click="editOrder(o.id)">Modifica</button>
-                <button @click="advance(o)">Avanza Stato</button>
+                <button @click="advance(o)">Avanza Stato: {{ getNextStatus(o.status) }}</button>
                 <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
                 <button class="share" @click="showShareMenu(o.id)"><i class="fa-solid fa-share-alt"></i> Azioni</button>
                 <button class="delete" @click="delOrder(o.id)">Elimina</button>
+                
+                <button class="final-btn" style="width: 100%; margin-right: 0;" @click="closeOrderAndArchive(o)">
+                    <i class="fa-solid fa-box-archive"></i> Chiudi Ordine & Archivia
+                </button>
             </div>
         </div>
     </section>
@@ -699,14 +706,6 @@
             
             <div v-if="mode === 'consegna'">
                 <div class="form-row">
-                    <label for="driver">Assegna Fattorino (opzionale)</label>
-                    <select id="driver" v-model="driver">
-                        <option value="">Nessun Fattorino Assegnato</option>
-                        <option v-for="d in drivers" :value="d">{{d}}</option>
-                    </select>
-                </div>
-                
-                <div class="form-row">
                     <label for="address">Indirizzo (Via/Piazza) *</label>
                     <input type="text" id="address" v-model="address" required>
                 </div>
@@ -800,7 +799,7 @@
         editingOrderId: null, 
         
         // --- DATI INIZIALI (Ripristinati/Aggiornati) ---
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Intera (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Divisa in Due (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Divisa in Tre (3 Gusti)","prezzo":14,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Intera (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":14,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2},{"nome":"Aggiunta Pomodoro","prezzo":0.5}],"Senza":[{"nome":"Senza olive","prezzo":0},{"nome":"Senza sale","prezzo":0}],"Poco":[{"nome":"Poco cotta","prezzo":0}],"Abbondante":[{"nome":"Basilico abbondante","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
@@ -817,7 +816,7 @@
         lastSelectedItem: null, 
         searchTerm: '',
         modifierSearchTerm: '', 
-        gustoSearchTerm: '', // NUOVO: Termine di ricerca per i gusti nei modali
+        gustoSearchTerm: '', 
 
         // Stato Composizione
         tempMeterItem: null, 
@@ -844,9 +843,9 @@
         hour: getDefaultHour(),
         driver: '', 
         minDate: getTodayDateString(), 
-        activeStatusFilter: 'Tutti', 
-        activeOrderSearchTerm: '', // NUOVO: Filtro ricerca ordini attivi
-        accontoRicevuto: null, // NUOVO: Acconto ricevuto
+        activeStatusFilter: 'Tutti', // Mantenuto per compatibilità, ma non usato nei filtri UI attivi
+        activeOrderSearchTerm: '', 
+        accontoRicevuto: null, 
 
         // Dati per Impostazioni
         newMenuCat: '', newProdCat: '', newName: '', newPrice: '',
@@ -857,7 +856,9 @@
         // Dati per Storico/Statistiche
         selectedDriver: '', 
         driverStats: { totalOrders: 0, totalRevenue: 0 }, 
-
+        
+        // Stati Ordine semplificati
+        orderStatuses: ["In preparazione", "Pronto"],
 
         // Funzione per identificare categorie speciali (Impedisce eliminazione)
         isSpecialCategory(cat) {
@@ -866,6 +867,16 @@
         // Funzione per identificare categorie modificatori base
         isBaseModCategory(cat) {
             return ['Più', 'Senza', 'Poco', 'Abbondante'].includes(cat);
+        },
+        
+        // Funzione per determinare lo stato successivo
+        getNextStatus(currentStatus) {
+            const currentIdx = this.orderStatuses.indexOf(currentStatus);
+            if (currentIdx !== -1 && currentIdx < this.orderStatuses.length - 1) {
+                return this.orderStatuses[currentIdx + 1];
+            }
+            // L'ultimo stato è ora "Chiudi Ordine & Archivia"
+            return "Chiudi Ordine & Archivia";
         },
 
         // Funzione di Formattazione Data per la Visualizzazione
@@ -926,7 +937,7 @@
             );
         },
         
-        // NUOVO: Computed per i prodotti base filtrati nei modali di composizione
+        // Computed per i prodotti base filtrati nei modali di composizione
         get filteredBaseItems() {
             if (!this.gustoSearchTerm.trim()) {
                 return this.availableBaseItems;
@@ -950,11 +961,7 @@
                 return dateTimeA - dateTimeB;
             });
 
-            if (this.activeStatusFilter !== 'Tutti') {
-                filtered = filtered.filter(o => o.status === this.activeStatusFilter);
-            }
-            
-            // Filtro per termine di ricerca (NUOVO)
+            // Filtro per termine di ricerca
             if (this.activeOrderSearchTerm.trim()) {
                 const term = this.activeOrderSearchTerm.toLowerCase().trim();
                 filtered = filtered.filter(o =>
@@ -976,7 +983,7 @@
             return (this.menu['Schiacciate'] || []).filter(p => !p.isFinished);
         },
 
-        // Computed per abilitare l'inserimento di prodotti composti (Refactoring 1)
+        // Computed per abilitare l'inserimento di prodotti composti 
         get canComposeMeter() {
             return this.availableBaseItems.length > 0 || this.availableSchiacciateItems.length > 0;
         },
@@ -1029,7 +1036,7 @@
             return new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
         },
 
-        // Funzione per calcolare il resto (NUOVO)
+        // Funzione per calcolare il resto 
         get restoDaDare() {
             if (this.accontoRicevuto && this.accontoRicevuto > this.total) {
                 return this.accontoRicevuto - this.total;
@@ -1082,6 +1089,15 @@
                 this.archive[orderIndex].driver = newDriver;
                 this.saveData();
                 this.calculateDriverStats(); 
+            }
+        },
+        
+        // NUOVO: Funzione per l'aggiornamento del fattorino negli ordini attivi
+        updateActiveOrderDriver(id, newDriver) {
+            const orderIndex = this.orders.findIndex(o => o.id === id);
+            if (orderIndex !== -1) {
+                this.orders[orderIndex].driver = newDriver;
+                this.saveData();
             }
         },
 
@@ -1198,7 +1214,7 @@
                 this.showMeterModal = false;
                 this.showHalfPizzaModal = false;
                 this.lastSelectedItem = null; 
-                this.gustoSearchTerm = ''; // NUOVO: Reset filtro gusti
+                this.gustoSearchTerm = ''; 
             }
         },
         startMeterComposition(p) {
@@ -1213,7 +1229,7 @@
             this.tempModCat = 'Più';
             this.showMeterModal = true;
             this.showHalfPizzaModal = false; 
-            this.gustoSearchTerm = ''; // NUOVO: Reset filtro gusti
+            this.gustoSearchTerm = ''; 
         },
         updateMeterPrice() {
             if (this.tempMeterItem) {
@@ -1246,7 +1262,7 @@
             this.tempMeterItem = null;
             this.showMeterModal = false;
             this.lastSelectedItem = null;
-            this.gustoSearchTerm = ''; // NUOVO: Reset filtro gusti
+            this.gustoSearchTerm = ''; 
         },
         startHalfPizzaComposition(p) {
             let existingItem = null;
@@ -1264,7 +1280,7 @@
             };
             this.showHalfPizzaModal = true;
             this.showMeterModal = false;
-            this.gustoSearchTerm = ''; // NUOVO: Reset filtro gusti
+            this.gustoSearchTerm = ''; 
         },
         updateHalfPizzaPrice() {
             let basePrice = 0;
@@ -1305,7 +1321,7 @@
             this.tempHalfPizzaItem = null;
             this.showHalfPizzaModal = false;
             this.lastSelectedItem = null;
-            this.gustoSearchTerm = ''; // NUOVO: Reset filtro gusti
+            this.gustoSearchTerm = ''; 
         },
         
         // Logica Ordine e Finalizzazione 
@@ -1320,7 +1336,7 @@
             this.searchTerm = '';
             this.modifierSearchTerm = ''; 
             this.lastSelectedItem = null;
-            this.accontoRicevuto = null; // NUOVO: Reset acconto
+            this.accontoRicevuto = null; 
             
             this.mode = '';
             this.customer = this.phone = this.address = this.streetNumber = this.town = '';
@@ -1405,7 +1421,7 @@
                 this.deliveryCost = 0;
                 this.zoneName = '';
                 this.town = ''; 
-                this.driver = ''; 
+                this.driver = ''; // Il fattorino viene assegnato solo per le consegne
             }
             this.calc();
         },
@@ -1421,7 +1437,7 @@
                 this.driver = ''; 
                 this.date = getTodayDateString(); 
                 this.hour = getDefaultHour();
-                this.accontoRicevuto = null; // NUOVO: Reset acconto
+                this.accontoRicevuto = null; 
                 this.calc(); 
             } 
             this.showModal = true;
@@ -1467,15 +1483,18 @@
                 tableNumber: this.tableNumber.trim(), 
                 date: this.date, 
                 hour: this.hour,
-                driver: this.mode === 'consegna' ? this.driver : '', 
+                // Assegnazione fattorino solo se è una consegna. Se è una modifica, mantiene il driver esistente (o lo imposta a '' se non lo è).
+                driver: this.mode === 'consegna' ? (this.editingOrderId ? (this.orders.find(o => o.id === this.editingOrderId).driver || '') : '') : '',
                 status: 'In preparazione', 
                 acconto: this.accontoRicevuto || 0 
             };
-
+            
             if (this.editingOrderId) {
                 const index = this.orders.findIndex(o => o.id === this.editingOrderId);
                 if (index !== -1) {
                     ord.status = this.orders[index].status; 
+                    // Se stiamo modificando, prendiamo il driver assegnato nell'ordine attivo
+                    ord.driver = this.orders[index].driver;
                     this.orders.splice(index, 1, ord);
                     alert("Ordine #" + ord.id + " aggiornato!");
                 }
@@ -1490,22 +1509,38 @@
             this.view = 'ordini';
         },
         
-        // Gestione Stato Ordini e Archiviazione (Modificato per archiviare correttamente)
+        // Logica Avanzamento Stato Semplificata
         advance(o){
-            const st=["In preparazione","Pronto","In Consegna / Ritirato"];
-            const i=st.indexOf(o.status);
+            const currentStatusIndex = this.orderStatuses.indexOf(o.status);
             
-            if(i < st.length - 1){
-                o.status=st[i+1];
-            } else if (i === st.length - 1) {
-                // Questo è l'ultimo stato (In Consegna / Ritirato). Archivia l'ordine.
-                this.archiveOrder(o);
-                this.orders.splice(this.orders.findIndex(order => order.id === o.id), 1);
-                this.calculateDriverStats(); 
-                alert(`Ordine #${o.id} completato e archiviato!`);
+            if (currentStatusIndex < this.orderStatuses.length - 1) {
+                // Avanza al prossimo stato (es. da "In preparazione" a "Pronto")
+                o.status = this.orderStatuses[currentStatusIndex + 1];
+            } else {
+                // Se è nell'ultimo stato visibile ("Pronto"), chiude e archivia
+                this.closeOrderAndArchive(o);
+                return; 
             }
             
             this.saveData();
+        },
+
+        // NUOVO: Funzione per chiudere l'ordine e archiviare
+        closeOrderAndArchive(o) {
+            if (o.mode === 'consegna' && !o.driver) {
+                if (!confirm("ATTENZIONE: L'ordine di consegna non ha un fattorino assegnato. Continuare con l'archiviazione?")) {
+                    return;
+                }
+            } else if (!confirm(`Confermi la chiusura e l'archiviazione dell'ordine #${o.id}?`)) {
+                 return;
+            }
+
+            // Archiviazione
+            this.archiveOrder(o);
+            this.orders.splice(this.orders.findIndex(order => order.id === o.id), 1);
+            this.calculateDriverStats(); 
+            this.saveData();
+            alert(`Ordine #${o.id} completato e archiviato!`);
         },
 
         archiveOrder(order) {
@@ -1523,14 +1558,13 @@
 
             let confirmationMessage = "Vuoi eliminare definitivamente l'ordine #" + id + "?";
             
-            if (o.status !== 'In Consegna / Ritirato') {
-                confirmationMessage = "ATTENZIONE: L'ordine #" + id + " è in stato '" + o.status + "'. Se è stato completato e ritirato, avanzalo all'ultimo stato per archiviare i dati di vendita.\n\n" + confirmationMessage + " (PERDERAI i dati di vendita)";
+            // Messaggio di avvertimento se l'ordine non è stato archiviato
+            if (!confirm(confirmationMessage + " (PERDERAI i dati di vendita)")) {
+                return;
             }
             
-            if(confirm(confirmationMessage)) {
-                this.orders.splice(orderIndex, 1);
-                this.saveData();
-            }
+            this.orders.splice(orderIndex, 1);
+            this.saveData();
         },
         
         // Funzioni di Stampa e Condivisione 
@@ -1770,7 +1804,7 @@
             this.saveData();
         },
         
-        // NUOVO: Toggle disponibilità per i modificatori
+        // Toggle disponibilità per i modificatori
         toggleFinishedMod(cat, i) {
             const item = this.modifiers[cat][i];
             item.isFinished = !item.isFinished;
@@ -1869,7 +1903,7 @@
                  alert("Un modificatore con questo nome esiste già in questa categoria.");
                  return;
             }
-            // NUOVO: Aggiungiamo isFinished: false di default
+            // Aggiungiamo isFinished: false di default
             this.modifiers[this.newModProdCat].push({nome: name, prezzo: parseFloat(this.newModPrice), isFinished: false});
             this.saveData();
             this.newModName = '';
