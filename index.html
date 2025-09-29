@@ -5,289 +5,151 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pizzeria Smart – Gestionale</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f4f7f6;
-            margin: 0;
-            padding: 0;
-            color: #333;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
         }
 
         #app {
             max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
+            margin: 0 auto;
             background-color: #fff;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
-        h1 {
-            color: #007bff;
-            text-align: center;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-
-        h2 {
-            color: #555;
-            margin-top: 30px;
-            border-left: 5px solid #007bff;
-            padding-left: 10px;
-            margin-bottom: 15px;
-        }
-
-        h3 {
-            color: #007bff;
-            margin-top: 20px;
-        }
-
-        h4 {
-            color: #6c757d;
+        h1, h2 {
+            color: #333;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 5px;
             margin-top: 15px;
         }
 
-        /* Nav Tabs */
+        /* Tabs */
         .tabs {
             display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-            padding: 0;
             list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
         }
 
         .tab-item {
+            padding: 10px 15px;
             cursor: pointer;
-            padding: 10px 20px;
-            margin: 0 5px;
             border: 1px solid #ccc;
-            border-radius: 5px;
-            transition: all 0.3s;
-            background-color: #f8f9fa;
+            border-bottom: none;
+            margin-right: -1px;
+            background-color: #f9f9f9;
         }
 
         .tab-item.active {
-            background-color: #007bff;
-            color: white;
-            border-color: #007bff;
+            background-color: #fff;
+            border-color: #333;
             font-weight: bold;
         }
 
-        /* Input and Forms */
-        input[type="text"],
-        input[type="number"],
-        input[type="date"],
-        input[type="time"],
-        select,
-        textarea {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        /* Buttons */
-        button {
-            padding: 10px 15px;
-            margin-right: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            font-weight: bold;
-        }
-
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: #0056b3;
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background-color: #5a6268;
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background-color: #1e7e34;
-        }
-
-        .btn-danger {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background-color: #bd2130;
-        }
-
-        .btn-warning {
-            background-color: #ffc107;
-            color: #333;
-        }
-
-        .btn-warning:hover {
-            background-color: #e0a800;
-        }
-
-        .btn-info {
-            background-color: #17a2b8;
-            color: white;
-        }
-
-        .btn-info:hover {
-            background-color: #117a8b;
-        }
-
-        /* Flex Utilities */
+        /* Flex layout for main content */
         .flex-container {
             display: flex;
             gap: 20px;
-            margin-top: 20px;
         }
 
         .flex-half {
             flex: 1;
-        }
-
-        .menu-list, .order-list, .inventory-list, .driver-list, .category-list, .product-list, .modifier-category-list, .modifier-list, .zone-list {
-            list-style: none;
-            padding: 0;
-            margin-top: 10px;
-        }
-
-        .menu-item, .order-item, .inventory-item, .driver-item, .category-item, .product-item, .modifier-category-item, .modifier-item, .zone-item {
-            background-color: #f8f9fa;
+            padding: 10px;
             border: 1px solid #eee;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
-        .inventory-item {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .inventory-item-details {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .inventory-item-actions {
-            width: 100%;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            padding-top: 10px;
-            border-top: 1px dotted #ccc;
-        }
-
-        .order-details ul, .order-details li {
+        /* Lists and Items */
+        .menu-list, .order-list, .inventory-list {
             list-style: none;
             padding: 0;
-            margin: 0;
         }
 
-        .order-details li {
-            margin-bottom: 5px;
-        }
-
-        .pizza-types-container {
-            display: flex;
-            gap: 10px;
+        .category-item, .order-item, .inventory-item {
             margin-bottom: 15px;
-        }
-
-        .pizza-type-box {
-            padding: 10px 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .pizza-type-box.active {
-            background-color: #ffeeba; /* Light yellow for selection */
-            border-color: #ffc107;
-            font-weight: bold;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #fefefe;
+            border-radius: 4px;
         }
 
         .product-card {
-            background-color: #e9ecef;
-            padding: 10px;
+            padding: 5px 10px;
+            border: 1px solid #ccc;
             margin-bottom: 5px;
-            border-radius: 3px;
+            cursor: pointer;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
+            background-color: #e9e9e9;
+        }
+
+        .product-card:hover:not(.finished) {
+            background-color: #ddd;
         }
 
         .product-card.finished {
-            background-color: #f8d7da; /* Light red for finished items */
-            opacity: 0.6;
+            opacity: 0.5;
+            text-decoration: line-through;
             cursor: not-allowed;
-        }
-
-        .product-card:not(.finished):hover {
-            background-color: #d1d8df;
+            background-color: #fdd;
         }
 
         .current-order-list li {
-            background-color: #e9f7ef;
-            border: 1px solid #c3e6cb;
+            padding: 8px;
             margin-bottom: 5px;
-            padding: 10px;
-            border-radius: 5px;
-            position: relative;
+            border: 1px dotted #ccc;
+            background-color: #f7f7f7;
+            cursor: pointer;
         }
 
         .current-order-list li.selected-item {
-            border: 2px solid #007bff;
-            background-color: #e0f7ff;
+            border: 2px solid blue;
+            background-color: #eef;
         }
 
-        .item-modifiers li {
+        .item-modifiers {
+            list-style: disc;
             margin-left: 20px;
             font-size: 0.9em;
-            color: #6c757d;
+            color: #555;
         }
 
-        .item-actions {
-            margin-top: 10px;
-            display: flex;
-            gap: 5px;
+        /* Buttons and Inputs */
+        button {
+            padding: 8px 12px;
+            cursor: pointer;
+            border: 1px solid #333;
+            border-radius: 4px;
+            margin-right: 5px;
         }
+
+        input[type="text"], input[type="number"], select, textarea {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 98%;
+            box-sizing: border-box;
+        }
+
+        /* Status Colors */
+        .order-status-in-prep { color: orange; font-weight: bold; }
+        .order-status-ready { color: green; font-weight: bold; }
+        .order-status-delivered, .order-status-archived { color: gray; font-weight: bold; }
+        .finished-badge {
+            background-color: red;
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        /* Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -303,40 +165,26 @@
 
         .modal-content {
             background: white;
-            padding: 30px;
+            padding: 20px;
             border-radius: 8px;
             width: 90%;
             max-width: 600px;
-            max-height: 80vh;
+            max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
 
-        .order-status-in-prep {
-            color: #ffc107; /* Warning yellow */
-            font-weight: bold;
+        /* Magazzino specific */
+        .inventory-item-details, .inventory-item-actions {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
         }
-
-        .order-status-ready {
-            color: #28a745; /* Success green */
-            font-weight: bold;
-        }
-
-        .order-status-delivered {
-            color: #17a2b8; /* Info blue */
-            font-weight: bold;
-        }
-        .order-status-archived {
-            color: #6c757d; /* Secondary gray */
-            font-weight: bold;
-        }
-        .finished-badge {
-            background-color: #dc3545;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            margin-left: 10px;
+        .inventory-item-actions input {
+            width: 100px;
+            margin-right: 10px;
         }
     </style>
 </head>
@@ -358,8 +206,8 @@
                 <h2>{{ editingOrderId ? 'Modifica Ordine #' + editingOrderId : 'Crea Nuovo Ordine' }}</h2>
 
                 <div v-if="selectedProduct && (selectedProduct.isMeter || selectedProduct.isHalfPizza)">
-                    <button class="btn-warning" @click="openComposer(selectedProduct)">Componi {{ selectedProduct.nome }}</button>
-                    <button class="btn-secondary" @click="resetCurrentProduct">Annulla Selezione</button>
+                    <button style="background-color: #ffc107;" @click="openComposer(selectedProduct)">Componi {{ selectedProduct.nome }}</button>
+                    <button style="background-color: #6c757d; color: white;" @click="resetCurrentProduct">Annulla Selezione</button>
                 </div>
 
                 <div v-else>
@@ -392,8 +240,8 @@
                             </div>
                         </div>
                     </div>
-                    <button class="btn-success" @click="addItemToOrder">Aggiungi {{ selectedProduct.nome }} all'Ordine</button>
-                    <button class="btn-secondary" @click="resetCurrentProduct">Annulla</button>
+                    <button style="background-color: #28a745; color: white;" @click="addItemToOrder">Aggiungi {{ selectedProduct.nome }} all'Ordine</button>
+                    <button style="background-color: #6c757d; color: white;" @click="resetCurrentProduct">Annulla</button>
                 </div>
             </div>
 
@@ -418,7 +266,7 @@
 
                         <div style="float: right;">
                             €{{calculateItemTotal(i).toFixed(2)}}
-                            <button class="btn-danger" style="margin-left: 10px; padding: 5px 10px;" @click.stop="removeItemFromOrder(index)">✖️</button>
+                            <button style="background-color: red; color: white; margin-left: 10px; padding: 5px 10px;" @click.stop="removeItemFromOrder(index)">✖️</button>
                         </div>
 
                         <ul class="item-modifiers">
@@ -428,7 +276,7 @@
                             </li>
                             <template v-if="i.isHalfPizza">
                                 <li>
-                                    <strong>Metà 1 ({{ i.gusto1 }})</strong>
+                                    **Metà 1 ({{ i.gusto1 }})**
                                     <ul class="item-modifiers">
                                         <li v-for="mod in i.modifiers1" :key="'mod1-' + mod.nome">
                                             {{ getModifierIcon(getModifierCategory(mod.nome)) }}
@@ -437,7 +285,7 @@
                                     </ul>
                                 </li>
                                 <li>
-                                    <strong>Metà 2 ({{ i.gusto2 }})</strong>
+                                    **Metà 2 ({{ i.gusto2 }})**
                                     <ul class="item-modifiers">
                                         <li v-for="mod in i.modifiers2" :key="'mod2-' + mod.nome">
                                             {{ getModifierIcon(getModifierCategory(mod.nome)) }}
@@ -448,7 +296,7 @@
                             </template>
                             <template v-if="i.isMeter">
                                 <li v-for="(section, secIdx) in i.sections" :key="'sec-' + secIdx">
-                                    <strong>{{ section.name }}</strong>: {{ section.gusto }}
+                                    **{{ section.name }}**: {{ section.gusto }}
                                     <span v-if="section.modifiers.length > 0">
                                         ({{ section.modifiers.length }} Modifiche)
                                     </span>
@@ -468,10 +316,10 @@
                 </div>
 
                 <div style="margin-top: 20px;">
-                    <button class="btn-success" @click="openFinalizeOrderModal" :disabled="order.length === 0">
+                    <button style="background-color: #28a745; color: white;" @click="openFinalizeOrderModal" :disabled="order.length === 0">
                         {{ editingOrderId ? 'Aggiorna Ordine #' + editingOrderId : 'Finalizza Ordine' }}
                     </button>
-                    <button v-if="editingOrderId" class="btn-secondary" @click="cancelOrderEdit">Annulla Modifica</button>
+                    <button v-if="editingOrderId" style="background-color: #6c757d; color: white;" @click="cancelOrderEdit">Annulla Modifica</button>
                 </div>
             </div>
         </div>
@@ -480,10 +328,10 @@
             <h2>Ordini Attivi</h2>
 
             <div style="margin-bottom: 20px;">
-                <button :class="{ 'btn-primary': activeOrderFilter === 'Tutti', 'btn-secondary': activeOrderFilter !== 'Tutti' }" @click="activeOrderFilter = 'Tutti'">Tutti</button>
-                <button :class="{ 'btn-primary': activeOrderFilter === 'In Prep.', 'btn-secondary': activeOrderFilter !== 'In Prep.' }" @click="activeOrderFilter = 'In Prep.'">In Prep.</button>
-                <button :class="{ 'btn-primary': activeOrderFilter === 'Pronto', 'btn-secondary': activeOrderFilter !== 'Pronto' }" @click="activeOrderFilter = 'Pronto'">Pronto</button>
-                <button :class="{ 'btn-primary': activeOrderFilter === 'Archiviati', 'btn-secondary': activeOrderFilter !== 'Archiviati' }" @click="activeOrderFilter = 'Archiviati'">Archiviati</button>
+                <button :style="{ 'background-color': activeOrderFilter === 'Tutti' ? '#007bff' : '#6c757d', 'color': 'white' }" @click="activeOrderFilter = 'Tutti'">Tutti</button>
+                <button :style="{ 'background-color': activeOrderFilter === 'In Prep.' ? '#007bff' : '#6c757d', 'color': 'white' }" @click="activeOrderFilter = 'In Prep.'">In Prep.</button>
+                <button :style="{ 'background-color': activeOrderFilter === 'Pronto' ? '#007bff' : '#6c757d', 'color': 'white' }" @click="activeOrderFilter = 'Pronto'">Pronto</button>
+                <button :style="{ 'background-color': activeOrderFilter === 'Archiviati' ? '#007bff' : '#6c757d', 'color': 'white' }" @click="activeOrderFilter = 'Archiviati'">Archiviati</button>
             </div>
 
             <ul class="order-list">
@@ -511,7 +359,7 @@
                     <p v-if="o.notes">**Note:** {{o.notes}}</p>
 
                     <ul style="padding-left: 20px;">
-                        <li v-for="it in o.items" :key="it.id">
+                        <li v-for="it in o.items" :key="it.id" style="margin-bottom: 5px;">
                             <span v-if="it.isHalfPizza">🍕 {{it.nome}} ({{it.gusto1}} / {{it.gusto2}})</span>
                             <span v-else-if="it.isMeter">🍕 {{it.nome}}</span>
                             <span v-else>{{ it.nome }}</span>
@@ -544,13 +392,13 @@
 
                     **Totale: €{{o.total.toFixed(2)}}**
 
-                    <div class="item-actions">
-                        <button class="btn-info" @click="editOrder(o.id)">Modifica</button>
-                        <button class="btn-warning" @click="advanceOrderStatus(o.id)" v-if="o.status !== 'Archiviato'">Avanza Stato</button>
-                        <button class="btn-secondary" @click="duplicateOrder(o)">Duplica</button>
-                        <button class="btn-info" @click="openShareModal(o.id)">Azioni</button>
-                        <button class="btn-danger" @click="deleteOrder(o.id)" v-if="o.status !== 'Archiviato'">Elimina</button>
-                        <button class="btn-danger" @click="deleteArchivedOrder(o.id)" v-if="o.status === 'Archiviato'">Elimina</button>
+                    <div style="margin-top: 10px;">
+                        <button style="background-color: #17a2b8; color: white;" @click="editOrder(o.id)">Modifica</button>
+                        <button style="background-color: #ffc107;" @click="advanceOrderStatus(o.id)" v-if="o.status !== 'Archiviato'">Avanza Stato</button>
+                        <button style="background-color: #6c757d; color: white;" @click="duplicateOrder(o)">Duplica</button>
+                        <button style="background-color: #17a2b8; color: white;" @click="openShareModal(o.id)">Azioni</button>
+                        <button style="background-color: red; color: white;" @click="deleteOrder(o.id)" v-if="o.status !== 'Archiviato'">Elimina</button>
+                        <button style="background-color: red; color: white;" @click="deleteArchivedOrder(o.id)" v-if="o.status === 'Archiviato'">Elimina</button>
                     </div>
                 </li>
             </ul>
@@ -560,11 +408,11 @@
             <h2>Storico e Statistiche</h2>
 
             <h3>Incasso Totale di Oggi ({{ todayDate }})</h3>
-            <p style="font-size: 2em; color: #28a745;">€{{ dailyTotal.toFixed(2) }}</p>
+            <p style="font-size: 2em; color: green;">€{{ dailyTotal.toFixed(2) }}</p>
 
             <h3>Consegne Giornaliere</h3>
             <label>Filtra per Fattorino:</label>
-            <select v-model="selectedDriverFilter">
+            <select v-model="selectedDriverFilter" style="width: 250px;">
                 <option value="">Tutti i Fattorini</option>
                 <option v-for="driver in menuData.drivers" :key="driver">{{ driver }}</option>
             </select>
@@ -585,9 +433,9 @@
                     <p>Tavolo/Ritiro: {{o.tableNumber}}</p>
                     <p>Fattorino: {{o.driver}}</p>
 
-                    <div class="item-actions">
-                        <button class="btn-info" @click="openDriverChangeModal(o.id)">Modifica Fattorino</button>
-                        <button class="btn-secondary" @click="duplicateOrder(o)">Duplica</button>
+                    <div style="margin-top: 10px;">
+                        <button style="background-color: #17a2b8; color: white;" @click="openDriverChangeModal(o.id)">Modifica Fattorino</button>
+                        <button style="background-color: #6c757d; color: white;" @click="duplicateOrder(o)">Duplica</button>
                     </div>
                 </li>
             </ul>
@@ -619,7 +467,7 @@
                     </div>
                 </div>
             </div>
-            <button class="btn-success" @click="addRawMaterial" :disabled="!rawMaterialName || rawMaterialQuantity <= 0">Aggiungi</button>
+            <button style="background-color: #28a745; color: white;" @click="addRawMaterial" :disabled="!rawMaterialName || rawMaterialQuantity <= 0">Aggiungi</button>
 
             <h3>Inventario Attuale</h3>
             <ul class="inventory-list">
@@ -627,13 +475,13 @@
                 <li v-for="(item, index) in inventory" :key="index" class="inventory-item">
                     <div class="inventory-item-details">
                         <p style="font-weight: bold;">{{ item.nome }}</p>
-                        <p>**Quantità:** <span style="font-size: 1.2em; color: #007bff;">{{ item.quantity.toFixed(2) }} {{ item.unit }}</span></p>
+                        <p>**Quantità:** <span style="font-size: 1.2em; color: blue;">{{ item.quantity.toFixed(2) }} {{ item.unit }}</span></p>
                     </div>
 
                     <div class="inventory-item-actions">
-                        <input type="number" v-model.number="item.reductionInput" min="0.01" :max="item.quantity" step="0.01" style="width: 100px; margin-bottom: 0;">
-                        <button class="btn-warning" @click="reduceStock(index)" :disabled="item.reductionInput <= 0 || item.reductionInput > item.quantity">Scarico</button>
-                        <button class="btn-danger" @click="deleteRawMaterial(index)">❌</button>
+                        <input type="number" v-model.number="item.reductionInput" min="0.01" :max="item.quantity" step="0.01">
+                        <button style="background-color: #ffc107;" @click="reduceStock(index)" :disabled="item.reductionInput <= 0 || item.reductionInput > item.quantity">Scarico</button>
+                        <button style="background-color: red; color: white;" @click="deleteRawMaterial(index)">❌</button>
                     </div>
                 </li>
             </ul>
@@ -643,53 +491,48 @@
             <div class="flex-container">
                 <div class="flex-half">
                     <h2>Gestione Fattorini</h2>
-                    <ul class="driver-list">
-                        <li v-for="driver in menuData.drivers" :key="driver" class="driver-item">
+                    <ul style="list-style: none; padding: 0;">
+                        <li v-for="driver in menuData.drivers" :key="driver" style="display: flex; justify-content: space-between; padding: 5px 0;">
                             <span>{{driver}}</span>
-                            <button class="btn-danger" @click="deleteDriver(driver)">Elimina</button>
+                            <button style="background-color: red; color: white;" @click="deleteDriver(driver)">Elimina</button>
                         </li>
                     </ul>
-                    <input type="text" v-model="newDriverName" placeholder="Nome Fattorino">
-                    <button class="btn-success" @click="addDriver" :disabled="!newDriverName">Aggiungi Fattorino</button>
+                    <input type="text" v-model="newDriverName" placeholder="Nome Fattorino" style="width: 250px;">
+                    <button style="background-color: #28a745; color: white;" @click="addDriver" :disabled="!newDriverName">Aggiungi Fattorino</button>
 
                     <hr style="margin-top: 20px;">
 
                     <h2>Impostazioni Modificatori</h2>
                     <h3>Gestione Categorie Modificatori</h3>
-                    <ul class="modifier-category-list">
-                        <li v-for="cat in menuData.modifierCategories" :key="cat" class="category-item">
+                    <ul style="list-style: none; padding: 0;">
+                        <li v-for="cat in menuData.modifierCategories" :key="cat" style="display: flex; justify-content: space-between; padding: 5px 0;">
                             <span>{{cat}}</span>
-                            <button class="btn-danger" @click="deleteModifierCategory(cat)">Elimina</button>
+                            <button style="background-color: red; color: white;" @click="deleteModifierCategory(cat)">Elimina</button>
                         </li>
                     </ul>
-                    <input type="text" v-model="newModifierCategoryName" placeholder="Es. Extra">
-                    <button class="btn-success" @click="addModifierCategory" :disabled="!newModifierCategoryName">Aggiungi Categoria</button>
+                    <input type="text" v-model="newModifierCategoryName" placeholder="Es. Extra" style="width: 250px;">
+                    <button style="background-color: #28a745; color: white;" @click="addModifierCategory" :disabled="!newModifierCategoryName">Aggiungi Categoria</button>
 
                     <h3>Aggiungi/Rimuovi Modificatori</h3>
-                    <div class="flex-container" style="gap: 5px;">
-                        <div class="flex-half">
-                            <label>Categoria</label>
-                            <select v-model="selectedModCategory">
-                                <option v-for="cat in menuData.modifierCategories" :key="cat">{{ cat }}</option>
-                            </select>
-                        </div>
-                        <div class="flex-half">
-                            <label>Nome Modificatore</label>
-                            <input type="text" v-model="newModifierName">
-                        </div>
-                        <div style="width: 100px;">
-                            <label>Prezzo</label>
-                            <input type="number" v-model.number="newModifierPrice" min="0" step="0.01">
-                        </div>
-                    </div>
-                    <button class="btn-success" @click="addModifier" :disabled="!selectedModCategory || !newModifierName">Aggiungi</button>
+                    <label>Categoria</label>
+                    <select v-model="selectedModCategory" style="width: 250px;">
+                        <option v-for="cat in menuData.modifierCategories" :key="cat">{{ cat }}</option>
+                    </select>
+
+                    <label>Nome Modificatore</label>
+                    <input type="text" v-model="newModifierName" style="width: 250px;">
+
+                    <label>Prezzo</label>
+                    <input type="number" v-model.number="newModifierPrice" min="0" step="0.01" style="width: 150px;">
+
+                    <button style="background-color: #28a745; color: white;" @click="addModifier" :disabled="!selectedModCategory || !newModifierName">Aggiungi</button>
 
                     <div v-for="cat in menuData.modifierCategories" :key="'mod-list-' + cat">
                         <h4>{{cat}}</h4>
-                        <ul class="modifier-list">
-                            <li v-for="m in getModifiersByCategory(cat)" :key="m.nome" class="modifier-item">
+                        <ul style="list-style: none; padding: 0;">
+                            <li v-for="m in getModifiersByCategory(cat)" :key="m.nome" style="display: flex; justify-content: space-between; padding: 5px 0;">
                                 <span>{{m.nome}} (+€{{m.prezzo.toFixed(2)}})</span>
-                                <button class="btn-danger" @click="deleteModifier(m.nome)">❌</button>
+                                <button style="background-color: red; color: white;" @click="deleteModifier(m.nome)">❌</button>
                             </li>
                         </ul>
                     </div>
@@ -699,70 +542,70 @@
                 <div class="flex-half">
                     <h2>Impostazioni Menu</h2>
                     <h3>Gestione Categorie Menu</h3>
-                    <ul class="category-list">
-                        <li v-for="cat in menuData.categories" :key="cat" class="category-item">
+                    <ul style="list-style: none; padding: 0;">
+                        <li v-for="cat in menuData.categories" :key="cat" style="display: flex; justify-content: space-between; padding: 5px 0;">
                             <span>{{cat}}</span>
-                            <button class="btn-danger" @click="deleteCategory(cat)">Elimina</button>
+                            <button style="background-color: red; color: white;" @click="deleteCategory(cat)">Elimina</button>
                         </li>
                     </ul>
-                    <input type="text" v-model="newCategoryName" placeholder="Es. Pizze Classiche">
-                    <button class="btn-success" @click="addCategory" :disabled="!newCategoryName">Aggiungi Categoria</button>
+                    <input type="text" v-model="newCategoryName" placeholder="Es. Pizze Classiche" style="width: 250px;">
+                    <button style="background-color: #28a745; color: white;" @click="addCategory" :disabled="!newCategoryName">Aggiungi Categoria</button>
 
                     <h3>Gestione Prodotti</h3>
                     <div v-for="cat in menuData.categories" :key="'prod-list-' + cat">
                         <h4>{{cat}}</h4>
-                        <ul class="product-list">
-                            <li v-for="p in getProductsByCategory(cat)" :key="p.nome" class="product-item">
+                        <ul style="list-style: none; padding: 0;">
+                            <li v-for="p in getProductsByCategory(cat)" :key="p.nome" style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px dotted #ccc;">
                                 <span>
                                     {{p.nome}} – €{{p.prezzo.toFixed(2)}}
                                     <span v-if="p.isMeter || p.isHalfPizza">(Composto)</span>
                                     <span v-if="p.isFinished" class="finished-badge">FINITO</span>
                                 </span>
-                                <div class="item-actions">
-                                    <button class="btn-info" @click="toggleFinished(p.nome)">{{ p.isFinished ? 'Rendi Disponibile' : 'Segna Finito' }}</button>
-                                    <button class="btn-danger" @click="deleteProduct(p.nome)">❌</button>
+                                <div style="display: flex; gap: 5px;">
+                                    <button style="background-color: #17a2b8; color: white;" @click="toggleFinished(p.nome)">{{ p.isFinished ? 'Rendi Disponibile' : 'Segna Finito' }}</button>
+                                    <button style="background-color: red; color: white;" @click="deleteProduct(p.nome)">❌</button>
                                 </div>
                             </li>
                         </ul>
                     </div>
 
-                    <h3>Aggiungi Prodotto (N.B. Le sezioni con composizione complessa sono gestite dal sistema)</h3>
+                    <h3>Aggiungi Prodotto</h3>
                     <label>Seleziona una categoria</label>
-                    <select v-model="newProductCategory">
+                    <select v-model="newProductCategory" style="width: 250px;">
                         <option v-for="cat in menuData.categories" :key="cat">{{ cat }}</option>
                     </select>
 
                     <label>Tipo di Prodotto *</label>
-                    <select v-model="newProductType">
+                    <select v-model="newProductType" style="width: 250px;">
                         <option value="standard">Standard (Es. Bibita)</option>
                         <option value="halfPizza">Mezza Pizza (gestisce due gusti)</option>
                         <option value="meterPizza">Pizza al Metro/Sezione (gestisce più sezioni/gusti)</option>
                     </select>
 
                     <label>Nome Prodotto *</label>
-                    <input type="text" v-model="newProductName" placeholder="Nome Prodotto">
+                    <input type="text" v-model="newProductName" placeholder="Nome Prodotto" style="width: 250px;">
 
                     <label v-if="newProductType === 'standard'">Prezzo *</label>
-                    <input v-if="newProductType === 'standard'" type="number" v-model.number="newProductPrice" min="0" step="0.01">
+                    <input v-if="newProductType === 'standard'" type="number" v-model.number="newProductPrice" min="0" step="0.01" style="width: 150px;">
 
-                    <button class="btn-success" @click="addProduct" :disabled="!newProductCategory || !newProductName || (newProductType === 'standard' && newProductPrice <= 0)">Aggiungi</button>
+                    <button style="background-color: #28a745; color: white;" @click="addProduct" :disabled="!newProductCategory || !newProductName || (newProductType === 'standard' && newProductPrice <= 0)">Aggiungi</button>
 
                     <hr style="margin-top: 20px;">
 
                     <h2>Gestione Zone di Consegna</h2>
                     <h3>Zone Attive</h3>
-                    <ul class="zone-list">
-                        <li v-for="zone in menuData.deliveryZones" :key="zone.name" class="zone-item">
+                    <ul style="list-style: none; padding: 0;">
+                        <li v-for="zone in menuData.deliveryZones" :key="zone.name" style="display: flex; justify-content: space-between; padding: 5px 0;">
                             <span>{{zone.name}} – Costo: €{{zone.price.toFixed(2)}}</span>
-                            <button class="btn-danger" @click="deleteZone(zone.name)">❌</button>
+                            <button style="background-color: red; color: white;" @click="deleteZone(zone.name)">❌</button>
                         </li>
                     </ul>
                     <h3>Aggiungi Nuova Zona</h3>
                     <label>Nome Zona *</label>
-                    <input type="text" v-model="newZoneName" placeholder="Es. Centro">
+                    <input type="text" v-model="newZoneName" placeholder="Es. Centro" style="width: 250px;">
                     <label>Costo Consegna *</label>
-                    <input type="number" v-model.number="newZonePrice" min="0" step="0.01">
-                    <button class="btn-success" @click="addZone" :disabled="!newZoneName || newZonePrice < 0">Aggiungi Zona</button>
+                    <input type="number" v-model.number="newZonePrice" min="0" step="0.01" style="width: 150px;">
+                    <button style="background-color: #28a745; color: white;" @click="addZone" :disabled="!newZoneName || newZonePrice < 0">Aggiungi Zona</button>
                 </div>
             </div>
         </div>
@@ -787,13 +630,13 @@
                             <li v-for="(mod, modIdx) in section.modifiers" :key="'sec'+secIdx+'mod'+modIdx">
                                 {{ getModifierIcon(getModifierCategory(mod.nome)) }}
                                 {{ mod.nome }} (+€{{ mod.prezzo.toFixed(2) }})
-                                <button class="btn-danger" style="padding: 2px 5px; margin-left: 10px;" @click="section.modifiers.splice(modIdx, 1)">❌</button>
+                                <button style="background-color: red; color: white; padding: 2px 5px; margin-left: 10px;" @click="section.modifiers.splice(modIdx, 1)">❌</button>
                             </li>
                         </ul>
                     </div>
 
                     <div style="margin-top: 15px; border-top: 1px dotted #ccc; padding-top: 10px;">
-                        <button class="btn-info" @click="openModifierSelector(section)">Aggiungi Modificatore</button>
+                        <button style="background-color: #17a2b8; color: white;" @click="openModifierSelector(section)">Aggiungi Modificatore</button>
 
                         <div v-if="activeModifierSection === section" style="background-color: #f1f1f1; padding: 10px; border-radius: 5px; margin-top: 10px;">
                             <label>Categoria</label>
@@ -813,9 +656,9 @@
 
                 <p style="font-weight: bold; margin-top: 20px;">Costo stimato: **€{{ calculateItemTotal(tempMeterItem).toFixed(2) }}**</p>
 
-                <div class="item-actions">
-                    <button class="btn-secondary" @click="cancelComposer">Annulla</button>
-                    <button class="btn-success" @click="addItemToOrderFromComposer(tempMeterItem)">Aggiungi All'Ordine</button>
+                <div style="margin-top: 15px;">
+                    <button style="background-color: #6c757d; color: white;" @click="cancelComposer">Annulla</button>
+                    <button style="background-color: #28a745; color: white;" @click="addItemToOrderFromComposer(tempMeterItem)">Aggiungi All'Ordine</button>
                 </div>
             </div>
         </div>
@@ -839,13 +682,13 @@
                             <li v-for="(mod, modIdx) in tempHalfPizzaItem.modifiers1" :key="'half1mod'+modIdx">
                                 {{ getModifierIcon(getModifierCategory(mod.nome)) }}
                                 {{ mod.nome }} (+€{{ mod.prezzo.toFixed(2) }})
-                                <button class="btn-danger" style="padding: 2px 5px; margin-left: 10px;" @click="tempHalfPizzaItem.modifiers1.splice(modIdx, 1)">❌</button>
+                                <button style="background-color: red; color: white; padding: 2px 5px; margin-left: 10px;" @click="tempHalfPizzaItem.modifiers1.splice(modIdx, 1)">❌</button>
                             </li>
                         </ul>
                     </div>
 
                     <div style="margin-top: 15px; border-top: 1px dotted #ccc; padding-top: 10px;">
-                        <button class="btn-info" @click="openModifierSelector(1)">Aggiungi Modificatore a Metà 1</button>
+                        <button style="background-color: #17a2b8; color: white;" @click="openModifierSelector(1)">Aggiungi Modificatore a Metà 1</button>
 
                         <div v-if="activeModifierSection === 1" style="background-color: #f1f1f1; padding: 10px; border-radius: 5px; margin-top: 10px;">
                             <label>Categoria</label>
@@ -877,13 +720,13 @@
                             <li v-for="(mod, modIdx) in tempHalfPizzaItem.modifiers2" :key="'half2mod'+modIdx">
                                 {{ getModifierIcon(getModifierCategory(mod.nome)) }}
                                 {{ mod.nome }} (+€{{ mod.prezzo.toFixed(2) }})
-                                <button class="btn-danger" style="padding: 2px 5px; margin-left: 10px;" @click="tempHalfPizzaItem.modifiers2.splice(modIdx, 1)">❌</button>
+                                <button style="background-color: red; color: white; padding: 2px 5px; margin-left: 10px;" @click="tempHalfPizzaItem.modifiers2.splice(modIdx, 1)">❌</button>
                             </li>
                         </ul>
                     </div>
 
                     <div style="margin-top: 15px; border-top: 1px dotted #ccc; padding-top: 10px;">
-                        <button class="btn-info" @click="openModifierSelector(2)">Aggiungi Modificatore a Metà 2</button>
+                        <button style="background-color: #17a2b8; color: white;" @click="openModifierSelector(2)">Aggiungi Modificatore a Metà 2</button>
 
                         <div v-if="activeModifierSection === 2" style="background-color: #f1f1f1; padding: 10px; border-radius: 5px; margin-top: 10px;">
                             <label>Categoria</label>
@@ -902,9 +745,9 @@
 
                 <p style="font-weight: bold; margin-top: 20px;">Costo Calcolato (Base Media + Modificatori): **€{{ calculateItemTotal(tempHalfPizzaItem).toFixed(2) }}**</p>
 
-                <div class="item-actions">
-                    <button class="btn-secondary" @click="cancelComposer">Annulla</button>
-                    <button class="btn-success" @click="addItemToOrderFromComposer(tempHalfPizzaItem)" :disabled="!tempHalfPizzaItem.gusto1 || !tempHalfPizzaItem.gusto2">Aggiungi All'Ordine</button>
+                <div style="margin-top: 15px;">
+                    <button style="background-color: #6c757d; color: white;" @click="cancelComposer">Annulla</button>
+                    <button style="background-color: #28a745; color: white;" @click="addItemToOrderFromComposer(tempHalfPizzaItem)" :disabled="!tempHalfPizzaItem.gusto1 || !tempHalfPizzaItem.gusto2">Aggiungi All'Ordine</button>
                 </div>
             </div>
         </div>
@@ -915,13 +758,12 @@
 
                 <label>Modalità di Ritiro/Consegna *</label>
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <div v-for="m in [{mode: 'tavolo', label: 'Tavolo/Ritiro'}, {mode: 'consegna', label: 'Consegna'}]" :key="m.mode"
-                        class="pizza-type-box"
-                        :class="{'active': finalizeOrder.mode === m.mode}"
+                    <button v-for="m in [{mode: 'tavolo', label: 'Tavolo/Ritiro'}, {mode: 'consegna', label: 'Consegna'}]" :key="m.mode"
+                        :style="{ 'background-color': finalizeOrder.mode === m.mode ? 'blue' : '#ccc', 'color': finalizeOrder.mode === m.mode ? 'white' : 'black' }"
                         @click="setOrderMode(m.mode)">
                         {{m.label}}
                         <span v-if="finalizeOrder.mode === m.mode">✔️</span>
-                    </div>
+                    </button>
                 </div>
 
                 <div class="flex-container">
@@ -990,9 +832,9 @@
                 </div>
 
 
-                <div class="item-actions">
-                    <button class="btn-secondary" @click="closeFinalizeOrderModal">Annulla</button>
-                    <button class="btn-success" @click="saveOrder" :disabled="!isFinalizeFormValid">
+                <div style="margin-top: 15px;">
+                    <button style="background-color: #6c757d; color: white;" @click="closeFinalizeOrderModal">Annulla</button>
+                    <button style="background-color: #28a745; color: white;" @click="saveOrder" :disabled="!isFinalizeFormValid">
                         {{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}
                     </button>
                 </div>
@@ -1002,10 +844,10 @@
         <div v-if="showShareModal" class="modal-overlay">
             <div class="modal-content">
                 <h3>Azioni Ordine #{{selectedOrderIdForShare}}</h3>
-                <div class="item-actions" style="flex-direction: column; gap: 10px;">
-                    <button class="btn-info" @click="printOrder(selectedOrderIdForShare)">Stampa Comanda</button>
-                    <button class="btn-info" @click="shareOrderDetails(selectedOrderIdForShare)">Condividi / Copia Dettagli</button>
-                    <button class="btn-secondary" @click="showShareModal = false">Chiudi</button>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                    <button style="background-color: #17a2b8; color: white;" @click="printOrder(selectedOrderIdForShare)">Stampa Comanda</button>
+                    <button style="background-color: #17a2b8; color: white;" @click="shareOrderDetails(selectedOrderIdForShare)">Condividi / Copia Dettagli</button>
+                    <button style="background-color: #6c757d; color: white;" @click="showShareModal = false">Chiudi</button>
                 </div>
             </div>
         </div>
@@ -1018,9 +860,9 @@
                     <option value="">Nessuno</option>
                     <option v-for="driver in menuData.drivers" :key="driver">{{ driver }}</option>
                 </select>
-                <div class="item-actions">
-                    <button class="btn-success" @click="updateArchivedDriver">Salva</button>
-                    <button class="btn-secondary" @click="showDriverChangeModal = false">Annulla</button>
+                <div style="margin-top: 15px;">
+                    <button style="background-color: #28a745; color: white;" @click="updateArchivedDriver">Salva</button>
+                    <button style="background-color: #6c757d; color: white;" @click="showDriverChangeModal = false">Annulla</button>
                 </div>
             </div>
         </div>
@@ -1035,7 +877,7 @@
                     activeTab: 'inserimento',
                     activeOrderFilter: 'Tutti', // 'Tutti', 'In Prep.', 'Pronto', 'Archiviati'
                     editingOrderId: null,
-                    
+
                     // --- MENU DATA & PERSISTENCE ---
                     menuData: JSON.parse(localStorage.getItem('menuData')) || {
                         categories: ['Pizze Classiche', 'Pizze Speciali', 'Bibite'],
@@ -1056,7 +898,7 @@
                         ],
                         drivers: ['Mario', 'Luigi']
                     },
-                    
+
                     // --- ORDER CREATION DATA ---
                     orders: JSON.parse(localStorage.getItem('orders')) || [],
                     archivedOrders: JSON.parse(localStorage.getItem('archivedOrders')) || [],
@@ -1078,11 +920,11 @@
                     // --- FINALIZATION DATA ---
                     showFinalizeModal: false,
                     finalizeOrder: this.resetFinalizeOrder(),
-                    
+
                     // --- MODALS & UTILITIES ---
                     showShareModal: false,
                     selectedOrderIdForShare: null,
-                    
+
                     showDriverChangeModal: false,
                     selectedOrderIdForDriverChange: null,
                     newDriverForArchivedOrder: '',
@@ -1101,7 +943,7 @@
                     newZonePrice: 0.00,
                     newDriverName: '',
 
-                    // --- INVENTORY DATA & PERSISTENCE (FIXED V4.0) ---
+                    // --- INVENTORY DATA & PERSISTENCE ---
                     inventory: this.loadInventory(), // Load and prepare inventory
                     rawMaterialName: '',
                     rawMaterialQuantity: 1,
@@ -1110,9 +952,11 @@
             },
             computed: {
                 standardPizzas() {
+                    // Filter for standard pizzas (or items suitable for half/meter base)
                     return this.menuData.products.filter(p => p.category.toLowerCase().includes('pizze') && !p.isHalfPizza && !p.isMeter && !p.isFinished);
                 },
                 schiacciate() {
+                     // Filter for schiacciate (or other similar category)
                     return this.menuData.products.filter(p => p.category.toLowerCase().includes('schiacciate') && !p.isHalfPizza && !p.isMeter && !p.isFinished);
                 },
                 calculatedOrderTotal() {
@@ -1215,7 +1059,7 @@
                     localStorage.setItem('orderCounter', this.orderCounter);
                 },
 
-                // --- INVENTORY PERSISTENCE & LOADING (V4.0 FIX) ---
+                // --- INVENTORY PERSISTENCE & LOADING ---
                 loadInventory() {
                     const loadedInventory = JSON.parse(localStorage.getItem('inventory')) || [];
                     // Ensure every item has a reduction input property for local binding
@@ -1225,8 +1069,7 @@
                     }));
                 },
                 saveInventory() {
-                    // When saving, we can strip the non-persistent `reductionInput` if preferred, but it doesn't hurt to keep it.
-                    // For simplicity and to maintain state, we save the full objects.
+                    // Saves the inventory state to local storage
                     localStorage.setItem('inventory', JSON.stringify(this.inventory));
                 },
 
@@ -1259,7 +1102,7 @@
                     const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
                     return new Date(dateString).toLocaleDateString('it-IT', options);
                 },
-                
+
                 // --- CALCULATION METHOD ---
                 calculateItemTotal(item) {
                     let total = 0;
@@ -1338,7 +1181,7 @@
                         this.showHalfPizzaComposer = true;
                     }
                 },
-                
+
                 // --- COMPOSER METHODS ---
                 openComposer(product) {
                     this.resetCurrentProduct(); // Ensure no standard product is accidentally being edited
@@ -1611,7 +1454,7 @@
                 printOrder(id) {
                     const order = this.orders.find(o => o.id === id) || this.archivedOrders.find(o => o.id === id);
                     if (!order) return;
-                    
+
                     // Simple text generation for printing/sharing
                     const details = this.generateOrderDetails(order);
 
@@ -1719,7 +1562,7 @@
                     }
                 },
 
-                // --- INVENTORY METHODS (V4.0 FIX) ---
+                // --- INVENTORY METHODS ---
                 addRawMaterial() {
                     const parsedQuantity = parseFloat(this.rawMaterialQuantity);
                     if (!this.rawMaterialName || parsedQuantity <= 0 || isNaN(parsedQuantity)) {
