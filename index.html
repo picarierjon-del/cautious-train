@@ -32,7 +32,7 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .item { background: #fff; border: 1px solid #ddd; border-radius: 10px; text-align: center; padding: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
         .item:hover { background: #ffecec; }
-        .item.active-menu-selection { border: 3px solid #3b82f6; box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);} /* Nuova Evidenziazione */
+        .item.active-menu-selection { border: 3px solid #3b82f6; box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);} 
         .item strong { display: block; margin-bottom: 4px; }
         .item.disabled { background: #f0f0f0; color: #999; cursor: not-allowed; opacity: 0.7; }
         .item.disabled:hover { background: #f0f0f0; }
@@ -74,6 +74,11 @@
         .order-actions button.share { background: #10b981; } 
         .order-actions button.duplicate { background: #facc15; color: #333;}
         
+        /* Filtro Ordini Attivi */
+        .filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .filter-btn { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.9rem; }
+        .filter-btn.active { background: #e31b23; color: #fff; border-color: #e31b23; }
+
         /* Avvisi Temporali */
         .order-card.warning-near { border-left: 5px solid #facc15; } /* Giallo (15 min) */
         .order-card.warning-urgent { border-left: 5px solid #b91c1c; } /* Rosso (5 min) */
@@ -98,9 +103,10 @@
         .stats-box { background: #e31b23; color: #fff; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
         .stats-box h3 { margin: 0; font-size: 1.1rem; }
         .stats-box p { margin: 5px 0 0; font-size: 2rem; font-weight: 700; }
-        .archive-order-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px; opacity: 0.9; }
+        .archive-order-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px; opacity: 0.9; position: relative;}
         .archive-order-card h5 { margin: 0 0 6px; color: #6b7280; font-size: 0.9rem;}
-
+        .archive-actions button { margin-left: 6px; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem;}
+        
         /* Stili Impostazioni e Gestione Fattorini */
         .settings-list { margin-bottom: 15px; }
         .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
@@ -232,15 +238,21 @@
 
     <section v-show="view==='ordini'">
         <h2>Ordini Attivi</h2>
-        <div v-if="!orders.length">Nessun ordine attivo.</div>
-        <div class="order-card" v-for="o in orders" :key="o.id"
+        <div class="filter-row">
+            <button class="filter-btn" :class="{active: activeStatusFilter === 'Tutti'}" @click="activeStatusFilter = 'Tutti'">Tutti</button>
+            <button class="filter-btn" :class="{active: activeStatusFilter === 'In preparazione'}" @click="activeStatusFilter = 'In preparazione'">In Prep.</button>
+            <button class="filter-btn" :class="{active: activeStatusFilter === 'Pronto'}" @click="activeStatusFilter = 'Pronto'">Pronto</button>
+        </div>
+        
+        <div v-if="!filteredActiveOrders.length">Nessun ordine attivo con il filtro selezionato.</div>
+        <div class="order-card" v-for="o in filteredActiveOrders" :key="o.id"
              :class="{'warning-urgent': isUrgent(o), 'warning-near': isNear(o) && !isUrgent(o)}">
             <h4>
                 <span>#{{o.id}} – {{o.mode.toUpperCase()}} ({{o.status}})</span>
                 <span v-if="o.tableNumber" style="color:#3b82f6; font-size:1rem;">Tavolo/Ritiro: {{o.tableNumber}}</span>
             </h4>
             <p><strong>Cliente: {{o.customer}}</strong></p>
-            <p>Ritiro/Consegna: **{{o.hour}}**</p>
+            <p>Data: **{{ formatDate(o.date) }}** | Ritiro/Consegna: **{{o.hour}}**</p>
             <p v-if="o.mode === 'consegna' && o.driver">Fattorino Assegnato: <strong>{{o.driver}}</strong></p>
             <p v-if="o.phone">📞 {{o.phone}}</p>
             <p v-if="o.mode === 'consegna'">
@@ -335,7 +347,14 @@
                 <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6; margin-left: 10px;">Tavolo/Ritiro: {{o.tableNumber}}</span>
                 <span v-if="o.driver" style="font-size: 0.8rem; color: #10b981; margin-left: 10px;">Fattorino: {{o.driver}}</span>
             </p>
-            <div class="order-actions" style="margin-top: 5px;">
+            <div class="archive-actions" style="margin-top: 5px; display: flex; align-items: center; justify-content: flex-end;">
+                 <div v-if="o.mode === 'consegna'" style="display: flex; align-items: center; gap: 5px;">
+                     <label style="font-size: 0.8rem;">Modifica Fattorino:</label>
+                     <select @change="updateArchiveDriver(o.id, $event.target.value)" style="padding: 4px; border-radius: 4px; font-size: 0.8rem;">
+                         <option value="">Nessuno</option>
+                         <option v-for="driver in availableDrivers" :value="driver" :selected="o.driver === driver">{{ driver }}</option>
+                     </select>
+                 </div>
                 <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
             </div>
         </div>
@@ -459,7 +478,7 @@
 <nav>
     <button :class="{active:view==='inserimento'}" @click="view='inserimento'"><i class="fa-solid fa-cash-register"></i>Inserimento</button>
     <button :class="{active:view==='ordini'}" @click="view='ordini'"><i class="fa-solid fa-clipboard-list"></i>Ordini</button>
-    <button :class="{active:view==='storico'}" @click="view='storico'"><i class="fa-solid fa-chart-line"></i>Storico</button>
+    <button :class="{active:view==='storico'}" @click="view='storico'; calculateDriverStats();"><i class="fa-solid fa-chart-line"></i>Storico</button>
     <button :class="{active:view==='impostazioni'}" @click="view='impostazioni'"><i class="fa-solid fa-gear"></i>Impostazioni</button>
 </nav>
 
@@ -684,6 +703,11 @@
             </div>
 
             <div class="form-row">
+                <label for="date">Data Ordine *</label>
+                <input type="date" id="date" v-model="date" required :min="minDate">
+            </div>
+
+            <div class="form-row">
                 <label for="hour">Ora di Ritiro/Consegna *</label>
                 <input type="time" id="hour" v-model="hour" required>
             </div>
@@ -714,6 +738,11 @@
         const today = new Date();
         return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
     }
+    
+    function getTodayDateString() {
+        const today = new Date();
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
 
     function getDefaultHour() {
         const now = new Date();
@@ -738,7 +767,7 @@
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
         archive: JSON.parse(localStorage.getItem('pz_archive')||'[]'), 
-        drivers: JSON.parse(localStorage.getItem('pz_drivers')||'[]'), // Nuovo: Array per i Fattorini
+        drivers: JSON.parse(localStorage.getItem('pz_drivers')||'[]'),
 
         // Stato Ordine Corrente
         activeCat:'Pizze',
@@ -771,8 +800,11 @@
         town:'',
         notes: '',
         tableNumber: '', 
+        date: getTodayDateString(), // NUOVO: Campo data
         hour: getDefaultHour(),
         driver: '', 
+        minDate: getTodayDateString(), // Per limitare il campo data
+        activeStatusFilter: 'Tutti', // NUOVO: Filtro stato ordini
 
         // Dati per Impostazioni
         newMenuCat: '', newProdCat: '', newName: '', newPrice: '',
@@ -784,6 +816,27 @@
         selectedDriver: '', 
         driverStats: { totalOrders: 0, totalRevenue: 0 }, 
 
+
+        // Funzione di Formattazione Data per la Visualizzazione
+        formatDate(dateString) {
+            if (!dateString) return 'Data Sconosciuta';
+            const [year, month, day] = dateString.split('-');
+            const date = new Date(year, month - 1, day);
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            if (date.getTime() === today.getTime()) {
+                return 'OGGI';
+            } else if (date.getTime() === tomorrow.getTime()) {
+                return 'DOMANI';
+            } else {
+                 return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+            }
+        },
 
         // Funzione di Calcolo Prezzo Metà Pizza Arrotondato
         roundHalfEuro(price) {
@@ -809,6 +862,19 @@
                 p.nome.toLowerCase().includes(term)
             );
         },
+        
+        // Computed property per il filtro degli ordini attivi
+        get filteredActiveOrders() {
+            if (this.activeStatusFilter === 'Tutti') {
+                // Ordina per data e poi per ora (più vecchi per primi)
+                return [...this.orders].sort((a, b) => {
+                    const dateTimeA = new Date(`${a.date}T${a.hour}`);
+                    const dateTimeB = new Date(`${b.date}T${b.hour}`);
+                    return dateTimeA - dateTimeB;
+                });
+            }
+            return this.orders.filter(o => o.status === this.activeStatusFilter);
+        },
 
         // Computed per base pizza disponibili nel modale
         get availableBaseItems() {
@@ -822,6 +888,7 @@
         get filteredArchive() {
             const todayKey = getTodayKey();
             const todayOrders = this.archive.filter(o => 
+                // Filtra solo gli ordini archiviati OGGI
                 new Date(o.archivedDate).toISOString().substring(0, 10) === todayKey
             );
 
@@ -881,52 +948,53 @@
             }
         },
 
-        // Funzioni per Avvisi Temporali (Omessa per brevità, non modificata)
+        // Funzioni per Avvisi Temporali (Aggiornata per la Data)
         isNear(o) {
             const now = new Date();
-            const orderTime = this.getOrderDateTime(o.hour);
+            const orderTime = this.getOrderDateTime(o.date, o.hour);
             const diffMinutes = Math.floor((orderTime - now) / (1000 * 60));
             return diffMinutes > 5 && diffMinutes <= 15;
         },
         isUrgent(o) {
             const now = new Date();
-            const orderTime = this.getOrderDateTime(o.hour);
+            const orderTime = this.getOrderDateTime(o.date, o.hour);
             const diffMinutes = Math.floor((orderTime - now) / (1000 * 60));
             return diffMinutes > 0 && diffMinutes <= 5;
         },
-        getOrderDateTime(hourString) {
-            const [h, m] = hourString.split(':').map(Number);
-            const date = new Date();
-            date.setHours(h, m, 0, 0);
-            return date;
+        getOrderDateTime(dateString, hourString) {
+            // Unisce data e ora per creare un oggetto Date preciso
+            return new Date(`${dateString}T${hourString}`);
         },
 
-        // --- Logica Calcoli Comuni (Aggiornata per Pizza Metà Modificatori) ---
+        // Funzione per l'aggiornamento del fattorino nello storico (NUOVA FUNZIONALITÀ)
+        updateArchiveDriver(id, newDriver) {
+            const orderIndex = this.archive.findIndex(o => o.id === id);
+            if (orderIndex !== -1) {
+                this.archive[orderIndex].driver = newDriver;
+                this.saveData();
+                this.calculateDriverStats(); // Ricalcola le statistiche per riflettere il cambio
+            }
+        },
+
+        // --- Logica Calcoli Comuni (Omessa per brevità, non modificata) ---
         calculateItemTotal(item) {
             let itemTotal = item.prezzo;
             
             if (item.isHalfPizza) {
-                 // Il prezzo base è già salvato su item.prezzo dopo il calcolo media
                  itemTotal = item.prezzo;
-                 // Aggiunge i modificatori per metà 1
                  if (item.modifiers1 && item.modifiers1.length) {
                      itemTotal += item.modifiers1.reduce((s, m) => s + m.prezzo, 0);
                  }
-                 // Aggiunge i modificatori per metà 2
                  if (item.modifiers2 && item.modifiers2.length) {
                      itemTotal += item.modifiers2.reduce((s, m) => s + m.prezzo, 0);
                  }
             } else if (item.isMeter) {
-                // Calcola il prezzo base dalla somma dei prezzi base dei gusti * peso della sezione
                 let basePrice = item.sections.reduce((sum, section) => {
                     const gustoItem = [...this.availableBaseItems, ...this.availableSchiacciateItems].find(p => p.nome === section.gusto);
                     return sum + (gustoItem ? gustoItem.prezzo * section.size : 0);
                 }, 0);
                 
-                // Aggiorna item.prezzo con il prezzo base calcolato + il prezzo iniziale del prodotto (costo extra per essere "metro")
                 itemTotal = basePrice + item.prezzo; 
-
-                // Aggiunge i modificatori per sezione
                 itemTotal += item.sections.reduce((s, section) => s + section.modifiers.reduce((mSum, m) => mSum + m.prezzo, 0), 0);
             } else if (item.modifiers) {
                 itemTotal += item.modifiers.reduce((s, m) => s + m.prezzo, 0);
@@ -944,7 +1012,6 @@
         // --- Logica Inserimento Articoli/Modificatori (Omessa per brevità, non modificata) ---
         handleItemClick(p) {
             if (p.isFinished) return; 
-            
             this.lastSelectedItem = p; 
 
             if (p.isMeter) {
@@ -1000,7 +1067,7 @@
             this.lastSelectedItem = null;
         },
         
-        // --- LOGICA PRODOTTI COMPOSTI ---
+        // Logica Composizione (Omessa per brevità, non modificata)
         cancelComposition() {
             if (confirm("Sei sicuro di voler annullare la composizione?")) {
                 this.tempMeterItem = null;
@@ -1010,8 +1077,6 @@
                 this.lastSelectedItem = null; 
             }
         },
-        
-        // Logica Mezzo Metro (Omessa per brevità, non modificata)
         startMeterComposition(p) {
             const baseItem = JSON.parse(JSON.stringify(p));
             baseItem.sections.forEach(section => {
@@ -1053,10 +1118,7 @@
             this.showMeterModal = false;
             this.lastSelectedItem = null;
         },
-
-        // Logica Pizza Metà (AGGIORNATA per modificatori)
         startHalfPizzaComposition(p) {
-            // Se in modifica, carica i dati esistenti
             let existingItem = null;
             if (this.editingOrderId && this.selectedItemIndex !== null) {
                  existingItem = this.order[this.selectedItemIndex];
@@ -1073,7 +1135,6 @@
             this.showHalfPizzaModal = true;
             this.showMeterModal = false;
         },
-
         updateHalfPizzaPrice() {
             let basePrice = 0;
             if (this.tempHalfPizzaItem.gusto1 && this.tempHalfPizzaItem.gusto2) {
@@ -1085,33 +1146,23 @@
                     basePrice = this.roundHalfEuro(avgPrice);
                 }
             } 
-            
-            // Salva solo il prezzo base medio, i modificatori saranno aggiunti da calculateItemTotal
             this.tempHalfPizzaItem.prezzo = basePrice;
-            
-            // Trigger ricalcolo totale nel modale
             this.calculateItemTotal(this.tempHalfPizzaItem);
         },
-        
         addHalfPizzaModifier(halfNum, mod) {
             const modList = halfNum === 1 ? 'modifiers1' : 'modifiers2';
             this.tempHalfPizzaItem[modList].push(JSON.parse(JSON.stringify(mod)));
         },
-
         removeHalfPizzaModifier(halfNum, modIndex) {
             const modList = halfNum === 1 ? 'modifiers1' : 'modifiers2';
             this.tempHalfPizzaItem[modList].splice(modIndex, 1);
         },
-
         addHalfPizzaToOrder() {
             if (!this.tempHalfPizzaItem.gusto1 || !this.tempHalfPizzaItem.gusto2 || this.tempHalfPizzaItem.prezzo === 0) {
                 alert("Seleziona entrambi i gusti per calcolare il prezzo.");
                 return;
             }
-            
-            // Ricalcola il totale finale (incluso modificatori)
             this.calculateItemTotal(this.tempHalfPizzaItem); 
-
             this.order.push(this.tempHalfPizzaItem);
             this.selectedItemIndex = this.order.length - 1;
             this.calc();
@@ -1121,7 +1172,7 @@
             this.lastSelectedItem = null;
         },
         
-        // --- Logica Ordine e Finalizzazione (Omessa per brevità, non modificata) ---
+        // --- Logica Ordine e Finalizzazione (Aggiornata per la Data) ---
         resetCurrentOrderState() {
             this.order = [];
             this.selectedItemIndex = null;
@@ -1139,6 +1190,7 @@
             this.deliveryCost = 0;
             this.notes = ''; 
             this.tableNumber = ''; 
+            this.date = getTodayDateString(); // Reset data
             this.hour = getDefaultHour();
             this.driver = ''; 
         },
@@ -1161,6 +1213,7 @@
             this.town = orderToEdit.town || '';
             this.notes = orderToEdit.notes || '';
             this.tableNumber = orderToEdit.tableNumber || ''; 
+            this.date = orderToEdit.date || getTodayDateString(); // Carica la data
             this.hour = orderToEdit.hour;
             this.driver = orderToEdit.driver || ''; 
 
@@ -1196,6 +1249,7 @@
             this.notes = duplicatedOrder.notes || '';
             this.tableNumber = duplicatedOrder.tableNumber || '';
             this.driver = duplicatedOrder.driver || ''; 
+            this.date = getTodayDateString(); // Data di oggi per la duplicazione
             this.hour = getDefaultHour(); 
 
             this.calc();
@@ -1227,6 +1281,7 @@
                 this.notes = '';
                 this.tableNumber = '';
                 this.driver = ''; 
+                this.date = getTodayDateString(); // Imposta la data di oggi se nuovo
                 this.hour = getDefaultHour();
                 this.calc(); 
             } 
@@ -1249,7 +1304,7 @@
                 return;
             }
 
-            if (!this.customer || !this.mode || !this.hour || 
+            if (!this.customer || !this.mode || !this.hour || !this.date ||
                 (this.mode !== 'consegna' && !this.tableNumber.trim()) || 
                 (this.mode !== 'banco' && !this.phone.trim()) || 
                 (this.mode === 'consegna' && (!this.address.trim() || !this.streetNumber.trim() || !this.zoneName || !this.town.trim()))) {
@@ -1271,6 +1326,7 @@
                 town: this.town.trim(),
                 notes: this.notes.trim(),
                 tableNumber: this.tableNumber.trim(), 
+                date: this.date, // Salva la data
                 hour: this.hour,
                 driver: this.mode === 'consegna' ? this.driver : '', 
                 status: 'In preparazione' 
@@ -1294,7 +1350,7 @@
             this.view = 'ordini';
         },
         
-        // --- Gestione Stato Ordini e Archiviazione con Robustezza (Omessa per brevità, non modificata) ---
+        // --- Gestione Stato Ordini e Archiviazione (Omessa per brevità, non modificata) ---
         advance(o){
             const st=["In preparazione","Pronto","Completato"];
             const i=st.indexOf(o.status);
@@ -1336,7 +1392,7 @@
             }
         },
         
-        // --- Funzioni di Stampa e Condivisione (Aggiornata per Pizza Metà Modificatori) ---
+        // --- Funzioni di Stampa e Condivisione (Omessa per brevità, non modificata) ---
         
         formatOrderForSharing(id) {
             const order = this.orders.find(o => o.id === id) || this.archive.find(o => o.id === id);
@@ -1344,7 +1400,7 @@
             
             let text = `================================\n`;
             text += `*COMANDA #${order.id} - ${order.mode.toUpperCase()}*\n`;
-            text += `Ora: ${order.hour} | Stato: ${order.status}\n`;
+            text += `Data: ${this.formatDate(order.date)} | Ora: ${order.hour} | Stato: ${order.status}\n`;
             text += `Cliente: ${order.customer}`;
             if (order.phone) text += ` | Tel: ${order.phone}\n`;
             else text += `\n`;
@@ -1420,7 +1476,7 @@
                 <div class="print-container">
                     <h3>Pizzeria Smart - Comanda</h3>
                     <p>Ordine #<strong>${order.id}</strong> - ${order.mode.toUpperCase()}</p>
-                    <p>Ora: ${order.hour}</p>
+                    <p>Data: ${this.formatDate(order.date)} | Ora: ${order.hour}</p>
                     <p>Cliente: <strong>${order.customer}</strong> ${order.phone ? `(${order.phone})` : ''}</p>
             `;
             
@@ -1540,7 +1596,7 @@
         },
 
 
-        // --- Logica Impostazioni e Gestione Menu/Modificatori (Aggiornata) ---
+        // --- Logica Impostazioni e Gestione Menu/Modificatori (Omessa per brevità, non modificata) ---
         addDriver() {
             const name = this.newDriverName.trim();
             if (name && !this.drivers.includes(name)) {
@@ -1620,7 +1676,6 @@
             }
         },
         
-        // Funzioni Modificatori (Reintrodotte e Pulite)
         addModCategory() {
             const name = this.newModCat.trim();
             if (name && !this.modifiers[name]) {
@@ -1655,12 +1710,6 @@
                 this.modifiers[cat].splice(i, 1);
                 if(!this.modifiers[cat].length) delete this.modifiers[cat];
                 this.saveData();
-            }
-        },
-
-        initDriverStats() {
-            if (this.view === 'storico') {
-                this.calculateDriverStats();
             }
         },
 
