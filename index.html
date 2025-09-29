@@ -772,14 +772,24 @@
 
 <script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.iife.js"></script>
 <script>
-    function getTodayKey() {
+    // ⭐ NUOVA FUNZIONE HELPER PER GARANTIRE LA DATA LOCALE (CORREZIONE DEL BUG) ⭐
+    function getTodayLocalString() {
         const today = new Date();
-        return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        return `${today.getFullYear()}-${
+            String(today.getMonth() + 1).padStart(2, '0')
+        }-${
+            String(today.getDate()).padStart(2, '0')
+        }`;
+    }
+
+    function getTodayKey() {
+        // Usa la funzione sicura
+        return getTodayLocalString();
     }
     
     function getTodayDateString() {
-        const today = new Date();
-        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        // Usa la funzione sicura
+        return getTodayLocalString();
     }
 
     function getDefaultHour() {
@@ -992,14 +1002,27 @@
             return this.availableBaseItems.length > 0 || this.availableSchiacciateItems.length > 0;
         },
         
-        // Computed property per gli ordini archiviati filtrati
+        // ⭐ PROPRIETÀ COMPUTATA CORRETTA: filteredArchive per risolvere il bug del fuso orario ⭐
         get filteredArchive() {
-            const todayKey = getTodayKey();
-            const todayOrders = this.archive.filter(o => 
-                // Filtra solo gli ordini archiviati OGGI
-                new Date(o.archivedDate).toISOString().substring(0, 10) === todayKey
-            );
+            // Ottiene la data di oggi nel fuso orario locale (es. "2025-09-30")
+            const todayString = getTodayLocalString(); 
 
+            const todayOrders = this.archive.filter(order => {
+                // 1. Converte la data ISO di archiviazione in un oggetto Date
+                const archivedOrderLocal = new Date(order.archivedDate);
+
+                // 2. Estrae la stringa della data (YYYY-MM-DD) usando il fuso orario LOCALE dell'ordine archiviato
+                const archivedDateLocalString = `${archivedOrderLocal.getFullYear()}-${
+                    String(archivedOrderLocal.getMonth() + 1).padStart(2, '0')
+                }-${
+                    String(archivedOrderLocal.getDate()).padStart(2, '0')
+                }`;
+                
+                // 3. Confronta le due stringhe di data locali.
+                return archivedDateLocalString === todayString;
+            });
+
+            // Applica il filtro del fattorino
             if (!this.selectedDriver) {
                 return todayOrders;
             }
@@ -1009,10 +1032,11 @@
         
         // Funzione di calcolo statistiche fattorino 
         calculateDriverStats() {
-            const todayKey = getTodayKey();
+            const todayString = getTodayLocalString(); // Usa la funzione sicura
             const filtered = this.archive.filter(o => 
                 o.mode === 'consegna' && 
-                new Date(o.archivedDate).toISOString().substring(0, 10) === todayKey &&
+                // Usa la stessa logica di confronto di filteredArchive
+                `${new Date(o.archivedDate).getFullYear()}-${String(new Date(o.archivedDate).getMonth() + 1).padStart(2, '0')}-${String(new Date(o.archivedDate).getDate()).padStart(2, '0')}` === todayString &&
                 (!this.selectedDriver || o.driver === this.selectedDriver)
             );
             
@@ -1027,10 +1051,17 @@
 
         // Computed property per le statistiche del giorno
         get dailyTotal() {
-            const todayKey = getTodayKey();
-            return this.archive.filter(o => 
-                new Date(o.archivedDate).toISOString().substring(0, 10) === todayKey
-            ).reduce((sum, order) => sum + order.total, 0);
+            const todayString = getTodayLocalString();
+            return this.archive.filter(order => {
+                // Usa la stessa logica di confronto di filteredArchive
+                const archivedOrderLocal = new Date(order.archivedDate);
+                const archivedDateLocalString = `${archivedOrderLocal.getFullYear()}-${
+                    String(archivedOrderLocal.getMonth() + 1).padStart(2, '0')
+                }-${
+                    String(archivedOrderLocal.getDate()).padStart(2, '0')
+                }`;
+                return archivedDateLocalString === todayString;
+            }).reduce((sum, order) => sum + order.total, 0);
         },
 
         get todayDate() {
