@@ -17,7 +17,6 @@
         h2 { color: #e31b23; margin: 8px 0; }
         
         /* Stili Inserimento Ordine */
-        /* Stili Categorie e Modificatori RIPRISTINATI */
         .cat-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
         .cat-btn { flex: 1 1 30%; padding: 8px; border: none; border-radius: 6px; background: #444; color: #fff; font-weight: 600; cursor: pointer; }
         .cat-btn.active { background: #e31b23; }
@@ -33,18 +32,31 @@
         .mod-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
         .search-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; }
-        /* NUOVO: Filtro Modificatori */
         .search-mod-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 10px; }
 
 
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .item { background: #fff; border: 1px solid #ddd; border-radius: 10px; text-align: center; padding: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
         .item:hover { background: #ffecec; }
-        .item.active-menu-selection { border: 3px solid #3b82f6; box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);} 
+        .item.active-menu-selection { border: 3px solid #3b82f6; box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.5);} 
         .item strong { display: block; margin-bottom: 4px; }
         .item.disabled { background: #f0f0f0; color: #999; cursor: not-allowed; opacity: 0.7; }
         .item.disabled:hover { background: #f0f0f0; }
 
+        /* Stili Magazzino */
+        .inventory-item { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .inventory-item strong { font-size: 1.1rem; }
+        .inventory-item span { font-size: 0.9rem; color: #6b7280; }
+        .inventory-actions { display: flex; gap: 8px; align-items: center; }
+        .inventory-actions input { width: 60px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: right; }
+        .inventory-actions button { padding: 8px 12px; border-radius: 6px; border: none; font-weight: 700; cursor: pointer; }
+        .inventory-actions .btn-remove { background: #b91c1c; color: #fff; }
+        .inventory-actions .btn-add { background: #10b981; color: #fff; }
+        .inventory-actions .btn-scarico { background: #3b82f6; color: #fff; }
+        .inventory-form { display: flex; gap: 10px; margin-bottom: 20px; }
+        .inventory-form input, .inventory-form select, .inventory-form button { padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .inventory-form button { background: #e31b23; color: #fff; border: none; flex-grow: 1; }
+        
         /* Stili Ordine Corrente */
         .order-box { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 20px; }
         .order-box ul { list-style: none; padding: 0; margin: 0; }
@@ -286,7 +298,8 @@
                             <ul v-if="it.modifiers1 && it.modifiers1.length > 0">
                                 <li v-for="mod in it.modifiers1">
                                      <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
-                                    * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+                                    * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)})</span
+                                    >
                                 </li>
                             </ul>
                         </li>
@@ -294,7 +307,8 @@
                              <ul v-if="it.modifiers2 && it.modifiers2.length > 0">
                                 <li v-for="mod in it.modifiers2">
                                      <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
-                                    * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+                                    * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)})</span
+                                    >
                                 </li>
                             </ul>
                         </li>
@@ -306,7 +320,8 @@
                             <ul v-if="sec.modifiers && sec.modifiers.length > 0">
                                 <li v-for="mod in sec.modifiers">
                                      <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
-                                    * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+                                    * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)})</span
+                                    >
                                 </li>
                             </ul>
                         </li>
@@ -372,6 +387,35 @@
                 <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
             </div>
         </div>
+    </section>
+    
+    <section v-show="view==='magazzino'">
+        <h2>Gestione Magazzino / Inventario</h2>
+
+        <h3>Aggiungi Materia Prima</h3>
+        <form @submit.prevent="addInventoryItem" class="inventory-form">
+            <input type="text" v-model="newInventoryName" placeholder="Nome (es. Farina 00)" required style="flex-grow: 2;">
+            <input type="text" v-model="newInventoryUnit" placeholder="Unità (es. Kg)" required style="width: 80px;">
+            <input type="number" step="0.01" v-model.number="newInventoryQuantity" placeholder="Quantità Iniziale" required style="width: 100px;">
+            <button type="submit">Aggiungi</button>
+        </form>
+
+        <h3>Inventario Attuale</h3>
+        <div v-if="!Object.keys(inventory).length">Nessuna materia prima aggiunta.</div>
+        <div v-for="(item, name) in inventory" :key="name" class="inventory-item">
+            <div>
+                <strong>{{ name }}</strong>
+                <br>
+                <span>**Quantità:** {{ item.quantity.toFixed(2) }} {{ item.unit }}</span>
+            </div>
+            <div class="inventory-actions">
+                 <input type="number" step="0.01" v-model.number="item.scaricoQuantity" placeholder="Scarico" min="0">
+                <button class="btn-scarico" @click="scaricoManuale(name)" :disabled="!item.scaricoQuantity || item.scaricoQuantity <= 0">Scarico <i class="fa-solid fa-minus"></i></button>
+                
+                <button class="btn-remove" @click="deleteInventoryItem(name)">❌</button>
+            </div>
+        </div>
+        
     </section>
 
     <section v-show="view==='impostazioni'" class="settings">
@@ -493,6 +537,7 @@
     <button :class="{active:view==='inserimento'}" @click="view='inserimento'"><i class="fa-solid fa-cash-register"></i>Inserimento</button>
     <button :class="{active:view==='ordini'}" @click="view='ordini'"><i class="fa-solid fa-clipboard-list"></i>Ordini</button>
     <button :class="{active:view==='storico'}" @click="view='storico'; calculateDriverStats();"><i class="fa-solid fa-chart-line"></i>Storico</button>
+    <button :class="{active:view==='magazzino'}" @click="view='magazzino'"><i class="fa-solid fa-warehouse"></i>Magazzino</button>
     <button :class="{active:view==='impostazioni'}" @click="view='impostazioni'"><i class="fa-solid fa-gear"></i>Impostazioni</button>
 </nav>
 
@@ -775,13 +820,16 @@
         selectedOrderIdForShare: null,
         editingOrderId: null, 
         
-        // --- DATI INIZIALI (Ripristinati/Aggiornati) ---
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Intera (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Divisa in Due (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Divisa in Tre (3 Gusti)","prezzo":14,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
+        // --- DATI INIZIALI (RIPRISTINATI E AGGIORNATI) ---
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Schiacciata Divisa (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Schiacciata Divisa (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Schiacciata Divisa (3 Gusti)","prezzo":14,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2},{"nome":"Aggiunta Pomodoro","prezzo":0.5}],"Senza":[{"nome":"Senza olive","prezzo":0},{"nome":"Senza sale","prezzo":0}],"Poco":[{"nome":"Poco cotta","prezzo":0}],"Abbondante":[{"nome":"Basilico abbondante","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
         archive: JSON.parse(localStorage.getItem('pz_archive')||'[]'), 
         drivers: JSON.parse(localStorage.getItem('pz_drivers')||'[]'),
+        
+        // NUOVI DATI PER IL MAGAZZINO
+        inventory: JSON.parse(localStorage.getItem('pz_inventory')||'{"Farina 00":{quantity:100, unit:"kg", scaricoQuantity: 0}, "Mozzarella":{quantity:50, unit:"kg", scaricoQuantity: 0}, "Coca Cola":{quantity:24, unit:"lattine", scaricoQuantity: 0}}'),
 
         // Stato Ordine Corrente
         activeCat:'Pizze',
@@ -792,7 +840,7 @@
         selectedItemIndex: null,
         lastSelectedItem: null, 
         searchTerm: '',
-        modifierSearchTerm: '', // NUOVO: Termine di ricerca modificatori
+        modifierSearchTerm: '', 
 
         // Stato Composizione
         tempMeterItem: null, 
@@ -826,6 +874,11 @@
         newModCat: '', newModProdCat: '', newModName: '', newModPrice: 0,
         newZoneName: '', newZonePrice: 0, 
         newDriverName: '', 
+        
+        // Dati per Magazzino
+        newInventoryName: '',
+        newInventoryUnit: '',
+        newInventoryQuantity: 0,
 
         // Dati per Storico/Statistiche
         selectedDriver: '', 
@@ -874,9 +927,10 @@
             localStorage.setItem('pz_zones',JSON.stringify(this.deliveryZones));
             localStorage.setItem('pz_archive',JSON.stringify(this.archive)); 
             localStorage.setItem('pz_drivers',JSON.stringify(this.drivers)); 
+            localStorage.setItem('pz_inventory',JSON.stringify(this.inventory)); // Salva Inventario
         },
         
-        // Computed property per il filtro prodotti (non modificata)
+        // Computed property per il filtro prodotti
         get filteredAvailableItems() {
             if (!this.searchTerm.trim() || !this.menu[this.activeCat]) {
                 return this.menu[this.activeCat] || [];
@@ -887,7 +941,7 @@
             );
         },
         
-        // NUOVO: Computed property per il filtro modificatori
+        // Computed property per il filtro modificatori
         get filteredModifiersForActiveCat() {
             const mods = this.modifiers[this.activeModCat] || [];
             if (!this.modifierSearchTerm.trim()) {
@@ -899,7 +953,7 @@
             );
         },
 
-        // Computed property per il filtro degli ordini attivi (non modificata)
+        // Computed property per il filtro degli ordini attivi
         get filteredActiveOrders() {
             if (this.activeStatusFilter === 'Tutti') {
                 // Ordina per data e poi per ora (più vecchi per primi)
@@ -912,7 +966,7 @@
             return this.orders.filter(o => o.status === this.activeStatusFilter);
         },
 
-        // Computed per base pizza disponibili nel modale (non modificata)
+        // Computed per base pizza disponibili nel modale
         get availableBaseItems() {
             return (this.menu['Pizze'] || []).filter(p => !p.isFinished);
         },
@@ -920,7 +974,7 @@
             return (this.menu['Schiacciate'] || []).filter(p => !p.isFinished);
         },
 
-        // Computed per gli ordini archiviati filtrati (non modificata)
+        // Computed per gli ordini archiviati filtrati
         get filteredArchive() {
             const todayKey = getTodayKey();
             const todayOrders = this.archive.filter(o => 
@@ -935,7 +989,7 @@
             return todayOrders.filter(o => o.driver === this.selectedDriver);
         },
         
-        // Funzione di calcolo statistiche fattorino (non modificata)
+        // Funzione di calcolo statistiche fattorino
         calculateDriverStats() {
             const todayKey = getTodayKey();
             const filtered = this.archive.filter(o => 
@@ -953,7 +1007,7 @@
         },
 
 
-        // Computed property per le statistiche del giorno (non modificata)
+        // Computed property per le statistiche del giorno
         get dailyTotal() {
             const todayKey = getTodayKey();
             return this.archive.filter(o => 
@@ -965,7 +1019,7 @@
             return new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
         },
 
-        // Funzioni per l'evidenziazione dei modificatori (non modificata)
+        // Funzioni per l'evidenziazione dei modificatori
         getModifierCategory(modName) {
             for (const cat in this.modifiers) {
                 if (this.modifiers[cat].some(m => m.nome === modName)) {
@@ -984,7 +1038,7 @@
             }
         },
 
-        // Funzioni per Avvisi Temporali (non modificata)
+        // Funzioni per Avvisi Temporali
         isNear(o) {
             const now = new Date();
             const orderTime = this.getOrderDateTime(o.date, o.hour);
@@ -1002,7 +1056,7 @@
             return new Date(`${dateString}T${hourString}`);
         },
 
-        // Funzione per l'aggiornamento del fattorino nello storico (non modificata)
+        // Funzione per l'aggiornamento del fattorino nello storico
         updateArchiveDriver(id, newDriver) {
             const orderIndex = this.archive.findIndex(o => o.id === id);
             if (orderIndex !== -1) {
@@ -1012,7 +1066,7 @@
             }
         },
 
-        // Logica Calcoli Comuni (non modificata)
+        // Logica Calcoli Comuni
         calculateItemTotal(item) {
             let itemTotal = item.prezzo;
             
@@ -1045,7 +1099,7 @@
             this.total = this.calculatedOrderTotal + this.deliveryCost;
         },
 
-        // Logica Inserimento Articoli/Modificatori (non modificata)
+        // Logica Inserimento Articoli/Modificatori
         handleItemClick(p) {
             if (p.isFinished) return; 
             this.lastSelectedItem = p; 
@@ -1106,7 +1160,7 @@
             this.lastSelectedItem = null;
         },
         
-        // Logica Composizione (non modificata)
+        // Logica Composizione
         cancelComposition() {
             if (confirm("Sei sicuro di voler annullare la composizione?")) {
                 this.tempMeterItem = null;
@@ -1211,7 +1265,7 @@
             this.lastSelectedItem = null;
         },
         
-        // Logica Ordine e Finalizzazione (non modificata)
+        // Logica Ordine e Finalizzazione
         resetCurrentOrderState() {
             this.order = [];
             this.selectedItemIndex = null;
@@ -1221,7 +1275,7 @@
             this.tempMeterItem = null; 
             this.tempHalfPizzaItem = null;
             this.searchTerm = '';
-            this.modifierSearchTerm = ''; // Reset filtro modificatori
+            this.modifierSearchTerm = ''; 
             this.lastSelectedItem = null;
             
             this.mode = '';
@@ -1390,7 +1444,7 @@
             this.view = 'ordini';
         },
         
-        // Gestione Stato Ordini e Archiviazione (non modificata)
+        // Gestione Stato Ordini e Archiviazione
         advance(o){
             const st=["In preparazione","Pronto","Completato"];
             const i=st.indexOf(o.status);
@@ -1432,7 +1486,7 @@
             }
         },
         
-        // Funzioni di Stampa e Condivisione (non modificata)
+        // Funzioni di Stampa e Condivisione
         
         formatOrderForSharing(id) {
             const order = this.orders.find(o => o.id === id) || this.archive.find(o => o.id === id);
@@ -1636,7 +1690,52 @@
         },
 
 
-        // Logica Impostazioni e Gestione Menu/Modificatori (non modificata)
+        // Logica Magazzino (NUOVA FUNZIONALITÀ)
+        addInventoryItem() {
+            const name = this.newInventoryName.trim();
+            const unit = this.newInventoryUnit.trim();
+            const quantity = parseFloat(this.newInventoryQuantity);
+
+            if (name && unit && quantity >= 0) {
+                if (this.inventory[name]) {
+                    alert("Questa materia prima è già presente nell'inventario.");
+                    return;
+                }
+                this.inventory[name] = { quantity: quantity, unit: unit, scaricoQuantity: 0 };
+                this.saveData();
+                this.newInventoryName = '';
+                this.newInventoryUnit = '';
+                this.newInventoryQuantity = 0;
+            } else {
+                alert("Compila tutti i campi con valori validi.");
+            }
+        },
+
+        scaricoManuale(name) {
+            const item = this.inventory[name];
+            if (item && item.scaricoQuantity > 0) {
+                if (item.quantity >= item.scaricoQuantity) {
+                    item.quantity -= item.scaricoQuantity;
+                    item.scaricoQuantity = 0; // Reset
+                    this.saveData();
+                    alert(`Scarico di ${name} effettuato con successo. Quantità rimanente: ${item.quantity.toFixed(2)} ${item.unit}.`);
+                } else {
+                    alert(`Quantità insufficiente: puoi scaricare al massimo ${item.quantity.toFixed(2)} ${item.unit} di ${name}.`);
+                }
+            } else {
+                alert("Inserisci una quantità valida da scaricare.");
+            }
+        },
+
+        deleteInventoryItem(name) {
+            if (confirm(`Sei sicuro di voler eliminare "${name}" dall'inventario?`)) {
+                delete this.inventory[name];
+                this.saveData();
+            }
+        },
+
+
+        // Logica Impostazioni e Gestione Menu/Modificatori
         addDriver() {
             const name = this.newDriverName.trim();
             if (name && !this.drivers.includes(name)) {
