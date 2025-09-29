@@ -256,8 +256,13 @@
     <section v-show="view==='ordini'">
         <h2>Ordini Attivi</h2>
         <input type="search" v-model="activeOrderSearchTerm" placeholder="Cerca per Cliente, Tavolo, Indirizzo..." class="search-input">
+        
+        <div class="form-row">
+            <label for="activeOrderFilterDate" style="font-weight: 600;">Filtra per Data di Ritiro/Consegna</label>
+            <input type="date" id="activeOrderFilterDate" v-model="activeOrderFilterDate" @change="filterActiveOrders" style="padding: 8px; font-size: 1rem;">
+        </div>
 
-        <div v-if="!filteredActiveOrders.length">Nessun ordine attivo trovato.</div>
+        <div v-if="!filteredActiveOrders.length">Nessun ordine attivo trovato per la data selezionata.</div>
         <div class="order-card" v-for="o in filteredActiveOrders" :key="o.id"
              :class="{'warning-urgent': isUrgent(o), 'warning-near': isNear(o) && !isUrgent(o)}">
             <h4>
@@ -347,8 +352,13 @@
     <section v-show="view==='storico'">
         <h2>Storico e Statistiche</h2>
         
+        <div class="form-row">
+            <label for="archiveDateFilter" style="font-weight: 600;">Filtra Ordini Completati per Data:</label>
+            <input type="date" id="archiveDateFilter" v-model="archiveDateFilter" @change="calculateDriverStats" style="padding: 8px; font-size: 1rem;">
+        </div>
+
         <div class="stats-box">
-            <h3>Incasso Totale di Oggi ({{ todayDate }})</h3>
+            <h3>Incasso Totale del {{ archiveDateFilterDisplay }}</h3>
             <p>€{{ dailyTotal.toFixed(2) }}</p>
         </div>
 
@@ -362,12 +372,12 @@
         </div>
 
         <div v-if="selectedDriver || driverStats.totalOrders > 0" style="background: #f0f0f0; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
-            <p style="margin: 0; font-weight: 700;">{{ selectedDriver ? 'Statistiche di ' + selectedDriver : 'Totale Consegne Oggi' }}:</p>
+            <p style="margin: 0; font-weight: 700;">{{ selectedDriver ? 'Statistiche di ' + selectedDriver : 'Totale Consegne' }} ({{ archiveDateFilterDisplay }}):</p>
             <p style="margin: 5px 0 0;">Consegne: **{{ driverStats.totalOrders }}** | Totale Incasso: **€{{ driverStats.totalRevenue.toFixed(2) }}**</p>
         </div>
 
         <h3 style="color:#6b7280;">Ordini Completati</h3>
-        <div v-if="!filteredArchive.length">Nessun ordine completato oggi.</div>
+        <div v-if="!filteredArchive.length">Nessun ordine completato per la data selezionata.</div>
         <div class="archive-order-card" v-for="o in filteredArchive.slice().reverse()" :key="o.id">
             <h5>#{{o.id}} – {{new Date(o.archivedDate).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
             <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})
@@ -772,7 +782,7 @@
 
 <script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.iife.js"></script>
 <script>
-    // ⭐ NUOVA FUNZIONE HELPER PER GARANTIRE LA DATA LOCALE (CORREZIONE DEL BUG) ⭐
+    // ⭐ NUOVE FUNZIONI HELPER PER GESTIRE LE DATE LOCALI ⭐
     function getTodayLocalString() {
         const today = new Date();
         return `${today.getFullYear()}-${
@@ -783,12 +793,10 @@
     }
 
     function getTodayKey() {
-        // Usa la funzione sicura
         return getTodayLocalString();
     }
     
     function getTodayDateString() {
-        // Usa la funzione sicura
         return getTodayLocalString();
     }
 
@@ -854,9 +862,12 @@
         hour: getDefaultHour(),
         driver: '', 
         minDate: getTodayDateString(), 
-        activeStatusFilter: 'Tutti', // Mantenuto per compatibilità, ma non usato nei filtri UI attivi
+        activeStatusFilter: 'Tutti', 
         activeOrderSearchTerm: '', 
         accontoRicevuto: null, 
+
+        // NUOVO: Filtro Data Ordini Attivi
+        activeOrderFilterDate: getTodayDateString(), 
 
         // Dati per Impostazioni
         newMenuCat: '', newProdCat: '', newName: '', newPrice: '',
@@ -867,7 +878,9 @@
         // Dati per Storico/Statistiche
         selectedDriver: '', 
         driverStats: { totalOrders: 0, totalRevenue: 0 }, 
-        
+        // NUOVO: Filtro Data Archiviati
+        archiveDateFilter: getTodayDateString(),
+
         // Stati Ordine semplificati
         orderStatuses: ["In preparazione", "Pronto"],
 
@@ -886,25 +899,27 @@
             if (currentIdx !== -1 && currentIdx < this.orderStatuses.length - 1) {
                 return this.orderStatuses[currentIdx + 1];
             }
-            // L'ultimo stato è ora "Chiudi Ordine & Archivia"
             return "Completa e Archivia";
         },
 
         // Funzione di Formattazione Data per la Visualizzazione
         formatDate(dateString) {
             if (!dateString) return 'Data Sconosciuta';
-            const [year, month, day] = dateString.split('-');
-            const date = new Date(year, month - 1, day);
-            
-            const today = new Date();
+            const date = new Date(dateString.replace(/-/g, '/')); // Corregge l'interpretazione del fuso orario
+            if (isNaN(date)) return dateString;
+
+            const today = new Date(getTodayDateString().replace(/-/g, '/'));
             today.setHours(0, 0, 0, 0);
             
+            const targetDate = new Date(dateString.replace(/-/g, '/'));
+            targetDate.setHours(0, 0, 0, 0);
+
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
 
-            if (date.getTime() === today.getTime()) {
+            if (targetDate.getTime() === today.getTime()) {
                 return 'OGGI';
-            } else if (date.getTime() === tomorrow.getTime()) {
+            } else if (targetDate.getTime() === tomorrow.getTime()) {
                 return 'DOMANI';
             } else {
                  return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
@@ -964,13 +979,18 @@
             return this.availableSchiacciateItems.filter(p => p.nome.toLowerCase().includes(term));
         },
 
-        // Computed property per il filtro degli ordini attivi
+        // ⭐ AGGIORNATO: Computed property per il filtro degli ordini attivi ⭐
         get filteredActiveOrders() {
             let filtered = [...this.orders].sort((a, b) => {
                 const dateTimeA = new Date(`${a.date}T${a.hour}`);
                 const dateTimeB = new Date(`${b.date}T${b.hour}`);
                 return dateTimeA - dateTimeB;
             });
+
+            // Filtro per data di ritiro/consegna (activeOrderFilterDate)
+            if (this.activeOrderFilterDate) {
+                filtered = filtered.filter(o => o.date === this.activeOrderFilterDate);
+            }
 
             // Filtro per termine di ricerca
             if (this.activeOrderSearchTerm.trim()) {
@@ -1002,13 +1022,12 @@
             return this.availableBaseItems.length > 0 || this.availableSchiacciateItems.length > 0;
         },
         
-        // ⭐ PROPRIETÀ COMPUTATA CORRETTA: filteredArchive per risolvere il bug del fuso orario ⭐
+        // ⭐ AGGIORNATO: filteredArchive per risolvere il bug del fuso orario E filtrare per data selezionata ⭐
         get filteredArchive() {
-            // Ottiene la data di oggi nel fuso orario locale (es. "2025-09-30")
-            const todayString = getTodayLocalString(); 
+            const selectedDateString = this.archiveDateFilter; // Data selezionata dall'utente
 
-            const todayOrders = this.archive.filter(order => {
-                // 1. Converte la data ISO di archiviazione in un oggetto Date
+            const filteredByDate = this.archive.filter(order => {
+                // 1. Converte la data ISO di archiviazione in un oggetto Date locale
                 const archivedOrderLocal = new Date(order.archivedDate);
 
                 // 2. Estrae la stringa della data (YYYY-MM-DD) usando il fuso orario LOCALE dell'ordine archiviato
@@ -1018,25 +1037,25 @@
                     String(archivedOrderLocal.getDate()).padStart(2, '0')
                 }`;
                 
-                // 3. Confronta le due stringhe di data locali.
-                return archivedDateLocalString === todayString;
+                // 3. Confronta con la data selezionata
+                return archivedDateLocalString === selectedDateString;
             });
 
             // Applica il filtro del fattorino
             if (!this.selectedDriver) {
-                return todayOrders;
+                return filteredByDate;
             }
 
-            return todayOrders.filter(o => o.driver === this.selectedDriver);
+            return filteredByDate.filter(o => o.driver === this.selectedDriver);
         },
         
-        // Funzione di calcolo statistiche fattorino 
+        // Funzione di calcolo statistiche fattorino (aggiornata per la data selezionata)
         calculateDriverStats() {
-            const todayString = getTodayLocalString(); // Usa la funzione sicura
+            const selectedDateString = this.archiveDateFilter; 
             const filtered = this.archive.filter(o => 
                 o.mode === 'consegna' && 
                 // Usa la stessa logica di confronto di filteredArchive
-                `${new Date(o.archivedDate).getFullYear()}-${String(new Date(o.archivedDate).getMonth() + 1).padStart(2, '0')}-${String(new Date(o.archivedDate).getDate()).padStart(2, '0')}` === todayString &&
+                `${new Date(o.archivedDate).getFullYear()}-${String(new Date(o.archivedDate).getMonth() + 1).padStart(2, '0')}-${String(new Date(o.archivedDate).getDate()).padStart(2, '0')}` === selectedDateString &&
                 (!this.selectedDriver || o.driver === this.selectedDriver)
             );
             
@@ -1049,9 +1068,9 @@
         },
 
 
-        // Computed property per le statistiche del giorno
+        // Computed property per le statistiche del giorno (aggiornata per la data selezionata)
         get dailyTotal() {
-            const todayString = getTodayLocalString();
+            const selectedDateString = this.archiveDateFilter;
             return this.archive.filter(order => {
                 // Usa la stessa logica di confronto di filteredArchive
                 const archivedOrderLocal = new Date(order.archivedDate);
@@ -1060,12 +1079,23 @@
                 }-${
                     String(archivedOrderLocal.getDate()).padStart(2, '0')
                 }`;
-                return archivedDateLocalString === todayString;
+                return archivedDateLocalString === selectedDateString;
             }).reduce((sum, order) => sum + order.total, 0);
         },
 
-        get todayDate() {
-            return new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+        // Computed per visualizzazione data nello storico
+        get archiveDateFilterDisplay() {
+            const date = new Date(this.archiveDateFilter.replace(/-/g, '/'));
+            if (isNaN(date)) return 'Data Sconosciuta';
+             
+            const today = new Date(getTodayDateString().replace(/-/g, '/'));
+            const targetDate = new Date(this.archiveDateFilter.replace(/-/g, '/'));
+            
+            if (targetDate.getTime() === today.getTime()) {
+                return 'OGGI';
+            } else {
+                return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+            }
         },
 
         // Funzione per calcolare il resto 
@@ -1098,12 +1128,18 @@
 
         // Funzioni per Avvisi Temporali 
         isNear(o) {
+            // Controlla solo gli ordini di oggi
+            if (o.date !== getTodayDateString()) return false;
+            
             const now = new Date();
             const orderTime = this.getOrderDateTime(o.date, o.hour);
             const diffMinutes = Math.floor((orderTime - now) / (1000 * 60));
             return diffMinutes > 5 && diffMinutes <= 15;
         },
         isUrgent(o) {
+            // Controlla solo gli ordini di oggi
+            if (o.date !== getTodayDateString()) return false;
+            
             const now = new Date();
             const orderTime = this.getOrderDateTime(o.date, o.hour);
             const diffMinutes = Math.floor((orderTime - now) / (1000 * 60));
@@ -1165,6 +1201,13 @@
             }, 0);
             this.total = this.calculatedOrderTotal + this.deliveryCost;
         },
+        
+        // Logica Ordini Attivi (forzando il ricalcolo del computed)
+        filterActiveOrders() {
+            // Ricalcola filteredActiveOrders
+            this.activeOrderSearchTerm = this.activeOrderSearchTerm.trim();
+        },
+
 
         // Logica Inserimento Articoli/Modificatori 
         handleItemClick(p) {
