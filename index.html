@@ -28,6 +28,7 @@
         .mod-btn.blue { border-color: #3b82f6; color: #3b82f6; }
         .mod-btn.active { border-color: #e31b23; background-color: #ffecec; box-shadow: 0 0 0 3px #e31b23; }
         .mod-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .search-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .item { background: #fff; border: 1px solid #ddd; border-radius: 10px; text-align: center; padding: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
         .item:hover { background: #ffecec; }
@@ -54,7 +55,7 @@
         .mode-card.active { border-color: #e31b23; box-shadow: 0 0 0 2px #e31b23 inset; }
         .form-row { margin-bottom: 10px; }
         .form-row label { display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600; }
-        .form-row input, .form-row select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .form-row input, .form-row select, .form-row textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
         .modal-actions { display: flex; justify-content: space-between; margin-top: 15px; }
         .modal-actions button { padding: 10px 15px; border-radius: 6px; font-weight: 700; }
         .modal-actions .btn-cancel { background: #6b7280; color: #fff; border: none; }
@@ -83,7 +84,7 @@
             .print-container { display: block; max-width: 100%; font-size: 11pt; }
             .print-container h3, .print-container h4, .print-container p { margin: 2px 0; }
             .print-container ul { list-style: none; padding: 0; margin-bottom: 10px; }
-            .print-container li { border-bottom: 1px dotted #ccc; padding: 2px 0; }
+            .print-container li { padding: 1px 0; }
         }
     </style>
 </head>
@@ -111,8 +112,10 @@
             </div>
         </div>
         
-        <div class="grid" v-if="menu[activeCat]">
-            <div class="item" v-for="p in menu[activeCat]" :key="p.nome" @click="handleItemClick(p)">
+        <input type="search" v-model="searchTerm" placeholder="Cerca prodotto..." class="search-input">
+
+        <div class="grid">
+            <div class="item" v-for="p in filteredItems" :key="p.nome" @click="handleItemClick(p)">
                 <strong>{{p.nome}}</strong>
                 €{{p.prezzo.toFixed(2)}}
             </div>
@@ -172,6 +175,7 @@
                 📍 {{o.address}} {{o.streetNumber}}, **{{o.zone}}** ({{o.town}})
                 <br>Costo Consegna: €{{o.deliveryCost.toFixed(2)}}
             </p>
+            <p v-if="o.notes" style="font-size: 0.9rem; margin-top: 8px;">**Note:** {{o.notes}}</p>
             <ul class="order-items">
                 <li v-for="it in o.items">
                     {{ it.isMeter ? '🍕 ' + it.nome : it.nome }} – €{{ calculateItemTotal(it).toFixed(2) }}
@@ -226,7 +230,7 @@
                 </div>
             </div>
         </div>
-        <h3>Aggiungi Prodotto (N.B. la sezione Mezzo Metro è modificabile solo nel codice)</h3>
+        <h3>Aggiungi Prodotto (N.B. Le sezioni con composizione complessa sono modificabili solo nel codice)</h3>
         <select v-model="newProdCat" required>
             <option disabled value="">Seleziona una categoria</option>
             <option v-for="cat in Object.keys(menu)" :value="cat">{{cat}}</option>
@@ -303,8 +307,13 @@
             <div class="form-row">
                 <label>Gusto Base *</label>
                 <select v-model="section.gusto" required>
-                    <option value="" disabled>Seleziona una pizza</option>
-                    <option v-for="pizza in menu['Pizze']" :value="pizza.nome">{{ pizza.nome }}</option>
+                    <option value="" disabled>Seleziona una pizza o schiacciata</option>
+                    <optgroup label="Pizze Classiche">
+                        <option v-for="pizza in menu['Pizze']" :value="pizza.nome">{{ pizza.nome }}</option>
+                    </optgroup>
+                    <optgroup label="Schiacciate">
+                         <option v-for="sch in menu['Schiacciate']" :value="sch.nome">{{ sch.nome }}</option>
+                    </optgroup>
                 </select>
             </div>
             
@@ -330,7 +339,7 @@
                     <div class="item" v-for="m in modifiers[tempModCat]" :key="m.nome" @click="addMeterModifier(secIdx, m)" 
                          style="padding: 8px; border-radius: 6px; font-size: 0.9rem;">
                         <strong>{{ m.nome }}</strong>
-                        <span v-if="m.prezzo > 0">€{{ m.prezzo.toFixed(2) }}</span>
+                        <span v-if="m.prezzo > 0">€{{ m.prezzo.toFixed(2)}}</span>
                     </div>
                 </div>
             </div>
@@ -388,6 +397,11 @@
                     <input type="text" id="town" v-model="town" required>
                 </div>
             </div>
+            
+            <div class="form-row">
+                <label for="notes">Note/Istruzioni (es. citofono, piano, allergie)</label>
+                <textarea id="notes" v-model="notes"></textarea>
+            </div>
 
             <div class="form-row">
                 <label for="hour">Ora di Ritiro/Consegna *</label>
@@ -432,9 +446,9 @@
         selectedOrderIdForShare: null,
         editingOrderId: null, 
         
-        // Dati iniziali con la nuova categoria "Mezzo Metro"
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Capricciosa","prezzo":8}],"Bibite":[{"nome":"Acqua","prezzo":1.5},{"nome":"Cola","prezzo":2.5}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
-        modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2}],"Senza":[{"nome":"Senza olive","prezzo":0}]}'),
+        // --- DATI INIZIALI AGGIORNATI ---
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Intera (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Divisa in Due (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Divisa in Tre (3 Gusti)","prezzo":14,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
+        modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2},{"nome":"Aggiunta Pomodoro","prezzo":0.5}],"Senza":[{"nome":"Senza olive","prezzo":0},{"nome":"Senza sale","prezzo":0}],"Poco":[{"nome":"Poco cotta","prezzo":0}],"Abbondante":[{"nome":"Basilico abbondante","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
 
@@ -445,6 +459,7 @@
         calculatedOrderTotal: 0, 
         total:0, 
         selectedItemIndex: null,
+        searchTerm: '', // Nuovo: Termine di ricerca
 
         // Stato Composizione Mezzo Metro
         tempMeterItem: null, 
@@ -464,6 +479,7 @@
         zoneName:'', 
         deliveryCost: 0, 
         town:'',
+        notes: '', // Nuovo: Campo note
         hour: getDefaultHour(),
 
         // Dati per Impostazioni
@@ -476,6 +492,17 @@
             localStorage.setItem('pz_orders',JSON.stringify(this.orders));
             localStorage.setItem('pz_modifiers',JSON.stringify(this.modifiers));
             localStorage.setItem('pz_zones',JSON.stringify(this.deliveryZones));
+        },
+        
+        // Computed Property per il filtro
+        get filteredItems() {
+            if (!this.searchTerm.trim() || !this.menu[this.activeCat]) {
+                return this.menu[this.activeCat] || [];
+            }
+            const term = this.searchTerm.toLowerCase().trim();
+            return this.menu[this.activeCat].filter(p => 
+                p.nome.toLowerCase().includes(term)
+            );
         },
 
         // --- Logica Calcoli Comuni ---
@@ -500,7 +527,13 @@
 
         // --- Logica Inserimento Articoli ---
         handleItemClick(p) {
+            // Se l'elemento è di tipo "Mezzo Metro" o "Schiacciata Grande"
             if (p.isMeter) {
+                // Controllo per assicurarsi che i gusti base (Pizze e Schiacciate) siano disponibili
+                if (!this.menu['Pizze'] && !this.menu['Schiacciate']) {
+                    alert("Devi prima aggiungere prodotti nelle categorie 'Pizze' e/o 'Schiacciate' per usarli come gusti base.");
+                    return;
+                }
                 this.startMeterComposition(p);
             } else {
                 this.addItem(p);
@@ -516,7 +549,6 @@
         // --- Logica Modificatori per Articoli Normali ---
         selectItem(index) {
             this.selectedItemIndex = index;
-            // Seleziona un item normale, impedisci la selezione per i meter item per evitare confusione
             if (this.order[index] && this.order[index].isMeter) {
                  this.selectedItemIndex = null;
             }
@@ -543,7 +575,7 @@
             this.calc();
         },
         
-        // --- LOGICA MEZZO METRO ---
+        // --- LOGICA MEZZO METRO / SCHIACCIATA GRANDE (Unificata) ---
 
         startMeterComposition(p) {
             const baseItem = JSON.parse(JSON.stringify(p));
@@ -585,13 +617,13 @@
         },
 
         cancelMeterComposition() {
-            if (confirm("Sei sicuro di voler annullare la composizione del Mezzo Metro?")) {
+            if (confirm("Sei sicuro di voler annullare la composizione?")) {
                 this.tempMeterItem = null;
                 this.showMeterModal = false;
             }
         },
         
-        // --- Logica Modifica Ordine e Finalizzazione (Mantenuta) ---
+        // --- Logica Modifica Ordine e Finalizzazione ---
         resetCurrentOrderState() {
             this.order = [];
             this.selectedItemIndex = null;
@@ -599,11 +631,13 @@
             this.total = 0;
             this.editingOrderId = null;
             this.tempMeterItem = null; 
+            this.searchTerm = ''; // Resetta la ricerca
             
             this.mode = '';
             this.customer = this.phone = this.address = this.streetNumber = this.town = '';
             this.zoneName = '';
             this.deliveryCost = 0;
+            this.notes = ''; // Resetta le note
             this.hour = getDefaultHour();
         },
 
@@ -623,6 +657,7 @@
             this.zoneName = orderToEdit.zone || '';
             this.deliveryCost = orderToEdit.deliveryCost || 0;
             this.town = orderToEdit.town || '';
+            this.notes = orderToEdit.notes || ''; // Carica le note
             this.hour = orderToEdit.hour;
 
             this.calc();
@@ -653,6 +688,7 @@
                 this.customer = this.phone = this.address = this.streetNumber = this.town = '';
                 this.zoneName = '';
                 this.deliveryCost = 0;
+                this.notes = '';
                 this.hour = getDefaultHour();
                 this.calc(); 
             } 
@@ -692,6 +728,7 @@
                 zone: this.zoneName, 
                 deliveryCost: this.deliveryCost, 
                 town: this.town,
+                notes: this.notes, // Salva le note
                 hour: this.hour,
                 status: 'In preparazione' 
             };
@@ -729,7 +766,7 @@
             }
         },
         
-        // --- Funzioni di Stampa e Condivisione (Aggiornate) ---
+        // --- Funzioni di Stampa e Condivisione (Aggiornate con le Note) ---
         
         formatOrderForSharing(id) {
             const order = this.orders.find(o => o.id === id);
@@ -746,6 +783,11 @@
                 text += `📍 Indirizzo: ${order.address} ${order.streetNumber}, ${order.town}\n`;
                 text += `Zona: ${order.zone} (+€${order.deliveryCost.toFixed(2)})\n`;
             }
+            
+            if (order.notes) { // Inclusione delle note
+                text += `*NOTE: ${order.notes}*\n`;
+            }
+            
             text += `--------------------------------\n`;
             text += `*ARTICOLI:*\n`;
 
@@ -799,6 +841,10 @@
                     <p>Indirizzo: ${order.address} ${order.streetNumber}, ${order.town}</p>
                     <p>Zona: ${order.zone} (Costo: €${order.deliveryCost.toFixed(2)})</p>
                 `;
+            }
+            
+            if (order.notes) {
+                printContent += `<p style="font-weight: bold;">Note: ${order.notes}</p>`;
             }
             
             printContent += `
