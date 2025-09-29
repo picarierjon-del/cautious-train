@@ -44,6 +44,7 @@
         .total { font-weight: 700; margin-top: 8px; text-align: right; }
         .final-btn { width: 100%; margin-top: 12px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 12px; font-size: 1rem; font-weight: 700; }
         .final-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .cancel-edit-btn { background: #6b7280; margin-top: 5px; } /* Nuovo stile per Annulla Modifica */
         
         /* Stili Modale Finalizza Ordine */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.7); z-index: 100; display: flex; justify-content: center; align-items: center; }
@@ -66,8 +67,9 @@
         .order-items { margin: 0; padding-left: 16px; font-size: .9rem; }
         .order-actions button { margin-top: 6px; margin-right: 6px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
         .order-actions button.delete { background: #b91c1c; }
+        .order-actions button.edit { background: #3b82f6; } /* Nuovo stile per Modifica */
         
-        /* Stili Impostazioni */
+        /* Stili Impostazioni (mantenuti) */
         .settings h3 { margin-top: 16px; color: #e31b23; }
         .settings input[type="text"], .settings input[type="number"], .settings select { width: 100%; padding: 8px; margin: 4px 0; border: 1px solid #ccc; border-radius: 6px; }
         .settings button { margin-top: 6px; margin-right: 4px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
@@ -80,7 +82,7 @@
 
 <main id="app">
     <section v-show="view==='inserimento'">
-        <h2>Crea Ordine</h2>
+        <h2>{{ editingOrderId ? 'Modifica Ordine #' + editingOrderId : 'Crea Nuovo Ordine' }}</h2>
         <div class="cat-row">
             <button class="cat-btn" v-for="c in Object.keys(menu)" :key="c"
                     :class="{active:activeCat===c}" @click="activeCat=c">{{c}}</button>
@@ -129,7 +131,10 @@
             <div class="total">Totale Ordine: €{{calculatedOrderTotal.toFixed(2)}}</div>
             <div v-if="deliveryCost > 0" class="total">Costo Consegna: +€{{deliveryCost.toFixed(2)}} ({{zoneName}})</div>
             <div class="total" style="font-size: 1.2rem; margin-top: 10px;">TOTALE COMPLESSIVO: €{{total.toFixed(2)}}</div>
-            <button class="final-btn" @click="openModal" :disabled="order.length === 0">Finalizza Ordine</button>
+            
+            <button class="final-btn" @click="openModal" :disabled="order.length === 0">{{ editingOrderId ? 'Aggiorna Ordine #' + editingOrderId : 'Finalizza Ordine' }}</button>
+            
+            <button v-if="editingOrderId" class="final-btn cancel-edit-btn" @click="cancelEdit">Annulla Modifica</button>
         </div>
     </section>
 
@@ -157,6 +162,7 @@
             </ul>
             <p><strong>Totale: €{{o.total.toFixed(2)}}</strong></p>
             <div class="order-actions">
+                <button class="edit" @click="editOrder(o.id)">Modifica</button>
                 <button @click="advance(o)">Avanza Stato ({{o.status}})</button>
                 <button class="delete" @click="delOrder(o.id)">Elimina</button>
             </div>
@@ -309,7 +315,7 @@
             
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" @click="showModal=false">Annulla</button>
-                <button type="submit" class="btn-confirm">Conferma e Salva Ordine</button>
+                <button type="submit" class="btn-confirm">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
             </div>
         </form>
     </div>
@@ -330,6 +336,7 @@
     PetiteVue.createApp({
         view:'inserimento',
         showModal: false, 
+        editingOrderId: null, // NUOVO STATO: ID dell'ordine in fase di modifica
         
         // Dati salvati
         menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Capricciosa","prezzo":8}],"Bibite":[{"nome":"Acqua","prezzo":1.5},{"nome":"Cola","prezzo":2.5}]}'),
@@ -341,8 +348,8 @@
         activeCat:'Pizze',
         activeModCat: 'Più',
         order:[],
-        calculatedOrderTotal: 0, // Totale solo prodotti + modificatori
-        total:0, // Totale complessivo (incluso costo consegna)
+        calculatedOrderTotal: 0, 
+        total:0, 
         selectedItemIndex: null,
 
         // Dati per il Modale/Finalizzazione
@@ -356,8 +363,8 @@
         phone:'',
         address:'',
         streetNumber:'',
-        zoneName:'', // Nome della zona selezionata
-        deliveryCost: 0, // Costo della consegna
+        zoneName:'', 
+        deliveryCost: 0, 
         town:'',
         hour: getDefaultHour(),
 
@@ -373,7 +380,7 @@
             localStorage.setItem('pz_zones',JSON.stringify(this.deliveryZones));
         },
 
-        // --- Logica Ordine e Modificatori ---
+        // --- Logica Ordine e Modificatori (CALC INCLUSA) ---
         addItem(p){
             this.order.push({...p, modifiers: []});
             this.selectedItemIndex = this.order.length - 1; 
@@ -404,17 +411,64 @@
             this.calc();
         },
         calc(){
-            // 1. Calcola il totale di prodotti + modificatori
             this.calculatedOrderTotal = this.order.reduce((sum, item) => {
                 const modTotal = item.modifiers.reduce((modSum, mod) => modSum + mod.prezzo, 0);
                 return sum + item.prezzo + modTotal;
             }, 0);
-            
-            // 2. Calcola il totale complessivo (inclusa la consegna, se presente)
             this.total = this.calculatedOrderTotal + this.deliveryCost;
         },
         
-        // --- Logica di Finalizzazione Ordine ---
+        // --- Logica di Modifica Ordine (NUOVE FUNZIONI) ---
+        resetCurrentOrderState() {
+            this.order = [];
+            this.selectedItemIndex = null;
+            this.calculatedOrderTotal = 0;
+            this.total = 0;
+            this.editingOrderId = null;
+            
+            // Reset dati cliente/modalità
+            this.mode = '';
+            this.customer = this.phone = this.address = this.streetNumber = this.town = '';
+            this.zoneName = '';
+            this.deliveryCost = 0;
+            this.hour = getDefaultHour();
+        },
+
+        editOrder(id) {
+            const orderToEdit = this.orders.find(o => o.id === id);
+            if (!orderToEdit) return;
+
+            // 1. Reset stato e imposta ID
+            this.resetCurrentOrderState();
+            this.editingOrderId = id;
+            
+            // 2. Carica i dati dell'ordine
+            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); // Clonazione profonda
+            this.mode = orderToEdit.mode;
+            this.customer = orderToEdit.customer;
+            this.phone = orderToEdit.phone || '';
+            this.address = orderToEdit.address || '';
+            this.streetNumber = orderToEdit.streetNumber || '';
+            this.zoneName = orderToEdit.zone || '';
+            this.deliveryCost = orderToEdit.deliveryCost || 0;
+            this.town = orderToEdit.town || '';
+            this.hour = orderToEdit.hour;
+
+            // 3. Ricalcola i totali (necessario per aggiornare le variabili reattive)
+            this.calc();
+            
+            // 4. Passa alla vista di inserimento
+            this.view = 'inserimento';
+        },
+        
+        cancelEdit() {
+            if (confirm("Sei sicuro di voler annullare le modifiche? L'ordine originale sarà mantenuto.")) {
+                this.resetCurrentOrderState();
+                this.view = 'ordini';
+            }
+        },
+
+        // --- Logica Modale Finalizzazione Ordine ---
         selectMode(modeId) {
             this.mode = modeId;
             if (modeId !== 'consegna') {
@@ -427,13 +481,16 @@
         },
 
         openModal() {
-            // Reset dei dati del cliente e modalità
-            this.mode = '';
-            this.customer = this.phone = this.address = this.streetNumber = this.town = '';
-            this.zoneName = '';
-            this.deliveryCost = 0;
-            this.hour = getDefaultHour();
-            this.calc(); // Aggiorna il totale senza costo di consegna iniziale
+            // Se non siamo in modalità modifica, assicurati che i dati siano puliti
+            if (!this.editingOrderId) {
+                this.mode = '';
+                this.customer = this.phone = this.address = this.streetNumber = this.town = '';
+                this.zoneName = '';
+                this.deliveryCost = 0;
+                this.hour = getDefaultHour();
+                this.calc(); // Aggiorna il totale senza costo di consegna iniziale
+            } 
+            // Se siamo in modifica, i dati sono già caricati
             this.showModal = true;
         },
 
@@ -453,46 +510,46 @@
                 return;
             }
 
-            // Validazione (assicurati che i campi obbligatori siano compilati)
+            // Validazione
             if (!this.customer || !this.mode || !this.hour || (this.mode !== 'banco' && !this.phone) || (this.mode === 'consegna' && (!this.address || !this.streetNumber || !this.zoneName || !this.town))) {
                  alert("Per favore, compila tutti i campi obbligatori per la modalità selezionata.");
                 return;
             }
 
-            const id=Date.now();
-            const ord={
-                id,
-                items:[...this.order],
-                total:this.total, 
-                mode:this.mode,
-                customer:this.customer,
-                phone:this.phone,
-                address:this.address,
-                streetNumber:this.streetNumber,
-                zone:this.zoneName, 
+            const ord = {
+                id: this.editingOrderId || Date.now(), // Usa ID esistente o crea nuovo
+                items: [...this.order],
+                total: this.total, 
+                mode: this.mode,
+                customer: this.customer,
+                phone: this.phone,
+                address: this.address,
+                streetNumber: this.streetNumber,
+                zone: this.zoneName, 
                 deliveryCost: this.deliveryCost, 
-                town:this.town,
-                hour:this.hour,
-                status:'In preparazione'
+                town: this.town,
+                hour: this.hour,
+                status: 'In preparazione' // Lo stato si resetta ad 'In preparazione' dopo la modifica/nuovo inserimento
             };
-            this.orders.push(ord);
-            this.saveData();
 
-            // Reset stato ordine e modale
-            this.order=[];
-            this.calculatedOrderTotal=0;
-            this.total=0;
-            this.selectedItemIndex = null;
-            this.showModal=false; 
-
-            // Reset dati cliente
-            this.mode = '';
-            this.customer = this.phone = this.address = this.streetNumber = this.zoneName = this.town = '';
-            this.deliveryCost = 0;
-            this.hour = getDefaultHour();
+            if (this.editingOrderId) {
+                // MODIFICA: Trova l'indice e sostituisci l'ordine
+                const index = this.orders.findIndex(o => o.id === this.editingOrderId);
+                if (index !== -1) {
+                    ord.status = this.orders[index].status; // Mantiene lo stato attuale
+                    this.orders.splice(index, 1, ord);
+                    alert("Ordine #" + ord.id + " aggiornato!");
+                }
+            } else {
+                // NUOVO INSERIMENTO
+                this.orders.push(ord);
+                alert("Ordine #" + ord.id + " salvato!");
+            }
             
-            alert("Ordine #"+id+" salvato!");
-            this.view='ordini';
+            this.saveData();
+            this.resetCurrentOrderState();
+            this.showModal = false;
+            this.view = 'ordini';
         },
 
         // --- Logica Gestione Ordini Attivi ---
@@ -511,7 +568,7 @@
             }
         },
 
-        // --- Logica Impostazioni (Zona di Consegna) ---
+        // --- Logica Impostazioni (Zone, Menu, Modificatori) ---
         addZone() {
             if (this.newZoneName && this.newZonePrice >= 0) {
                 if (this.deliveryZones.some(z => z.name === this.newZoneName)) {
@@ -534,7 +591,6 @@
             }
         },
         
-        // --- Logica Impostazioni (Menu) ---
         addMenuCategory() { 
             if (this.newMenuCat && !this.menu[this.newMenuCat]) {
                 this.menu[this.newMenuCat] = [];
@@ -565,7 +621,6 @@
             }
         },
 
-        // --- Logica Impostazioni (Modificatori) ---
         addModCategory() {
             if (this.newModCat && !this.modifiers[this.newModCat]) {
                 this.modifiers[this.newModCat] = [];
