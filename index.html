@@ -16,9 +16,6 @@
         main { padding: 12px; max-width: 480px; margin: auto; }
         h2 { color: #e31b23; margin: 8px 0; }
         
-        /* FIX RENDER TIME: Nasconde il contenuto prima che Petite-Vue abbia finito di caricarlo */
-        [v-cloak] { display: none; }
-        
         /* Stili Inserimento Ordine */
         .cat-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
         .cat-btn { flex: 1 1 30%; padding: 8px; border: none; border-radius: 6px; background: #444; color: #fff; font-weight: 600; cursor: pointer; }
@@ -78,12 +75,22 @@
         .meter-section select { margin-bottom: 10px; }
         .modifier-tag { display: inline-block; background: #f0f0f0; border: 1px solid #ccc; padding: 4px 8px; margin: 3px; border-radius: 4px; font-size: 0.8rem; }
         .modifier-tag button { margin-left: 5px; border: none; background: none; color: #b91c1c; font-weight: 700; cursor: pointer; padding: 0; }
+    
+        /* Stile per la stampa (nasconde elementi non necessari) */
+        @media print {
+            body > *:not(.print-container) { display: none; }
+            body, html { margin: 0; padding: 0; }
+            .print-container { display: block; max-width: 100%; font-size: 11pt; }
+            .print-container h3, .print-container h4, .print-container p { margin: 2px 0; }
+            .print-container ul { list-style: none; padding: 0; margin-bottom: 10px; }
+            .print-container li { border-bottom: 1px dotted #ccc; padding: 2px 0; }
+        }
     </style>
 </head>
 <body>
 <header>Pizzeria Smart</header>
 
-<main id="app" v-cloak>
+<main id="app">
     <section v-show="view==='inserimento'">
         <h2>{{ editingOrderId ? 'Modifica Ordine #' + editingOrderId : 'Crea Nuovo Ordine' }}</h2>
         <div class="cat-row">
@@ -98,7 +105,7 @@
         </div>
         <div class="grid" v-if="modifiers[activeModCat]">
             <div class="item" v-for="m in modifiers[activeModCat]" :key="m.nome + m.prezzo" @click="addExtra(m)" 
-                 :style="{opacity: selectedItemIndex === null || order[selectedItemIndex].isMeter ? 0.5 : 1, cursor: selectedItemIndex === null || order[selectedItemIndex].isMeter ? 'not-allowed' : 'pointer'}">
+                 :style="{opacity: selectedItemIndex === null || (order[selectedItemIndex] && order[selectedItemIndex].isMeter) ? 0.5 : 1, cursor: selectedItemIndex === null || (order[selectedItemIndex] && order[selectedItemIndex].isMeter) ? 'not-allowed' : 'pointer'}">
                 <strong>{{m.nome}}</strong>
                 <span v-if="m.prezzo > 0">€{{m.prezzo.toFixed(2)}}</span>
             </div>
@@ -134,7 +141,7 @@
                     
                     <ul v-if="i.isMeter" class="modifiers-list" style="padding-left: 0;">
                         <li v-for="(section, secIdx) in i.sections" :key="secIdx" style="display: block; margin-bottom: 5px;">
-                            <strong style="color: #444;">{{ section.name }}</strong>: {{ section.gusto }}
+                            <strong style="color: #444; font-weight: 600;">{{ section.name }}</strong>: {{ section.gusto }}
                             <span v-if="section.modifiers && section.modifiers.length > 0" style="font-style: italic;">
                                 (+{{ section.modifiers.length }} mod.)
                             </span>
@@ -168,8 +175,8 @@
             <ul class="order-items">
                 <li v-for="it in o.items">
                     {{ it.isMeter ? '🍕 ' + it.nome : it.nome }} – €{{ calculateItemTotal(it).toFixed(2) }}
-                    <ul v-if="it.isMeter">
-                        <li v-for="sec in it.sections">
+                    <ul v-if="it.isMeter" style="padding-left: 0;">
+                        <li v-for="sec in it.sections" style="margin-bottom: 3px;">
                             **{{ sec.name }}:** {{ sec.gusto }}
                             <ul v-if="sec.modifiers && sec.modifiers.length > 0">
                                 <li v-for="mod in sec.modifiers">
@@ -421,12 +428,12 @@
         view:'inserimento',
         showModal: false, 
         showShareModal: false,
-        showMeterModal: false, // NUOVO STATO: Modale Mezzo Metro
+        showMeterModal: false, 
         selectedOrderIdForShare: null,
         editingOrderId: null, 
         
-        // Dati salvati (AGGIUNTA CATEGORIA MEZZO METRO)
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Capricciosa","prezzo":8}],"Bibite":[{"nome":"Acqua","prezzo":1.5},{"nome":"Cola","prezzo":2.5}],"Mezzo Metro":[{"nome":"Intero","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
+        // Dati iniziali con la nuova categoria "Mezzo Metro"
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Capricciosa","prezzo":8}],"Bibite":[{"nome":"Acqua","prezzo":1.5},{"nome":"Cola","prezzo":2.5}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2}],"Senza":[{"nome":"Senza olive","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
@@ -440,10 +447,10 @@
         selectedItemIndex: null,
 
         // Stato Composizione Mezzo Metro
-        tempMeterItem: null, // Oggetto per la composizione temporanea del Mezzo Metro
-        tempModCat: 'Più', // Categoria modificatore nel modale Mezzo Metro
+        tempMeterItem: null, 
+        tempModCat: 'Più', 
 
-        // Dati per il Modale/Finalizzazione (mantenuti)
+        // Dati per il Modale/Finalizzazione
         modes:[
             {id:"consegna",label:"Consegna a domicilio",icon:"fa-solid fa-truck"},
             {id:"asporto",label:"Asporto",icon:"fa-solid fa-bag-shopping"},
@@ -459,7 +466,7 @@
         town:'',
         hour: getDefaultHour(),
 
-        // Dati per Impostazioni (mantenuti)
+        // Dati per Impostazioni
         newMenuCat: '', newProdCat: '', newName: '', newPrice: '',
         newModCat: '', newModProdCat: '', newModName: '', newModPrice: 0,
         newZoneName: '', newZonePrice: 0, 
@@ -472,23 +479,18 @@
         },
 
         // --- Logica Calcoli Comuni ---
-        
-        // CALCOLA IL TOTALE DI UN SINGOLO ARTICOLO (Normale o Meter)
         calculateItemTotal(item) {
             let itemTotal = item.prezzo;
             if (item.isMeter) {
-                // Per Mezzo Metro, somma i costi dei modificatori di tutte le sezioni
                 item.sections.forEach(section => {
                     itemTotal += section.modifiers.reduce((s, m) => s + m.prezzo, 0);
                 });
-            } else {
-                // Per prodotto normale, somma i modificatori diretti
+            } else if (item.modifiers) {
                 itemTotal += item.modifiers.reduce((s, m) => s + m.prezzo, 0);
             }
             return itemTotal;
         },
 
-        // CALCOLA IL TOTALE GENERALE DELL'ORDINE
         calc(){
             this.calculatedOrderTotal = this.order.reduce((sum, item) => {
                 return sum + this.calculateItemTotal(item);
@@ -506,8 +508,7 @@
         },
 
         addItem(p){
-            // Assicura che i nuovi prodotti abbiano un array modifiers
-            this.order.push({...p, modifiers: p.modifiers ? [...p.modifiers] : []});
+            this.order.push({...p, modifiers: p.modifiers ? JSON.parse(JSON.stringify(p.modifiers)) : []});
             this.selectedItemIndex = this.order.length - 1; 
             this.calc();
         },
@@ -515,21 +516,17 @@
         // --- Logica Modificatori per Articoli Normali ---
         selectItem(index) {
             this.selectedItemIndex = index;
-            // Seleziona un item normale, resetta il modale meter
+            // Seleziona un item normale, impedisci la selezione per i meter item per evitare confusione
             if (this.order[index] && this.order[index].isMeter) {
-                 this.selectedItemIndex = null; // Non permettere modificatori diretti su item meter
+                 this.selectedItemIndex = null;
             }
         },
         addExtra(mod){
-            if(this.selectedItemIndex === null || this.order.length === 0) {
-                alert("Seleziona prima un prodotto dall'ordine corrente.");
+            if(this.selectedItemIndex === null || this.order.length === 0 || this.order[this.selectedItemIndex].isMeter) {
+                alert("Seleziona prima un prodotto normale dall'ordine corrente.");
                 return;
             }
-            if (this.order[this.selectedItemIndex].isMeter) {
-                 alert("I modificatori per il Mezzo Metro vanno aggiunti all'interno del modale di composizione (che sarà disponibile solo in fase di creazione/duplicazione, non di modifica ordine completo).");
-                 return;
-            }
-            this.order[this.selectedItemIndex].modifiers.push(mod);
+            this.order[this.selectedItemIndex].modifiers.push(JSON.parse(JSON.stringify(mod)));
             this.calc();
         },
         removeModifier(itemIndex, modIndex) {
@@ -546,15 +543,14 @@
             this.calc();
         },
         
-        // --- NUOVA LOGICA: Mezzo Metro ---
+        // --- LOGICA MEZZO METRO ---
 
         startMeterComposition(p) {
-            // Clona l'oggetto base e inizializza le sezioni
             const baseItem = JSON.parse(JSON.stringify(p));
             baseItem.sections.forEach(section => {
-                section.gusto = section.gusto || ''; // Gusto non selezionato di default
-                section.modifiers = section.modifiers || []; // Array vuoto per i modificatori della sezione
-                section.name = section.name || `Sezione ${section.size}`;
+                section.gusto = section.gusto || ''; 
+                section.modifiers = section.modifiers || []; 
+                section.name = section.name || `Sezione`; 
             });
             this.tempMeterItem = baseItem;
             this.tempModCat = 'Più';
@@ -580,12 +576,10 @@
                 return;
             }
             
-            // Aggiunge l'elemento complesso all'ordine
             this.order.push(this.tempMeterItem);
             this.selectedItemIndex = this.order.length - 1; 
             this.calc();
 
-            // Resetta e chiudi
             this.tempMeterItem = null;
             this.showMeterModal = false;
         },
@@ -597,14 +591,14 @@
             }
         },
         
-        // --- Logica Modifica Ordine (mantenuta e aggiornata per i calcoli) ---
+        // --- Logica Modifica Ordine e Finalizzazione (Mantenuta) ---
         resetCurrentOrderState() {
             this.order = [];
             this.selectedItemIndex = null;
             this.calculatedOrderTotal = 0;
             this.total = 0;
             this.editingOrderId = null;
-            this.tempMeterItem = null; // Resetta anche lo stato meter
+            this.tempMeterItem = null; 
             
             this.mode = '';
             this.customer = this.phone = this.address = this.streetNumber = this.town = '';
@@ -620,8 +614,6 @@
             this.resetCurrentOrderState();
             this.editingOrderId = id;
             
-            // ATTENZIONE: i prodotti "Mezzo Metro" una volta salvati NON sono modificabili
-            // con il modale di composizione. Vengono caricati come semplici oggetti nell'ordine corrente.
             this.order = JSON.parse(JSON.stringify(orderToEdit.items)); 
             this.mode = orderToEdit.mode;
             this.customer = orderToEdit.customer;
@@ -637,7 +629,13 @@
             this.view = 'inserimento';
         },
         
-        // --- Logica Modale Finalizzazione Ordine (mantenuta) ---
+        cancelEdit() {
+            if (confirm("Sei sicuro di voler annullare le modifiche? L'ordine originale sarà mantenuto.")) {
+                this.resetCurrentOrderState();
+                this.view = 'ordini';
+            }
+        },
+
         selectMode(modeId) {
             this.mode = modeId;
             if (modeId !== 'consegna') {
@@ -716,7 +714,22 @@
             this.view = 'ordini';
         },
         
-        // --- Funzioni di Stampa e Condivisione (aggiornate per Mezzo Metro) ---
+        advance(o){
+            const st=["In preparazione","Pronto","Completato"];
+            const i=st.indexOf(o.status);
+            if(i<st.length-1){
+                o.status=st[i+1];
+                this.saveData();
+            }
+        },
+        delOrder(id){
+            if(confirm("Sei sicuro di voler eliminare questo ordine?")) {
+                this.orders=this.orders.filter(o=>o.id!==id);
+                this.saveData();
+            }
+        },
+        
+        // --- Funzioni di Stampa e Condivisione (Aggiornate) ---
         
         formatOrderForSharing(id) {
             const order = this.orders.find(o => o.id === id);
@@ -873,7 +886,7 @@
             this.showShareModal = true;
         },
 
-        // --- Logica Impostazioni (mantenuta) ---
+        // --- Logica Impostazioni (Mantenuta) ---
         addZone() { 
             if (this.newZoneName && this.newZonePrice >= 0) {
                 if (this.deliveryZones.some(z => z.name === this.newZoneName)) {
