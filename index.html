@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v17 - Funzionale)</title>
+    <title>Gestionale Pizzeria Avanzato (v17.1 - Modificatori Corretti)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -509,7 +509,7 @@
                 </div>
             
             <h3>Gestione Ingredienti Modificabili (Centralizzata)</h3>
-            <p>Questa lista alimenta i pulsanti 'Più', 'Senza', 'Poco', 'Abbondante' e la categoria 'Aggiunte' del menu.</p>
+            <p>Questa lista alimenta i pulsanti 'Più', 'Senza', 'Poco', 'Abbondante'.</p>
             <form id="add-ingredient-form">
                 <input type="text" id="ingredient-name" placeholder="Nome Ingrediente/Modificatore (es. Prosciutto, Basilico, Cornicione)" required>
                 <input type="number" id="ingredient-price" placeholder="Prezzo Modificatore (€)" step="0.01" value="0.50" required>
@@ -756,7 +756,7 @@
             const list = document.getElementById('addons-list-container');
             list.innerHTML = '';
             
-            // 1. Aggiunge gli ingredienti modificabili 
+            // 1. Aggiunge gli ingredienti modificabili (da ingredients)
             ingredients.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'addon-item';
@@ -1213,27 +1213,22 @@
             if (name === "MODIFIER_SELECTION" && modifier) {
                  // Caso 1: Click su un pulsante Modificatore Immediato (Più, Senza, Poco, Abbondante)
                 
-                const pizzaItems = currentOrder.filter(item => menuCategories.slice(0, 5).includes(getCategory(item.nome)));
-                
-                if (pizzaItems.length === 0) {
-                     alert("Seleziona prima una pizza o un prodotto modificabile nell'ordine!");
-                     return;
-                }
-                
-                // Si applica sempre all'ultimo elemento aggiunto (pizza o prodotto)
+                // Cerchiamo l'indice dell'ultimo articolo inserito
                 const lastItemIndex = currentOrder.length - 1; 
                 
-                if (lastItemIndex >= 0) {
-                     targetItemIndex = lastItemIndex;
-                     pendingModifier = modifier;
-                     
-                     document.getElementById('addon-selection-title').textContent = `Seleziona Ingrediente da rendere "${modifier.toUpperCase()}"`;
-                     
-                     renderAddonsForSelection();
-                     document.getElementById('addons-selection-modal').classList.remove('hidden');
-                } else {
-                     alert("Nessun articolo nell'ordine da modificare.");
+                if (lastItemIndex === -1) {
+                     alert("Seleziona prima una pizza o un prodotto nell'ordine!");
+                     return; // Blocco se l'ordine è vuoto
                 }
+                
+                // Trovato l'indice dell'ultimo elemento
+                targetItemIndex = lastItemIndex;
+                pendingModifier = modifier;
+                
+                document.getElementById('addon-selection-title').textContent = `Seleziona Ingrediente da rendere "${modifier.toUpperCase()}"`;
+                
+                renderAddonsForSelection();
+                document.getElementById('addons-selection-modal').classList.remove('hidden'); 
                 
                 return; 
             }
@@ -1324,9 +1319,12 @@
                  priceToApply = addonPrice;
             } else if (addonPrice > 0) {
                  // È un Ingrediente modificabile con un prezzo > 0 
-                 if (modifierToApply !== "Meno") {
+                 if (modifierToApply === "Più" || modifierToApply === "Abbondante") {
                      priceToApply = addonPrice; 
+                 } else if (modifierToApply === "Poco") {
+                     priceToApply = addonPrice / 2; // Prezzo dimezzato per "Poco"
                  }
+                 // Se è "Meno", priceToApply rimane 0.00 (nessun costo aggiuntivo)
             } else {
                  // È un Ingrediente con prezzo 0.00 (Basilico, ecc.)
                  priceToApply = 0.00;
@@ -1334,13 +1332,16 @@
 
             // 2. Applicazione o Rimozione
             if (existingIndex !== -1) {
+                 // Se si applica lo stesso modificatore, lo rimuove (toggle)
                  if (item.modifiers[existingIndex].modifier === modifierToApply) {
                     item.modifiers.splice(existingIndex, 1);
                  } else {
+                    // Altrimenti lo sovrascrive
                     item.modifiers[existingIndex].modifier = modifierToApply;
                     item.modifiers[existingIndex].price = priceToApply; 
                  }
             } else {
+                // Nuova aggiunta
                 item.modifiers.push({ 
                     modifier: modifierToApply, 
                     addonName: addonName, 
