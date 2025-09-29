@@ -16,6 +16,9 @@
         main { padding: 12px; max-width: 480px; margin: auto; }
         h2 { color: #e31b23; margin: 8px 0; }
         
+        /* FIX RENDER TIME: Nasconde il contenuto prima che Petite-Vue abbia finito di caricarlo */
+        [v-cloak] { display: none; }
+        
         /* Stili Inserimento Ordine */
         .cat-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
         .cat-btn { flex: 1 1 30%; padding: 8px; border: none; border-radius: 6px; background: #444; color: #fff; font-weight: 600; cursor: pointer; }
@@ -80,7 +83,7 @@
 <body>
 <header>Pizzeria Smart</header>
 
-<main id="app">
+<main id="app" v-cloak>
     <section v-show="view==='inserimento'">
         <h2>{{ editingOrderId ? 'Modifica Ordine #' + editingOrderId : 'Crea Nuovo Ordine' }}</h2>
         <div class="cat-row">
