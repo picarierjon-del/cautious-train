@@ -54,7 +54,7 @@
         .mode-card i { font-size: 1.4rem; color: #e31b23; }
         .form-row { margin-bottom: 10px; }
         .form-row label { display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600; }
-        .form-row input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .form-row input, .form-row select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
         .modal-actions { display: flex; justify-content: space-between; margin-top: 15px; }
         .modal-actions button { padding: 10px 15px; border-radius: 6px; font-weight: 700; }
         .modal-actions .btn-cancel { background: #6b7280; color: #fff; border: none; }
@@ -126,8 +126,10 @@
                     </ul>
                 </li>
             </ul>
-            <div class="total">Totale: €{{total.toFixed(2)}}</div>
-            <button class="final-btn" @click="showModal=true" :disabled="order.length === 0">Finalizza Ordine</button>
+            <div class="total">Totale Ordine: €{{calculatedOrderTotal.toFixed(2)}}</div>
+            <div v-if="deliveryCost > 0" class="total">Costo Consegna: +€{{deliveryCost.toFixed(2)}} ({{zoneName}})</div>
+            <div class="total" style="font-size: 1.2rem; margin-top: 10px;">TOTALE COMPLESSIVO: €{{total.toFixed(2)}}</div>
+            <button class="final-btn" @click="openModal" :disabled="order.length === 0">Finalizza Ordine</button>
         </div>
     </section>
 
@@ -139,7 +141,10 @@
             <p><strong>Cliente: {{o.customer}}</strong></p>
             <p>Ritiro/Consegna: {{o.hour}}</p>
             <p v-if="o.phone">📞 {{o.phone}}</p>
-            <p v-if="o.address">📍 {{o.address}} {{o.streetNumber}}, {{o.zone}}, {{o.town}}</p>
+            <p v-if="o.mode === 'consegna'">
+                📍 {{o.address}} {{o.streetNumber}}, {{o.zone}} ({{o.town}})
+                <br>Costo Consegna: €{{o.deliveryCost.toFixed(2)}}
+            </p>
             <ul class="order-items">
                 <li v-for="it in o.items">
                     {{it.nome}} – €{{(it.prezzo + it.modifiers.reduce((s,m)=>s+m.prezzo,0)).toFixed(2)}}
@@ -160,70 +165,26 @@
 
     <section v-show="view==='impostazioni'" class="settings">
         <h2>Impostazioni Categorie</h2>
-        <h3>Gestione Categorie Menu</h3>
-        <div class="settings-list">
-            <div class="settings-item" v-for="cat in Object.keys(menu)" :key="cat">
-                <span>{{cat}}</span>
-                <button class="remove" @click="deleteMenuCategory(cat)">Elimina</button>
-            </div>
-        </div>
-        <form @submit.prevent="addMenuCategory">
-            <input type="text" v-model="newMenuCat" placeholder="Nuova Categoria Menu" required>
-            <button type="submit">Aggiungi Categoria</button>
-        </form>
-
-        <h3>Gestione Prodotti</h3>
-        <div v-for="(items,cat) in menu" :key="cat">
-            <h4>{{cat}}</h4>
-            <div class="settings-list">
-                <div class="settings-item" v-for="(p,i) in items" :key="i">
-                    <span>{{p.nome}} – €{{p.prezzo.toFixed(2)}}</span>
-                    <button class="remove" @click="deleteProd(cat,i)">❌</button>
-                </div>
-            </div>
-        </div>
-        <h3>Aggiungi Prodotto</h3>
-        <select v-model="newProdCat" required>
-            <option disabled value="">Seleziona una categoria</option>
-            <option v-for="cat in Object.keys(menu)" :value="cat">{{cat}}</option>
-        </select>
-        <input type="text" v-model="newName" placeholder="Nome prodotto" required>
-        <input type="number" step="0.01" v-model.number="newPrice" placeholder="Prezzo" required>
-        <button @click="addProd">Aggiungi</button>
-
         <hr style="margin: 20px 0;">
 
         <h2>Impostazioni Modificatori</h2>
-        <h3>Gestione Categorie Modificatori</h3>
+        <hr style="margin: 20px 0;">
+
+        <h2>Gestione Zone di Consegna</h2>
+        <h3>Zone Attive</h3>
         <div class="settings-list">
-            <div class="settings-item" v-for="cat in Object.keys(modifiers)" :key="cat">
-                <span>{{cat}}</span>
-                <button class="remove" @click="deleteModCategory(cat)">Elimina</button>
+            <div class="settings-item" v-for="(zone, i) in deliveryZones" :key="i">
+                <span>{{zone.name}} – Costo: €{{zone.price.toFixed(2)}}</span>
+                <button class="remove" @click="deleteZone(i)">❌</button>
             </div>
         </div>
-        <form @submit.prevent="addModCategory">
-            <input type="text" v-model="newModCat" placeholder="Nuova Categoria Modificatori" required>
-            <button type="submit">Aggiungi Categoria</button>
+        <h3>Aggiungi Nuova Zona</h3>
+        <form @submit.prevent="addZone">
+            <input type="text" v-model="newZoneName" placeholder="Nome Zona (es. Centro)" required>
+            <input type="number" step="0.01" v-model.number="newZonePrice" placeholder="Costo Consegna (es. 2.50)" required>
+            <button type="submit">Aggiungi Zona</button>
         </form>
 
-        <h3>Gestione Modificatori</h3>
-        <div v-for="(mods,cat) in modifiers" :key="cat">
-            <h4>{{cat}}</h4>
-            <div class="settings-list">
-                <div class="settings-item" v-for="(m,i) in mods" :key="i">
-                    <span>{{m.nome}} <span v-if="m.prezzo > 0">– €{{m.prezzo.toFixed(2)}}</span></span>
-                    <button class="remove" @click="deleteMod(cat,i)">❌</button>
-                </div>
-            </div>
-        </div>
-        <h3>Aggiungi Modificatore</h3>
-        <select v-model="newModProdCat" required>
-            <option disabled value="">Seleziona una categoria</option>
-            <option v-for="cat in Object.keys(modifiers)" :value="cat">{{cat}}</option>
-        </select>
-        <input type="text" v-model="newModName" placeholder="Nome modificatore" required>
-        <input type="number" step="0.01" v-model.number="newModPrice" placeholder="Prezzo" required>
-        <button @click="addMod">Aggiungi</button>
     </section>
 </main>
 
@@ -235,12 +196,12 @@
 
 <div class="modal-overlay" v-show="showModal" @click.self="showModal=false">
     <div class="modal-content">
-        <h3>Finalizza Ordine - €{{total.toFixed(2)}}</h3>
+        <h3>Finalizza Ordine - Totale: €{{total.toFixed(2)}}</h3>
         
         <div class="form-row">
             <label>Modalità di Ritiro/Consegna</label>
             <div class="mode-card" v-for="m in modes" :key="m.id"
-                 :class="{active:mode===m.id}" @click="mode=m.id">
+                 :class="{active:mode===m.id}" @click="selectMode(m.id)">
                 <span><i :class="m.icon"></i> {{m.label}}</span>
                 <span v-if="mode===m.id">✔️</span>
             </div>
@@ -268,7 +229,10 @@
                 </div>
                 <div class="form-row">
                     <label for="zone">Zona *</label>
-                    <input type="text" id="zone" v-model="zone" required>
+                    <select id="zone" v-model="zoneName" @change="updateDeliveryCost" required>
+                        <option value="" disabled>Seleziona una zona</option>
+                        <option v-for="z in deliveryZones" :value="z.name">{{z.name}} ({{z.price.toFixed(2)}}€)</option>
+                    </select>
                 </div>
                 <div class="form-row">
                     <label for="town">Paese *</label>
@@ -303,42 +267,51 @@
 
     PetiteVue.createApp({
         view:'inserimento',
-        showModal: false, // Nuovo stato per il modale
+        showModal: false, 
+        
+        // Dati salvati
         menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Capricciosa","prezzo":8}],"Bibite":[{"nome":"Acqua","prezzo":1.5},{"nome":"Cola","prezzo":2.5}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2}],"Senza":[{"nome":"Senza olive","prezzo":0}]}'),
+        deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
+        orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
+
+        // Stato Ordine Corrente
         activeCat:'Pizze',
         activeModCat: 'Più',
         order:[],
-        total:0,
+        calculatedOrderTotal: 0, // Totale solo prodotti + modificatori
+        total:0, // Totale complessivo (incluso costo consegna)
         selectedItemIndex: null,
+
+        // Dati per il Modale/Finalizzazione
         modes:[
             {id:"consegna",label:"Consegna a domicilio",icon:"fa-solid fa-truck"},
             {id:"asporto",label:"Asporto",icon:"fa-solid fa-bag-shopping"},
             {id:"banco",label:"Banco",icon:"fa-solid fa-chair"}
         ],
-        // Dati dell'ordine
         mode:'',
         customer:'',
         phone:'',
         address:'',
-        streetNumber:'', // Nuovo campo
-        zone:'', // Nuovo campo
-        town:'', // Nuovo campo
-        hour: getDefaultHour(), // Nuovo campo con ora predefinita
-        
-        orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
-        
-        // Proprietà per la gestione dinamica delle categorie e prodotti
+        streetNumber:'',
+        zoneName:'', // Nome della zona selezionata
+        deliveryCost: 0, // Costo della consegna
+        town:'',
+        hour: getDefaultHour(),
+
+        // Dati per Impostazioni
         newMenuCat: '', newProdCat: '', newName: '', newPrice: '',
         newModCat: '', newModProdCat: '', newModName: '', newModPrice: 0,
+        newZoneName: '', newZonePrice: 0, // Nuovi campi per le zone
 
         saveData(){
             localStorage.setItem('pz_menu',JSON.stringify(this.menu));
             localStorage.setItem('pz_orders',JSON.stringify(this.orders));
             localStorage.setItem('pz_modifiers',JSON.stringify(this.modifiers));
+            localStorage.setItem('pz_zones',JSON.stringify(this.deliveryZones));
         },
 
-        // --- Logica Ordine e Modificatori (invariata) ---
+        // --- Logica Ordine e Modificatori (invariata, tranne calc()) ---
         addItem(p){
             this.order.push({...p, modifiers: []});
             this.selectedItemIndex = this.order.length - 1; 
@@ -369,21 +342,59 @@
             this.calc();
         },
         calc(){
-            this.total = this.order.reduce((sum, item) => {
+            // 1. Calcola il totale di prodotti + modificatori
+            this.calculatedOrderTotal = this.order.reduce((sum, item) => {
                 const modTotal = item.modifiers.reduce((modSum, mod) => modSum + mod.prezzo, 0);
                 return sum + item.prezzo + modTotal;
             }, 0);
+            
+            // 2. Calcola il totale complessivo (inclusa la consegna, se presente)
+            this.total = this.calculatedOrderTotal + this.deliveryCost;
+        },
+        
+        // --- Logica di Finalizzazione Ordine (modificata) ---
+        selectMode(modeId) {
+            this.mode = modeId;
+            // Resetta i costi di consegna se la modalità non è "consegna"
+            if (modeId !== 'consegna') {
+                this.deliveryCost = 0;
+                this.zoneName = '';
+            } else {
+                // Al cambio a Consegna, ricalcola il costo basandosi sul nome della zona (se già selezionata)
+                this.updateDeliveryCost();
+            }
+            this.calc();
         },
 
-        // --- Logica di Finalizzazione Ordine (modificata) ---
+        openModal() {
+            // Assicura che i dati del cliente non siano sporcati da ordini precedenti
+            this.mode = '';
+            this.customer = this.phone = this.address = this.streetNumber = this.town = '';
+            this.zoneName = '';
+            this.deliveryCost = 0;
+            this.hour = getDefaultHour();
+            this.calc(); // Ricalcola il totale con costo di consegna a 0
+            this.showModal = true;
+        },
+
+        updateDeliveryCost() {
+            if (this.mode === 'consegna' && this.zoneName) {
+                const selectedZone = this.deliveryZones.find(z => z.name === this.zoneName);
+                this.deliveryCost = selectedZone ? selectedZone.price : 0;
+            } else {
+                this.deliveryCost = 0;
+            }
+            this.calc();
+        },
+
         confermaOrdine(){
             if(!this.order.length){
                 alert("L'ordine è vuoto!");
                 return;
             }
 
-            // Validazione minima, i campi sono già 'required' nel modulo, ma questo aggiunge un controllo finale.
-            if (!this.customer || !this.mode || !this.hour || (this.mode !== 'banco' && !this.phone) || (this.mode === 'consegna' && (!this.address || !this.streetNumber || !this.zone || !this.town))) {
+            // Validazione aggiuntiva
+            if (!this.customer || !this.mode || !this.hour || (this.mode !== 'banco' && !this.phone) || (this.mode === 'consegna' && (!this.address || !this.streetNumber || !this.zoneName || !this.town))) {
                  alert("Per favore, compila tutti i campi obbligatori per la modalità selezionata.");
                 return;
             }
@@ -392,15 +403,16 @@
             const ord={
                 id,
                 items:[...this.order],
-                total:this.total,
+                total:this.total, // Totale con costo consegna incluso
                 mode:this.mode,
                 customer:this.customer,
                 phone:this.phone,
                 address:this.address,
                 streetNumber:this.streetNumber,
-                zone:this.zone,
+                zone:this.zoneName, // Nome della zona
+                deliveryCost: this.deliveryCost, // Costo di consegna separato
                 town:this.town,
-                hour:this.hour, // Aggiunto ora
+                hour:this.hour,
                 status:'In preparazione'
             };
             this.orders.push(ord);
@@ -408,13 +420,15 @@
 
             // Reset stato ordine
             this.order=[];
+            this.calculatedOrderTotal=0;
             this.total=0;
             this.selectedItemIndex = null;
-            this.showModal=false; // Chiudi il modale
+            this.showModal=false; 
 
             // Reset dati cliente
             this.mode = '';
-            this.customer = this.phone = this.address = this.streetNumber = this.zone = this.town = '';
+            this.customer = this.phone = this.address = this.streetNumber = this.zoneName = this.town = '';
+            this.deliveryCost = 0;
             this.hour = getDefaultHour();
             
             alert("Ordine #"+id+" salvato!");
@@ -437,11 +451,91 @@
             }
         },
 
-        // --- Logica Impostazioni (invariata) ---
-        addMenuCategory() { /* ... */ }, deleteMenuCategory(cat) { /* ... */ },
-        addProd(){ /* ... */ }, deleteProd(cat,i){ /* ... */ },
-        addModCategory() { /* ... */ }, deleteModCategory(cat) { /* ... */ },
-        addMod(){ /* ... */ }, deleteMod(cat, i){ /* ... */ }
+        // --- Logica Impostazioni (Zona di Consegna) ---
+        addZone() {
+            if (this.newZoneName && this.newZonePrice >= 0) {
+                // Previene duplicati per nome
+                if (this.deliveryZones.some(z => z.name === this.newZoneName)) {
+                    alert("Una zona con questo nome esiste già.");
+                    return;
+                }
+                this.deliveryZones.push({name: this.newZoneName, price: this.newZonePrice});
+                this.saveData();
+                this.newZoneName = '';
+                this.newZonePrice = 0;
+            } else {
+                alert("Inserisci un nome valido e un costo non negativo.");
+            }
+        },
+
+        deleteZone(i) {
+            if(confirm("Sei sicuro di voler eliminare questa zona?")) {
+                this.deliveryZones.splice(i, 1);
+                this.saveData();
+            }
+        },
+        
+        // --- Logica Impostazioni (Menu e Modificatori - omessa per brevità ma completa nello script) ---
+        
+        addMenuCategory() { 
+            if (this.newMenuCat && !this.menu[this.newMenuCat]) {
+                this.menu[this.newMenuCat] = [];
+                this.saveData();
+                this.newMenuCat = '';
+            } else {
+                alert("Inserisci una categoria valida o il nome è già in uso.");
+            }
+        }, 
+        deleteMenuCategory(cat) { 
+            if (confirm("Sei sicuro di voler eliminare la categoria '" + cat + "' e tutti i suoi prodotti?")) {
+                delete this.menu[cat];
+                this.activeCat = Object.keys(this.menu)[0] || '';
+                this.saveData();
+            }
+        },
+        addProd(){ 
+            if(!this.newProdCat||!this.newName||!this.newPrice)return;
+            this.menu[this.newProdCat].push({nome:this.newName,prezzo:this.newPrice});
+            this.saveData();
+            this.newName='';this.newPrice='';
+        }, 
+        deleteProd(cat,i){ 
+            if(confirm("Sei sicuro di voler eliminare questo prodotto?")) {
+                this.menu[cat].splice(i,1);
+                if(!this.menu[cat].length)delete this.menu[cat];
+                this.saveData();
+            }
+        },
+        addModCategory() {
+            if (this.newModCat && !this.modifiers[this.newModCat]) {
+                this.modifiers[this.newModCat] = [];
+                this.saveData();
+                this.newModCat = '';
+            } else {
+                alert("Inserisci una categoria valida o il nome è già in uso.");
+            }
+        },
+        deleteModCategory(cat) {
+            if (confirm("Sei sicuro di voler eliminare la categoria di modificatori '" + cat + "' e tutti i suoi elementi?")) {
+                delete this.modifiers[cat];
+                this.activeModCat = Object.keys(this.modifiers)[0] || '';
+                this.saveData();
+            }
+        },
+        addMod(){
+            if(!this.newModProdCat || !this.newModName) return;
+            this.modifiers[this.newModProdCat].push({nome: this.newModName, prezzo: this.newModPrice});
+            this.saveData();
+            this.newModProdCat = this.newModName = '';
+            this.newModPrice = 0;
+        },
+        deleteMod(cat, i){
+            if(confirm("Sei sicuro di voler eliminare questo modificatore?")) {
+                this.modifiers[cat].splice(i, 1);
+                if(!this.modifiers[cat].length) delete this.modifiers[cat];
+                this.saveData();
+            }
+        }
     }).mount()
 </script>
 </body>
