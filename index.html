@@ -1,315 +1,308 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pizzeria Smart – Gestionale</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<style>
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;background:#f7f7fa;color:#333;}
-header{background:#e31b23;color:#fff;padding:14px;text-align:center;font-weight:700;font-size:1.2rem;}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;border-top:1px solid #ddd;background:#fff;z-index:50}
-nav button{flex:1;border:none;background:none;padding:6px 0;color:#777;font-size:.8rem;display:flex;flex-direction:column;align-items:center}
-nav button i{font-size:1.3rem;margin-bottom:2px}
-nav button.active{color:#e31b23}
-
-main{padding:12px;padding-bottom:90px;max-width:480px;margin:auto}
-h2{color:#e31b23;margin:8px 0}
-.section{margin-bottom:20px}
-
-.cat-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.cat-btn{flex:1 1 30%;padding:8px;border:none;border-radius:6px;background:#444;color:#fff;font-weight:600;cursor:pointer}
-.cat-btn.active{background:#e31b23}
-
-.mod-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;margin-bottom:12px}
-.mod-btn{flex:1;padding:10px;border:2px solid #ccc;border-radius:8px;font-weight:700;cursor:pointer;background:#fff}
-.mod-btn.green{border-color:#22c55e;color:#22c55e}
-.mod-btn.gray{border-color:#6b7280;color:#6b7280}
-.mod-btn.yellow{border-color:#facc15;color:#facc15}
-.mod-btn.blue{border-color:#3b82f6;color:#3b82f6}
-.mod-btn.active{border-color: #e31b23; background-color: #ffecec;}
-
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:20px}
-.item{background:#fff;border:1px solid #ddd;border-radius:10px;text-align:center;padding:12px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.item:hover{background:#ffecec}
-.item strong{display:block;margin-bottom:4px}
-
-.order-box{background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px;margin-bottom:20px}
-.order-box ul{list-style:none;padding:0;margin:0}
-.order-box li{padding:4px 0;border-bottom:1px dotted #ddd;font-size:.9rem}
-.order-box .item-info{display:flex;justify-content:space-between}
-.order-box .modifiers-list{margin: 0; padding-left: 20px;}
-.total{font-weight:700;margin-top:8px;text-align:right}
-.final-btn{width:100%;margin-top:12px;background:#e31b23;color:#fff;border:none;border-radius:6px;padding:12px;font-size:1rem;font-weight:700}
-.final-btn:disabled{background:#ccc;cursor:not-allowed}
-
-.mode-card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
-.mode-card.active{border-color:#e31b23;box-shadow:0 0 0 2px #e31b23 inset}
-.mode-card i{font-size:1.4rem;color:#e31b23}
-
-.order-card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px;margin-bottom:10px}
-.order-card h4{margin:0 0 6px;color:#e31b23}
-.order-items{margin:0;padding-left:16px;font-size:.9rem}
-.order-actions button{margin-top:6px;margin-right:6px;background:#e31b23;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer}
-.order-actions button.delete{background:#b91c1c}
-
-.settings h3{margin-top:16px;color:#e31b23}
-.settings input[type="text"], .settings input[type="number"]{width:100%;padding:8px;margin:4px 0;border:1px solid #ccc;border-radius:6px}
-.settings button{margin-top:6px;margin-right:4px;background:#e31b23;color:#fff;border:none;border-radius:6px;padding:8px 12px;cursor:pointer}
-.settings button.remove{background:#b91c1c}
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Pizzeria Smart – Gestionale</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif; background: #f7f7fa; color: #333; padding-bottom: 90px; }
+        header { background: #e31b23; color: #fff; padding: 14px; text-align: center; font-weight: 700; font-size: 1.2rem; }
+        nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; border-top: 1px solid #ddd; background: #fff; z-index: 50; }
+        nav button { flex: 1; border: none; background: none; padding: 6px 0; color: #777; font-size: .8rem; display: flex; flex-direction: column; align-items: center; }
+        nav button i { font-size: 1.3rem; margin-bottom: 2px; }
+        nav button.active { color: #e31b23; }
+        main { padding: 12px; max-width: 480px; margin: auto; }
+        h2 { color: #e31b23; margin: 8px 0; }
+        .section { margin-bottom: 20px; }
+        .cat-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .cat-btn { flex: 1 1 30%; padding: 8px; border: none; border-radius: 6px; background: #444; color: #fff; font-weight: 600; cursor: pointer; }
+        .cat-btn.active { background: #e31b23; }
+        .mod-row { display: flex; justify-content: space-between; gap: 6px; margin-bottom: 12px; }
+        .mod-btn { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 8px; font-weight: 700; cursor: pointer; background: #fff; }
+        .mod-btn.green { border-color: #22c55e; color: #22c55e; }
+        .mod-btn.gray { border-color: #6b7280; color: #6b7280; }
+        .mod-btn.yellow { border-color: #facc15; color: #facc15; }
+        .mod-btn.blue { border-color: #3b82f6; color: #3b82f6; }
+        .mod-btn.active { border-color: #e31b23; background-color: #ffecec; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .item { background: #fff; border: 1px solid #ddd; border-radius: 10px; text-align: center; padding: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+        .item:hover { background: #ffecec; }
+        .item strong { display: block; margin-bottom: 4px; }
+        .order-box { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 20px; }
+        .order-box ul { list-style: none; padding: 0; margin: 0; }
+        .order-box .order-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dotted #ddd; font-size: .9rem; }
+        .order-box .modifiers-list { list-style: none; padding-left: 15px; font-size: 0.8rem; margin-top: 2px; }
+        .total { font-weight: 700; margin-top: 8px; text-align: right; }
+        .final-btn { width: 100%; margin-top: 12px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 12px; font-size: 1rem; font-weight: 700; }
+        .final-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .mode-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+        .mode-card.active { border-color: #e31b23; box-shadow: 0 0 0 2px #e31b23 inset; }
+        .mode-card i { font-size: 1.4rem; color: #e31b23; }
+        .order-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+        .order-card h4 { margin: 0 0 6px; color: #e31b23; }
+        .order-items { margin: 0; padding-left: 16px; font-size: .9rem; }
+        .order-actions button { margin-top: 6px; margin-right: 6px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+        .order-actions button.delete { background: #b91c1c; }
+        .settings h3 { margin-top: 16px; color: #e31b23; }
+        .settings input[type="text"], .settings input[type="number"] { width: 100%; padding: 8px; margin: 4px 0; border: 1px solid #ccc; border-radius: 6px; }
+        .settings button { margin-top: 6px; margin-right: 4px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+        .settings button.remove { background: #b91c1c; }
+    </style>
 </head>
 <body>
 <header>Pizzeria Smart</header>
 
 <main id="app">
-  <section v-show="view==='inserimento'">
-    <h2>Crea Ordine</h2>
-    <div class="cat-row">
-      <button class="cat-btn" v-for="c in Object.keys(menu)" :key="c"
-              :class="{active:activeCat===c}" @click="activeCat=c">{{c}}</button>
-    </div>
+    <section v-show="view==='inserimento'">
+        <h2>Crea Ordine</h2>
+        <div class="cat-row">
+            <button class="cat-btn" v-for="c in Object.keys(menu)" :key="c"
+                    :class="{active:activeCat===c}" @click="activeCat=c">{{c}}</button>
+        </div>
 
-    <div class="mod-row">
-      <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-              :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeModCat===cat}"
-              @click="activeModCat=cat">{{cat.toUpperCase()}}</button>
-    </div>
-    <div class="grid" v-if="modifiers[activeModCat]">
-      <div class="item" v-for="m in modifiers[activeModCat]" :key="m.nome" @click="addExtra(m)">
-        <strong>{{m.nome}}</strong>
-        <span v-if="m.prezzo > 0">€{{m.prezzo.toFixed(2)}}</span>
-      </div>
-    </div>
-    
-    <div class="grid">
-      <div class="item" v-for="p in menu[activeCat]" :key="p.nome" @click="addItem(p)">
-        <strong>{{p.nome}}</strong>
-        €{{p.prezzo.toFixed(2)}}
-      </div>
-    </div>
+        <div class="mod-row">
+            <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
+                    :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeModCat===cat}"
+                    @click="activeModCat=cat">{{cat.toUpperCase()}}</button>
+        </div>
+        <div class="grid" v-if="modifiers[activeModCat]">
+            <div class="item" v-for="m in modifiers[activeModCat]" :key="m.nome" @click="addExtra(m)">
+                <strong>{{m.nome}}</strong>
+                <span v-if="m.prezzo > 0">€{{m.prezzo.toFixed(2)}}</span>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="item" v-for="p in menu[activeCat]" :key="p.nome" @click="addItem(p)">
+                <strong>{{p.nome}}</strong>
+                €{{p.prezzo.toFixed(2)}}
+            </div>
+        </div>
 
-    <div class="order-box">
-      <h3>Ordine Corrente</h3>
-      <ul>
-        <li v-for="(i,idx) in order" :key="idx">
-          <div class="item-info">
-            <span>{{i.nome}}</span>
-            <span>€{{(i.prezzo + i.modifiers.reduce((s,m)=>s+m.prezzo,0)).toFixed(2)}} <button @click="removeItem(idx)" style="border:none;background:none;color:#e31b23">✖️</button></span>
-          </div>
-          <ul v-if="i.modifiers.length > 0" class="modifiers-list">
-            <li v-for="mod in i.modifiers">
-              * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
-            </li>
-          </ul>
-        </li>
-      </ul>
-      <div class="total">Totale: €{{total.toFixed(2)}}</div>
-      <button class="final-btn" @click="step=2" :disabled="order.length === 0">Finalizza Ordine</button>
-    </div>
-
-    <div v-if="step===2">
-      <h3>Modalità di ritiro/consegna</h3>
-      <div class="mode-card" v-for="m in modes" :key="m.id"
-           :class="{active:mode===m.id}" @click="mode=m.id">
-        <span><i :class="m.icon"></i> {{m.label}}</span>
-        <span v-if="mode===m.id">✔️</span>
-      </div>
-      <div v-if="mode">
-        <input type="text" v-model="customer" placeholder="Nome cliente">
-        <input type="tel" v-if="mode!=='banco'" v-model="phone" placeholder="Telefono">
-        <input type="text" v-if="mode==='consegna'" v-model="address" placeholder="Indirizzo">
-        <button class="final-btn" @click="confermaOrdine" :disabled="!customer.trim()">Conferma Ordine</button>
-      </div>
-    </div>
-  </section>
-
-  <section v-show="view==='ordini'">
-    <h2>Ordini Attivi</h2>
-    <div v-if="!orders.length">Nessun ordine attivo.</div>
-    <div class="order-card" v-for="o in orders" :key="o.id">
-      <h4>#{{o.id}} – {{o.mode.toUpperCase()}}</h4>
-      <p><strong>{{o.customer}}</strong> <span v-if="o.phone">📞 {{o.phone}}</span></p>
-      <p v-if="o.address">📍 {{o.address}}</p>
-      <ul class="order-items">
-        <li v-for="it in o.items">
-            {{it.nome}} – €{{(it.prezzo + it.modifiers.reduce((s,m)=>s+m.prezzo,0)).toFixed(2)}}
-            <ul v-if="it.modifiers.length > 0">
-                <li v-for="mod in it.modifiers">
-                    * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+        <div class="order-box">
+            <h3>Ordine Corrente</h3>
+            <ul>
+                <li v-for="(i,idx) in order" :key="idx">
+                    <div class="order-item">
+                        <span>{{i.nome}}</span>
+                        <span>€{{(i.prezzo + i.modifiers.reduce((s,m)=>s+m.prezzo,0)).toFixed(2)}} <button @click="removeItem(idx)" style="border:none;background:none;color:#e31b23">✖️</button></span>
+                    </div>
+                    <ul v-if="i.modifiers && i.modifiers.length > 0" class="modifiers-list">
+                        <li v-for="mod in i.modifiers">
+                            * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+                        </li>
+                    </ul>
                 </li>
             </ul>
-        </li>
-      </ul>
-      <p><strong>Totale: €{{o.total.toFixed(2)}}</strong></p>
-      <div class="order-actions">
-        <button @click="advance(o)">Avanza Stato ({{o.status}})</button>
-        <button class="delete" @click="delOrder(o.id)">Elimina</button>
-      </div>
-    </div>
-  </section>
+            <div class="total">Totale: €{{total.toFixed(2)}}</div>
+            <button class="final-btn" @click="step=2" :disabled="order.length === 0">Finalizza Ordine</button>
+        </div>
 
-  <section v-show="view==='impostazioni'" class="settings">
-    <h2>Impostazioni Menu</h2>
-    <div v-for="(items,cat) in menu" :key="cat">
-      <h3>{{cat}}</h3>
-      <div v-for="(p,i) in items" :key="i">
-        {{p.nome}} – €{{p.prezzo.toFixed(2)}}
-        <button class="remove" @click="deleteProd(cat,i)">❌</button>
-      </div>
-    </div>
-    <h3>Aggiungi Prodotto</h3>
-    <input type="text" v-model="newCat" placeholder="Categoria">
-    <input type="text" v-model="newName" placeholder="Nome prodotto">
-    <input type="number" step="0.01" v-model.number="newPrice" placeholder="Prezzo">
-    <button @click="addProd">Aggiungi</button>
+        <div v-if="step===2">
+            <h3>Modalità di ritiro/consegna</h3>
+            <div class="mode-card" v-for="m in modes" :key="m.id"
+                 :class="{active:mode===m.id}" @click="mode=m.id">
+                <span><i :class="m.icon"></i> {{m.label}}</span>
+                <span v-if="mode===m.id">✔️</span>
+            </div>
+            <div v-if="mode">
+                <input type="text" v-model="customer" placeholder="Nome cliente">
+                <input type="tel" v-if="mode!=='banco'" v-model="phone" placeholder="Telefono">
+                <input type="text" v-if="mode==='consegna'" v-model="address" placeholder="Indirizzo">
+                <button class="final-btn" @click="confermaOrdine">Conferma Ordine</button>
+            </div>
+        </div>
+    </section>
 
-    <hr style="margin: 20px 0;">
+    <section v-show="view==='ordini'">
+        <h2>Ordini Attivi</h2>
+        <div v-if="!orders.length">Nessun ordine attivo.</div>
+        <div class="order-card" v-for="o in orders" :key="o.id">
+            <h4>#{{o.id}} – {{o.mode.toUpperCase()}}</h4>
+            <p><strong>{{o.customer}}</strong> <span v-if="o.phone">📞 {{o.phone}}</span></p>
+            <p v-if="o.address">📍 {{o.address}}</p>
+            <ul class="order-items">
+                <li v-for="it in o.items">
+                    {{it.nome}} – €{{(it.prezzo + it.modifiers.reduce((s,m)=>s+m.prezzo,0)).toFixed(2)}}
+                    <ul v-if="it.modifiers && it.modifiers.length > 0">
+                        <li v-for="mod in it.modifiers">
+                            * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <p><strong>Totale: €{{o.total.toFixed(2)}}</strong></p>
+            <div class="order-actions">
+                <button @click="advance(o)">Avanza Stato ({{o.status}})</button>
+                <button class="delete" @click="delOrder(o.id)">Elimina</button>
+            </div>
+        </div>
+    </section>
 
-    <h2>Impostazioni Modificatori</h2>
-    <div v-for="(mods,cat) in modifiers" :key="cat">
-      <h3>{{cat}}</h3>
-      <div v-for="(m,i) in mods" :key="i">
-        {{m.nome}} <span v-if="m.prezzo > 0">– €{{m.prezzo.toFixed(2)}}</span>
-        <button class="remove" @click="deleteMod(cat,i)">❌</button>
-      </div>
-    </div>
-    <h3>Aggiungi Modificatore</h3>
-    <input type="text" v-model="newModCat" placeholder="Categoria (es. Più, Senza)">
-    <input type="text" v-model="newModName" placeholder="Nome modificatore">
-    <input type="number" step="0.01" v-model.number="newModPrice" placeholder="Prezzo">
-    <button @click="addMod">Aggiungi</button>
-  </section>
+    <section v-show="view==='impostazioni'" class="settings">
+        <h2>Impostazioni Menu</h2>
+        <div v-for="(items,cat) in menu" :key="cat">
+            <h3>{{cat}}</h3>
+            <div v-for="(p,i) in items" :key="i">
+                {{p.nome}} – €{{p.prezzo.toFixed(2)}}
+                <button class="remove" @click="deleteProd(cat,i)">❌</button>
+            </div>
+        </div>
+        <h3>Aggiungi Prodotto</h3>
+        <input type="text" v-model="newCat" placeholder="Categoria">
+        <input type="text" v-model="newName" placeholder="Nome prodotto">
+        <input type="number" step="0.01" v-model.number="newPrice" placeholder="Prezzo">
+        <button @click="addProd">Aggiungi</button>
+
+        <hr style="margin: 20px 0;">
+
+        <h2>Impostazioni Modificatori</h2>
+        <div v-for="(mods,cat) in modifiers" :key="cat">
+            <h3>{{cat}}</h3>
+            <div v-for="(m,i) in mods" :key="i">
+                {{m.nome}} <span v-if="m.prezzo > 0">– €{{m.prezzo.toFixed(2)}}</span>
+                <button class="remove" @click="deleteMod(cat,i)">❌</button>
+            </div>
+        </div>
+        <h3>Aggiungi Modificatore</h3>
+        <input type="text" v-model="newModCat" placeholder="Categoria (es. Più, Senza)">
+        <input type="text" v-model="newModName" placeholder="Nome modificatore">
+        <input type="number" step="0.01" v-model.number="newModPrice" placeholder="Prezzo">
+        <button @click="addMod">Aggiungi</button>
+    </section>
 </main>
 
 <nav>
-  <button :class="{active:view==='inserimento'}" @click="view='inserimento'"><i class="fa-solid fa-cash-register"></i>Inserimento</button>
-  <button :class="{active:view==='ordini'}" @click="view='ordini'"><i class="fa-solid fa-clipboard-list"></i>Ordini</button>
-  <button :class="{active:view==='impostazioni'}" @click="view='impostazioni'"><i class="fa-solid fa-gear"></i>Impostazioni</button>
+    <button :class="{active:view==='inserimento'}" @click="view='inserimento'"><i class="fa-solid fa-cash-register"></i>Inserimento</button>
+    <button :class="{active:view==='ordini'}" @click="view='ordini'"><i class="fa-solid fa-clipboard-list"></i>Ordini</button>
+    <button :class="{active:view==='impostazioni'}" @click="view='impostazioni'"><i class="fa-solid fa-gear"></i>Impostazioni</button>
 </nav>
 
 <script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.iife.js"></script>
 <script>
-PetiteVue.createApp({
-  view:'inserimento',
-  step:1,
-  menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Capricciosa","prezzo":8}],"Bibite":[{"nome":"Acqua","prezzo":1.5},{"nome":"Cola","prezzo":2.5}]}'),
-  modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2}],"Senza":[{"nome":"Senza olive","prezzo":0}]}'),
-  activeCat:'Pizze',
-  activeModCat: 'Più',
-  order:[],
-  total:0,
-  modes:[
-    {id:"consegna",label:"Consegna a domicilio",icon:"fa-solid fa-truck"},
-    {id:"asporto",label:"Asporto",icon:"fa-solid fa-bag-shopping"},
-    {id:"banco",label:"Banco",icon:"fa-solid fa-chair"}
-  ],
-  mode:'',
-  customer:'',
-  phone:'',
-  address:'',
-  orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
-  newCat:'',newName:'',newPrice:'',
-  newModCat:'', newModName:'', newModPrice: 0,
+    PetiteVue.createApp({
+        view:'inserimento',
+        step:1,
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Capricciosa","prezzo":8}],"Bibite":[{"nome":"Acqua","prezzo":1.5},{"nome":"Cola","prezzo":2.5}]}'),
+        modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2}],"Senza":[{"nome":"Senza olive","prezzo":0}]}'),
+        activeCat:'Pizze',
+        activeModCat: 'Più',
+        order:[],
+        total:0,
+        modes:[
+            {id:"consegna",label:"Consegna a domicilio",icon:"fa-solid fa-truck"},
+            {id:"asporto",label:"Asporto",icon:"fa-solid fa-bag-shopping"},
+            {id:"banco",label:"Banco",icon:"fa-solid fa-chair"}
+        ],
+        mode:'',
+        customer:'',
+        phone:'',
+        address:'',
+        orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
+        newCat:'',newName:'',newPrice:'',
+        newModCat:'', newModName:'', newModPrice: 0,
 
-  saveData(){
-    localStorage.setItem('pz_menu',JSON.stringify(this.menu));
-    localStorage.setItem('pz_orders',JSON.stringify(this.orders));
-    localStorage.setItem('pz_modifiers',JSON.stringify(this.modifiers));
-  },
+        saveData(){
+            localStorage.setItem('pz_menu',JSON.stringify(this.menu));
+            localStorage.setItem('pz_orders',JSON.stringify(this.orders));
+            localStorage.setItem('pz_modifiers',JSON.stringify(this.modifiers));
+        },
 
-  addItem(p){
-    this.order.push({...p, modifiers: []});
-    this.calc();
-  },
+        addItem(p){
+            this.order.push({...p, modifiers: []});
+            this.calc();
+        },
 
-  addExtra(mod){
-    if(!this.order.length) {
-      alert("Aggiungi prima un prodotto all'ordine.");
-      return;
-    }
-    const lastItem = this.order[this.order.length - 1];
-    if (lastItem.modifiers.some(m => m.nome === mod.nome)) {
-      alert("Questo modificatore è già stato aggiunto.");
-      return;
-    }
-    lastItem.modifiers.push(mod);
-    this.calc();
-  },
+        addExtra(mod){
+            if(!this.order.length) {
+                alert("Aggiungi prima un prodotto all'ordine.");
+                return;
+            }
+            const lastItem = this.order[this.order.length - 1];
+            if (lastItem.modifiers.some(m => m.nome === mod.nome)) {
+                alert("Questo modificatore è già stato aggiunto.");
+                return;
+            }
+            lastItem.modifiers.push(mod);
+            this.calc();
+        },
 
-  removeItem(i){
-    this.order.splice(i,1);
-    this.calc();
-  },
+        removeItem(i){
+            this.order.splice(i,1);
+            this.calc();
+        },
 
-  calc(){
-    this.total = this.order.reduce((sum, item) => {
-      const modTotal = item.modifiers.reduce((modSum, mod) => modSum + mod.prezzo, 0);
-      return sum + item.prezzo + modTotal;
-    }, 0);
-  },
+        calc(){
+            this.total = this.order.reduce((sum, item) => {
+                const modTotal = item.modifiers.reduce((modSum, mod) => modSum + mod.prezzo, 0);
+                return sum + item.prezzo + modTotal;
+            }, 0);
+        },
 
-  confermaOrdine(){
-    if(!this.order.length){
-      alert("L'ordine è vuoto!");
-      return;
-    }
-    const id=Date.now();
-    const ord={id,items:[...this.order],total:this.total,mode:this.mode,customer:this.customer,phone:this.phone,address:this.address,status:'In preparazione'};
-    this.orders.push(ord);
-    this.saveData();
-    this.order=[];this.total=0;this.step=1;this.customer=this.phone=this.address='';this.mode='';
-    alert("Ordine #"+id+" salvato!");
-    this.view='ordini';
-  },
+        confermaOrdine(){
+            if(!this.order.length){
+                alert("L'ordine è vuoto!");
+                return;
+            }
+            const id=Date.now();
+            const ord={id,items:[...this.order],total:this.total,mode:this.mode,customer:this.customer,phone:this.phone,address:this.address,status:'In preparazione'};
+            this.orders.push(ord);
+            this.saveData();
+            this.order=[];this.total=0;this.step=1;this.customer=this.phone=this.address='';this.mode='';
+            alert("Ordine #"+id+" salvato!");
+            this.view='ordini';
+        },
 
-  advance(o){
-    const st=["In preparazione","Pronto","Completato"];
-    const i=st.indexOf(o.status);
-    if(i<st.length-1){o.status=st[i+1];this.saveData();}
-  },
+        advance(o){
+            const st=["In preparazione","Pronto","Completato"];
+            const i=st.indexOf(o.status);
+            if(i<st.length-1){
+                o.status=st[i+1];
+                this.saveData();
+            }
+        },
 
-  delOrder(id){
-    if(confirm("Sei sicuro di voler eliminare questo ordine?")) {
-      this.orders=this.orders.filter(o=>o.id!==id);
-      this.saveData();
-    }
-  },
+        delOrder(id){
+            if(confirm("Sei sicuro di voler eliminare questo ordine?")) {
+                this.orders=this.orders.filter(o=>o.id!==id);
+                this.saveData();
+            }
+        },
 
-  addProd(){
-    if(!this.newCat||!this.newName||!this.newPrice)return;
-    if(!this.menu[this.newCat])this.menu[this.newCat]=[];
-    this.menu[this.newCat].push({nome:this.newName,prezzo:this.newPrice});
-    this.saveData();
-    this.newCat=this.newName='';this.newPrice='';
-  },
+        addProd(){
+            if(!this.newCat||!this.newName||!this.newPrice)return;
+            if(!this.menu[this.newCat])this.menu[this.newCat]=[];
+            this.menu[this.newCat].push({nome:this.newName,prezzo:this.newPrice});
+            this.saveData();
+            this.newCat=this.newName='';this.newPrice='';
+        },
 
-  deleteProd(cat,i){
-    if(confirm("Sei sicuro di voler eliminare questo prodotto?")) {
-      this.menu[cat].splice(i,1);
-      if(!this.menu[cat].length)delete this.menu[cat];
-      this.saveData();
-    }
-  },
-  
-  addMod(){
-    if(!this.newModCat || !this.newModName) return;
-    if(!this.modifiers[this.newModCat]) this.modifiers[this.newModCat] = [];
-    this.modifiers[this.newModCat].push({nome: this.newModName, prezzo: this.newModPrice});
-    this.saveData();
-    this.newModCat = this.newModName = '';
-    this.newModPrice = 0;
-  },
+        deleteProd(cat,i){
+            if(confirm("Sei sicuro di voler eliminare questo prodotto?")) {
+                this.menu[cat].splice(i,1);
+                if(!this.menu[cat].length)delete this.menu[cat];
+                this.saveData();
+            }
+        },
+        
+        addMod(){
+            if(!this.newModCat || !this.newModName) return;
+            if(!this.modifiers[this.newModCat]) this.modifiers[this.newModCat] = [];
+            this.modifiers[this.newModCat].push({nome: this.newModName, prezzo: this.newModPrice});
+            this.saveData();
+            this.newModCat = this.newModName = '';
+            this.newModPrice = 0;
+        },
 
-  deleteMod(cat, i){
-    if(confirm("Sei sicuro di voler eliminare questo modificatore?")) {
-      this.modifiers[cat].splice(i, 1);
-      if(!this.modifiers[cat].length) delete this.modifiers[cat];
-      this.saveData();
-    }
-  }
-
-}).mount()
+        deleteMod(cat, i){
+            if(confirm("Sei sicuro di voler eliminare questo modificatore?")) {
+                this.modifiers[cat].splice(i, 1);
+                if(!this.modifiers[cat].length) delete this.modifiers[cat];
+                this.saveData();
+            }
+        }
+    }).mount()
 </script>
 </body>
 </html>
