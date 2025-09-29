@@ -63,7 +63,7 @@
         
         /* Stili Ordini Attivi */
         .order-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-        .order-card h4 { margin: 0 0 6px; color: #e31b23; }
+        .order-card h4 { margin: 0 0 6px; color: #e31b23; display: flex; justify-content: space-between;}
         .order-items { margin: 0; padding-left: 16px; font-size: .9rem; }
         .order-actions button { margin-top: 6px; margin-right: 6px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
         .order-actions button.delete { background: #b91c1c; }
@@ -76,7 +76,21 @@
         .meter-section select { margin-bottom: 10px; }
         .modifier-tag { display: inline-block; background: #f0f0f0; border: 1px solid #ccc; padding: 4px 8px; margin: 3px; border-radius: 4px; font-size: 0.8rem; }
         .modifier-tag button { margin-left: 5px; border: none; background: none; color: #b91c1c; font-weight: 700; cursor: pointer; padding: 0; }
-    
+        
+        /* Stili Modificatori Evidenziati */
+        .mod-icon { margin-right: 5px; font-weight: 900; font-size: 0.8rem; border-radius: 50%; width: 15px; height: 15px; display: inline-flex; align-items: center; justify-content: center; color: #fff; }
+        .mod-icon.Più { background: #22c55e; } 
+        .mod-icon.Senza { background: #b91c1c; } 
+        .mod-icon.Poco { background: #facc15; color: #333; } 
+        .mod-icon.Abbondante { background: #3b82f6; } 
+        
+        /* Stili Storico */
+        .stats-box { background: #e31b23; color: #fff; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+        .stats-box h3 { margin: 0; font-size: 1.1rem; }
+        .stats-box p { margin: 5px 0 0; font-size: 2rem; font-weight: 700; }
+        .archive-order-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px; opacity: 0.8; }
+        .archive-order-card h5 { margin: 0 0 6px; color: #6b7280; font-size: 0.9rem;}
+
         /* Stile per la stampa (nasconde elementi non necessari) */
         @media print {
             body > *:not(.print-container) { display: none; }
@@ -137,7 +151,10 @@
                     
                     <ul v-if="i.modifiers && i.modifiers.length > 0 && !i.isMeter" class="modifiers-list">
                         <li v-for="(mod, modIdx) in i.modifiers" :key="modIdx">
-                            <span>* {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span></span>
+                            <span>
+                                <span :class="['mod-icon', getModifierCategory(mod.nome)]">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+                            </span>
                             <button class="mod-remove-btn" @click.stop="removeModifier(idx, modIdx)">❌</button>
                         </li>
                     </ul>
@@ -146,7 +163,9 @@
                         <li v-for="(section, secIdx) in i.sections" :key="secIdx" style="display: block; margin-bottom: 5px;">
                             <strong style="color: #444; font-weight: 600;">{{ section.name }}</strong>: {{ section.gusto }}
                             <span v-if="section.modifiers && section.modifiers.length > 0" style="font-style: italic;">
-                                (+{{ section.modifiers.length }} mod.)
+                                (<span v-for="(mod, mIdx) in section.modifiers" :key="mIdx">
+                                    <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                </span> Modifiche)
                             </span>
                         </li>
                     </ul>
@@ -167,9 +186,12 @@
         <h2>Ordini Attivi</h2>
         <div v-if="!orders.length">Nessun ordine attivo.</div>
         <div class="order-card" v-for="o in orders" :key="o.id">
-            <h4>#{{o.id}} – {{o.mode.toUpperCase()}} ({{o.status}})</h4>
+            <h4>
+                <span>#{{o.id}} – {{o.mode.toUpperCase()}} ({{o.status}})</span>
+                <span v-if="o.tableNumber" style="color:#3b82f6; font-size:1rem;">Tavolo/Ritiro: {{o.tableNumber}}</span>
+            </h4>
             <p><strong>Cliente: {{o.customer}}</strong></p>
-            <p>Ritiro/Consegna: {{o.hour}}</p>
+            <p>Ritiro/Consegna: **{{o.hour}}**</p>
             <p v-if="o.phone">📞 {{o.phone}}</p>
             <p v-if="o.mode === 'consegna'">
                 📍 {{o.address}} {{o.streetNumber}}, **{{o.zone}}** ({{o.town}})
@@ -184,6 +206,7 @@
                             **{{ sec.name }}:** {{ sec.gusto }}
                             <ul v-if="sec.modifiers && sec.modifiers.length > 0">
                                 <li v-for="mod in sec.modifiers">
+                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                     * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                 </li>
                             </ul>
@@ -191,6 +214,7 @@
                     </ul>
                     <ul v-if="it.modifiers && it.modifiers.length > 0 && !it.isMeter">
                         <li v-for="mod in it.modifiers">
+                             <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                             * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                         </li>
                     </ul>
@@ -203,6 +227,23 @@
                 <button class="share" @click="showShareMenu(o.id)"><i class="fa-solid fa-share-alt"></i> Azioni</button>
                 <button class="delete" @click="delOrder(o.id)">Elimina</button>
             </div>
+        </div>
+    </section>
+
+    <section v-show="view==='storico'">
+        <h2>Storico e Statistiche</h2>
+        
+        <div class="stats-box">
+            <h3>Incasso Totale di Oggi ({{ todayDate }})</h3>
+            <p>€{{ dailyTotal.toFixed(2) }}</p>
+        </div>
+
+        <h3 style="color:#6b7280;">Ordini Completati</h3>
+        <div v-if="!archive.length">Nessun ordine completato oggi.</div>
+        <div class="archive-order-card" v-for="o in archive.slice().reverse()" :key="o.id">
+            <h5>#{{o.id}} – {{new Date(o.id).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
+            <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})</p>
+            <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6;">Tavolo/Ritiro: {{o.tableNumber}}</span>
         </div>
     </section>
 
@@ -295,6 +336,7 @@
 <nav>
     <button :class="{active:view==='inserimento'}" @click="view='inserimento'"><i class="fa-solid fa-cash-register"></i>Inserimento</button>
     <button :class="{active:view==='ordini'}" @click="view='ordini'"><i class="fa-solid fa-clipboard-list"></i>Ordini</button>
+    <button :class="{active:view==='storico'}" @click="view='storico'"><i class="fa-solid fa-chart-line"></i>Storico</button>
     <button :class="{active:view==='impostazioni'}" @click="view='impostazioni'"><i class="fa-solid fa-gear"></i>Impostazioni</button>
 </nav>
 
@@ -321,6 +363,7 @@
                 <label>Modificatori Aggiunti:</label>
                 <div>
                     <span v-for="(mod, modIdx) in section.modifiers" :key="modIdx" class="modifier-tag">
+                         <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                         {{ mod.nome }} <span v-if="mod.prezzo > 0">(+€{{ mod.prezzo.toFixed(2) }})</span>
                         <button @click="removeMeterModifier(secIdx, modIdx)">❌</button>
                     </span>
@@ -371,6 +414,11 @@
                 <input type="text" id="customer" v-model="customer" required>
             </div>
             
+            <div v-if="mode !== 'consegna'" class="form-row">
+                <label for="tableNumber">{{ mode === 'banco' ? 'Numero Tavolo' : 'Numero per Ritiro' }}</label>
+                <input type="text" id="tableNumber" v-model="tableNumber" :required="mode !== 'consegna'">
+            </div>
+
             <div v-if="mode !== 'banco'" class="form-row">
                 <label for="phone">Telefono *</label>
                 <input type="tel" id="phone" v-model="phone" required>
@@ -430,6 +478,11 @@
 
 <script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.iife.js"></script>
 <script>
+    function getTodayKey() {
+        const today = new Date();
+        return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    }
+
     function getDefaultHour() {
         const now = new Date();
         now.setMinutes(now.getMinutes() + 30);
@@ -446,11 +499,12 @@
         selectedOrderIdForShare: null,
         editingOrderId: null, 
         
-        // --- DATI INIZIALI AGGIORNATI ---
+        // --- DATI INIZIALI ---
         menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Intera (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Divisa in Due (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Divisa in Tre (3 Gusti)","prezzo":14,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2},{"nome":"Aggiunta Pomodoro","prezzo":0.5}],"Senza":[{"nome":"Senza olive","prezzo":0},{"nome":"Senza sale","prezzo":0}],"Poco":[{"nome":"Poco cotta","prezzo":0}],"Abbondante":[{"nome":"Basilico abbondante","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
+        archive: JSON.parse(localStorage.getItem('pz_archive')||'[]'), // Nuovo: Archivio ordini completati
 
         // Stato Ordine Corrente
         activeCat:'Pizze',
@@ -459,7 +513,7 @@
         calculatedOrderTotal: 0, 
         total:0, 
         selectedItemIndex: null,
-        searchTerm: '', // Nuovo: Termine di ricerca
+        searchTerm: '',
 
         // Stato Composizione Mezzo Metro
         tempMeterItem: null, 
@@ -479,7 +533,8 @@
         zoneName:'', 
         deliveryCost: 0, 
         town:'',
-        notes: '', // Nuovo: Campo note
+        notes: '',
+        tableNumber: '', // Nuovo: Numero tavolo/ritiro
         hour: getDefaultHour(),
 
         // Dati per Impostazioni
@@ -492,9 +547,10 @@
             localStorage.setItem('pz_orders',JSON.stringify(this.orders));
             localStorage.setItem('pz_modifiers',JSON.stringify(this.modifiers));
             localStorage.setItem('pz_zones',JSON.stringify(this.deliveryZones));
+            localStorage.setItem('pz_archive',JSON.stringify(this.archive)); // Salva anche l'archivio
         },
         
-        // Computed Property per il filtro
+        // Computed property per il filtro
         get filteredItems() {
             if (!this.searchTerm.trim() || !this.menu[this.activeCat]) {
                 return this.menu[this.activeCat] || [];
@@ -504,6 +560,39 @@
                 p.nome.toLowerCase().includes(term)
             );
         },
+
+        // Computed property per le statistiche del giorno
+        get dailyTotal() {
+            const todayKey = getTodayKey();
+            // Filtra solo gli ordini archiviati che hanno la data di oggi
+            return this.archive.filter(o => 
+                new Date(o.archivedDate).toISOString().substring(0, 10) === todayKey
+            ).reduce((sum, order) => sum + order.total, 0);
+        },
+
+        get todayDate() {
+            return new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+        },
+
+        // Funzioni per l'evidenziazione dei modificatori
+        getModifierCategory(modName) {
+            for (const cat in this.modifiers) {
+                if (this.modifiers[cat].some(m => m.nome === modName)) {
+                    return cat;
+                }
+            }
+            return '';
+        },
+        getModifierIcon(category) {
+            switch (category) {
+                case 'Più': return '+';
+                case 'Senza': return 'X';
+                case 'Poco': return 'P';
+                case 'Abbondante': return 'A';
+                default: return '?';
+            }
+        },
+
 
         // --- Logica Calcoli Comuni ---
         calculateItemTotal(item) {
@@ -525,11 +614,9 @@
             this.total = this.calculatedOrderTotal + this.deliveryCost;
         },
 
-        // --- Logica Inserimento Articoli ---
+        // --- Logica Inserimento Articoli/Modificatori (Mantenuta) ---
         handleItemClick(p) {
-            // Se l'elemento è di tipo "Mezzo Metro" o "Schiacciata Grande"
             if (p.isMeter) {
-                // Controllo per assicurarsi che i gusti base (Pizze e Schiacciate) siano disponibili
                 if (!this.menu['Pizze'] && !this.menu['Schiacciate']) {
                     alert("Devi prima aggiungere prodotti nelle categorie 'Pizze' e/o 'Schiacciate' per usarli come gusti base.");
                     return;
@@ -546,7 +633,6 @@
             this.calc();
         },
 
-        // --- Logica Modificatori per Articoli Normali ---
         selectItem(index) {
             this.selectedItemIndex = index;
             if (this.order[index] && this.order[index].isMeter) {
@@ -575,8 +661,7 @@
             this.calc();
         },
         
-        // --- LOGICA MEZZO METRO / SCHIACCIATA GRANDE (Unificata) ---
-
+        // --- LOGICA MEZZO METRO / SCHIACCIATA GRANDE (Mantenuta) ---
         startMeterComposition(p) {
             const baseItem = JSON.parse(JSON.stringify(p));
             baseItem.sections.forEach(section => {
@@ -623,7 +708,7 @@
             }
         },
         
-        // --- Logica Modifica Ordine e Finalizzazione ---
+        // --- Logica Ordine e Finalizzazione (Aggiornata con Tavolo/Ritiro) ---
         resetCurrentOrderState() {
             this.order = [];
             this.selectedItemIndex = null;
@@ -631,13 +716,14 @@
             this.total = 0;
             this.editingOrderId = null;
             this.tempMeterItem = null; 
-            this.searchTerm = ''; // Resetta la ricerca
+            this.searchTerm = '';
             
             this.mode = '';
             this.customer = this.phone = this.address = this.streetNumber = this.town = '';
             this.zoneName = '';
             this.deliveryCost = 0;
-            this.notes = ''; // Resetta le note
+            this.notes = ''; 
+            this.tableNumber = ''; // Resetta il numero
             this.hour = getDefaultHour();
         },
 
@@ -657,7 +743,8 @@
             this.zoneName = orderToEdit.zone || '';
             this.deliveryCost = orderToEdit.deliveryCost || 0;
             this.town = orderToEdit.town || '';
-            this.notes = orderToEdit.notes || ''; // Carica le note
+            this.notes = orderToEdit.notes || '';
+            this.tableNumber = orderToEdit.tableNumber || ''; // Carica il numero
             this.hour = orderToEdit.hour;
 
             this.calc();
@@ -673,11 +760,12 @@
 
         selectMode(modeId) {
             this.mode = modeId;
-            if (modeId !== 'consegna') {
+            if (modeId === 'consegna') {
+                this.tableNumber = ''; // Reset numero se consegna
+                this.updateDeliveryCost();
+            } else {
                 this.deliveryCost = 0;
                 this.zoneName = '';
-            } else {
-                this.updateDeliveryCost();
             }
             this.calc();
         },
@@ -689,6 +777,7 @@
                 this.zoneName = '';
                 this.deliveryCost = 0;
                 this.notes = '';
+                this.tableNumber = '';
                 this.hour = getDefaultHour();
                 this.calc(); 
             } 
@@ -711,11 +800,11 @@
                 return;
             }
 
-            if (!this.customer || !this.mode || !this.hour || (this.mode !== 'banco' && !this.phone) || (this.mode === 'consegna' && (!this.address || !this.streetNumber || !this.zoneName || !this.town))) {
+            if (!this.customer || !this.mode || !this.hour || (this.mode !== 'consegna' && !this.tableNumber) || (this.mode !== 'banco' && !this.phone) || (this.mode === 'consegna' && (!this.address || !this.streetNumber || !this.zoneName || !this.town))) {
                  alert("Per favore, compila tutti i campi obbligatori per la modalità selezionata.");
                 return;
             }
-
+            
             let ord = {
                 id: this.editingOrderId || Date.now(), 
                 items: [...this.order],
@@ -728,7 +817,8 @@
                 zone: this.zoneName, 
                 deliveryCost: this.deliveryCost, 
                 town: this.town,
-                notes: this.notes, // Salva le note
+                notes: this.notes,
+                tableNumber: this.tableNumber, // Salva il numero
                 hour: this.hour,
                 status: 'In preparazione' 
             };
@@ -751,14 +841,30 @@
             this.view = 'ordini';
         },
         
+        // --- Gestione Stato Ordini (Aggiornata per l'Archiviazione) ---
         advance(o){
             const st=["In preparazione","Pronto","Completato"];
             const i=st.indexOf(o.status);
             if(i<st.length-1){
                 o.status=st[i+1];
+                
+                if (o.status === 'Completato') {
+                    // Sposta nell'archivio e rimuovi dagli ordini attivi
+                    this.archiveOrder(o);
+                    this.orders.splice(this.orders.findIndex(order => order.id === o.id), 1);
+                }
+                
                 this.saveData();
             }
         },
+
+        archiveOrder(order) {
+            const archivedOrder = JSON.parse(JSON.stringify(order));
+            archivedOrder.archivedDate = new Date().toISOString(); 
+            this.archive.push(archivedOrder);
+            this.saveData();
+        },
+
         delOrder(id){
             if(confirm("Sei sicuro di voler eliminare questo ordine?")) {
                 this.orders=this.orders.filter(o=>o.id!==id);
@@ -766,7 +872,7 @@
             }
         },
         
-        // --- Funzioni di Stampa e Condivisione (Aggiornate con le Note) ---
+        // --- Funzioni di Stampa e Condivisione (Aggiornate con Tavolo/Ritiro) ---
         
         formatOrderForSharing(id) {
             const order = this.orders.find(o => o.id === id);
@@ -779,12 +885,16 @@
             if (order.phone) text += ` | Tel: ${order.phone}\n`;
             else text += `\n`;
 
+            if (order.tableNumber) {
+                text += `**Tavolo/Ritiro: ${order.tableNumber}**\n`;
+            }
+
             if (order.mode === 'consegna') {
                 text += `📍 Indirizzo: ${order.address} ${order.streetNumber}, ${order.town}\n`;
                 text += `Zona: ${order.zone} (+€${order.deliveryCost.toFixed(2)})\n`;
             }
             
-            if (order.notes) { // Inclusione delle note
+            if (order.notes) {
                 text += `*NOTE: ${order.notes}*\n`;
             }
             
@@ -799,12 +909,12 @@
                     item.sections.forEach(sec => {
                         text += `  -> **${sec.name}**: ${sec.gusto}\n`;
                         sec.modifiers.forEach(mod => {
-                            text += `     -> ${mod.nome}` + (mod.prezzo > 0 ? ` (+€${mod.prezzo.toFixed(2)})` : '') + `\n`;
+                            text += `     -> [${this.getModifierIcon(this.getModifierCategory(mod.nome))}] ${mod.nome}` + (mod.prezzo > 0 ? ` (+€${mod.prezzo.toFixed(2)})` : '') + `\n`;
                         });
                     });
                 } else if (item.modifiers && item.modifiers.length > 0) {
                     item.modifiers.forEach(mod => {
-                        text += `  -> ${mod.nome}` + (mod.prezzo > 0 ? ` (+€${mod.prezzo.toFixed(2)})` : '') + `\n`;
+                        text += `  -> [${this.getModifierIcon(this.getModifierCategory(mod.nome))}] ${mod.nome}` + (mod.prezzo > 0 ? ` (+€${mod.prezzo.toFixed(2)})` : '') + `\n`;
                     });
                 }
             });
@@ -822,7 +932,6 @@
 
         printOrder(id) {
             this.showShareModal = false; 
-
             const order = this.orders.find(o => o.id === id);
             if (!order) return;
 
@@ -836,6 +945,10 @@
                     <p>Cliente: <strong>${order.customer}</strong> ${order.phone ? `(${order.phone})` : ''}</p>
             `;
             
+            if (order.tableNumber) {
+                printContent += `<p style="font-size: 1.1rem; font-weight: bold; color: #e31b23;">Tavolo/Ritiro: ${order.tableNumber}</p>`;
+            }
+
             if (order.mode === 'consegna') {
                 printContent += `
                     <p>Indirizzo: ${order.address} ${order.streetNumber}, ${order.town}</p>
@@ -861,12 +974,12 @@
                     item.sections.forEach(sec => {
                         printContent += `<li>&nbsp; &nbsp; &nbsp; **${sec.name}:** ${sec.gusto}</li>`;
                         sec.modifiers.forEach(mod => {
-                            printContent += `<li>&nbsp; &nbsp; &nbsp; &nbsp; ↳ ${mod.nome} ${mod.prezzo > 0 ? `(+€${mod.prezzo.toFixed(2)})` : ''}</li>`;
+                            printContent += `<li>&nbsp; &nbsp; &nbsp; &nbsp; ↳ [${this.getModifierIcon(this.getModifierCategory(mod.nome))}] ${mod.nome} ${mod.prezzo > 0 ? `(+€${mod.prezzo.toFixed(2)})` : ''}</li>`;
                         });
                     });
                 } else if (item.modifiers && item.modifiers.length > 0) {
                     item.modifiers.forEach(mod => {
-                        printContent += `<li>&nbsp; &nbsp; &nbsp; ↳ ${mod.nome} ${mod.prezzo > 0 ? `(+€${mod.prezzo.toFixed(2)})` : ''}</li>`;
+                        printContent += `<li>&nbsp; &nbsp; &nbsp; ↳ [${this.getModifierIcon(this.getModifierCategory(mod.nome))}] ${mod.nome} ${mod.prezzo > 0 ? `(+€${mod.prezzo.toFixed(2)})` : ''}</li>`;
                     });
                 }
             });
