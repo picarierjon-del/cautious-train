@@ -32,6 +32,7 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .item { background: #fff; border: 1px solid #ddd; border-radius: 10px; text-align: center; padding: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
         .item:hover { background: #ffecec; }
+        .item.active-menu-selection { border: 3px solid #3b82f6; box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);} /* Nuova Evidenziazione */
         .item strong { display: block; margin-bottom: 4px; }
         .item.disabled { background: #f0f0f0; color: #999; cursor: not-allowed; opacity: 0.7; }
         .item.disabled:hover { background: #f0f0f0; }
@@ -100,7 +101,16 @@
         .archive-order-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px; opacity: 0.9; }
         .archive-order-card h5 { margin: 0 0 6px; color: #6b7280; font-size: 0.9rem;}
 
-        /* Stile per la stampa (nasconde elementi non necessari) */
+        /* Stili Impostazioni e Gestione Fattorini */
+        .settings-list { margin-bottom: 15px; }
+        .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+        .settings-item button { margin-left: 10px; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; background: #6b7280; color: #fff;}
+        .settings-item button.remove { background: #b91c1c; }
+        .settings form { display: flex; gap: 5px; margin-bottom: 20px;}
+        .settings form input, .settings form select, .settings form button { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .settings form button { background: #e31b23; color: #fff; border: none; flex-grow: 1; }
+        
+        /* Stili per la stampa (nasconde elementi non necessari) */
         @media print {
             body > *:not(.print-container) { display: none; }
             body, html { margin: 0; padding: 0; }
@@ -119,7 +129,7 @@
         <h2>{{ editingOrderId ? 'Modifica Ordine #' + editingOrderId : 'Crea Nuovo Ordine' }}</h2>
         <div class="cat-row">
             <button class="cat-btn" v-for="c in Object.keys(menu)" :key="c"
-                    :class="{active:activeCat===c}" @click="activeCat=c">{{c}}</button>
+                    :class="{active:activeCat===c}" @click="activeCat=c; lastSelectedItem=null;">{{c}}</button>
         </div>
 
         <div class="mod-row">
@@ -138,10 +148,10 @@
         <input type="search" v-model="searchTerm" placeholder="Cerca prodotto..." class="search-input">
 
         <div class="grid">
-            <div class="item" v-for="p in filteredAvailableItems" :key="p.nome" @click="handleItemClick(p)" :class="{disabled: p.isFinished}">
+            <div class="item" v-for="p in filteredAvailableItems" :key="p.nome" @click="handleItemClick(p)" :class="{disabled: p.isFinished, 'active-menu-selection': lastSelectedItem === p}">
                 <strong>{{p.nome}}</strong>
                 <span v-if="p.isFinished" style="color:#b91c1c; font-weight:700;">(FINITO)</span>
-                <span v-else>€{{p.prezzo.toFixed(2)}}</span>
+                <span v-else>€{{(p.isMeter || p.isHalfPizza ? 'COMPOSTO' : p.prezzo.toFixed(2))}}</span>
             </div>
         </div>
 
@@ -204,6 +214,7 @@
             </h4>
             <p><strong>Cliente: {{o.customer}}</strong></p>
             <p>Ritiro/Consegna: **{{o.hour}}**</p>
+            <p v-if="o.mode === 'consegna' && o.driver">Fattorino Assegnato: <strong>{{o.driver}}</strong></p>
             <p v-if="o.phone">📞 {{o.phone}}</p>
             <p v-if="o.mode === 'consegna'">
                 📍 {{o.address}} {{o.streetNumber}}, **{{o.zone}}** ({{o.town}})
@@ -231,7 +242,8 @@
                     <ul v-if="it.modifiers && it.modifiers.length > 0 && !it.isMeter && !it.isHalfPizza">
                         <li v-for="mod in it.modifiers">
                              <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
-                            * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+                            * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)})</span
+                            >
                         </li>
                     </ul>
                 </li>
@@ -255,12 +267,27 @@
             <p>€{{ dailyTotal.toFixed(2) }}</p>
         </div>
 
+        <h3 style="color:#6b7280;">Consegne Giornaliere</h3>
+        <div style="margin-bottom: 15px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtra per Fattorino:</label>
+            <select v-model="selectedDriver" @change="calculateDriverStats" style="padding: 8px; border-radius: 6px; width: 100%;">
+                <option value="">Tutti i Fattorini</option>
+                <option v-for="driver in availableDrivers" :value="driver">{{ driver }}</option>
+            </select>
+        </div>
+
+        <div v-if="selectedDriver || driverStats.totalOrders > 0" style="background: #f0f0f0; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 0; font-weight: 700;">{{ selectedDriver ? 'Statistiche di ' + selectedDriver : 'Totale Consegne Oggi' }}:</p>
+            <p style="margin: 5px 0 0;">Consegne: **{{ driverStats.totalOrders }}** | Totale Incasso: **€{{ driverStats.totalRevenue.toFixed(2) }}**</p>
+        </div>
+
         <h3 style="color:#6b7280;">Ordini Completati</h3>
         <div v-if="!archive.length">Nessun ordine completato oggi.</div>
-        <div class="archive-order-card" v-for="o in archive.slice().reverse()" :key="o.id">
+        <div class="archive-order-card" v-for="o in filteredArchive.slice().reverse()" :key="o.id">
             <h5>#{{o.id}} – {{new Date(o.archivedDate).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
             <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})
                 <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6; margin-left: 10px;">Tavolo/Ritiro: {{o.tableNumber}}</span>
+                <span v-if="o.driver" style="font-size: 0.8rem; color: #10b981; margin-left: 10px;">Fattorino: {{o.driver}}</span>
             </p>
             <div class="order-actions" style="margin-top: 5px;">
                 <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
@@ -269,6 +296,21 @@
     </section>
 
     <section v-show="view==='impostazioni'" class="settings">
+        
+        <h2>Gestione Fattorini</h2>
+        <div class="settings-list">
+            <div class="settings-item" v-for="(driver, i) in drivers" :key="i">
+                <span>{{driver}}</span>
+                <button class="remove" @click="deleteDriver(i)">Elimina</button>
+            </div>
+        </div>
+        <form @submit.prevent="addDriver">
+            <input type="text" v-model="newDriverName" placeholder="Nome Fattorino (es. Mario Rossi)" required>
+            <button type="submit">Aggiungi Fattorino</button>
+        </form>
+
+        <hr style="margin: 20px 0;">
+
         <h2>Impostazioni Menu</h2>
         <h3>Gestione Categorie Menu</h3>
         <div class="settings-list">
@@ -345,7 +387,7 @@
                 <h4>Sezione {{ secIdx + 1 }}: {{ section.name }}</h4>
                 <div class="form-row">
                     <label>Gusto Base *</label>
-                    <select v-model="section.gusto" required>
+                    <select v-model="section.gusto" required @change="updateMeterPrice">
                         <option value="" disabled>Seleziona una pizza o schiacciata</option>
                         <optgroup label="Pizze Classiche">
                             <option v-for="pizza in availableBaseItems" :value="pizza.nome">{{ pizza.nome }}</option>
@@ -376,7 +418,7 @@
                         </select>
                     </div>
                     <div class="grid" v-if="modifiers[tempModCat]" style="grid-template-columns: repeat(2, 1fr); gap: 5px;">
-                        <div class="item" v-for="m in modifiers[tempModCat]" :key="m.nome" @click="addMeterModifier(secIdx, m)" 
+                        <div class="item" v-for="m in modifiers[tempModCat]" :key="m.nome" @click="addMeterModifier(secIdx, m); updateMeterPrice()" 
                              style="padding: 8px; border-radius: 6px; font-size: 0.9rem;">
                             <strong>{{ m.nome }}</strong>
                             <span v-if="m.prezzo > 0">€{{ m.prezzo.toFixed(2)}}</span>
@@ -384,6 +426,11 @@
                     </div>
                 </div>
             </div>
+            
+            <div style="margin-top: 15px; padding: 10px; border: 1px solid #e31b23; border-radius: 6px; text-align: right;">
+                Costo stimato: **€{{ calculateItemTotal(tempMeterItem).toFixed(2) }}**
+            </div>
+
 
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" @click="cancelComposition">Annulla</button>
@@ -418,7 +465,7 @@
                 </select>
             </div>
 
-            <div v-if="tempHalfPizzaItem.gusto1 && tempHalfPizzaItem.gusto2" style="margin-top: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+            <div v-if="tempHalfPizzaItem.gusto1 && tempHalfPizzaItem.gusto2" style="margin-top: 15px; padding: 10px; border: 1px solid #e31b23; border-radius: 6px; text-align: right;">
                 Costo Calcolato (Media Arrotondata): **€{{ tempHalfPizzaItem.prezzo.toFixed(2) }}**
             </div>
 
@@ -461,6 +508,14 @@
             </div>
             
             <div v-if="mode === 'consegna'">
+                <div class="form-row">
+                    <label for="driver">Assegna Fattorino (opzionale)</label>
+                    <select id="driver" v-model="driver">
+                        <option value="">Nessun Fattorino Assegnato</option>
+                        <option v-for="d in drivers" :value="d">{{d}}</option>
+                    </select>
+                </div>
+                
                 <div class="form-row">
                     <label for="address">Indirizzo (Via/Piazza) *</label>
                     <input type="text" id="address" v-model="address" required>
@@ -532,7 +587,7 @@
         showModal: false, 
         showShareModal: false,
         showMeterModal: false, 
-        showHalfPizzaModal: false, // Nuovo: Modale per Pizza Metà
+        showHalfPizzaModal: false, 
         selectedOrderIdForShare: null,
         editingOrderId: null, 
         
@@ -542,6 +597,7 @@
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
         archive: JSON.parse(localStorage.getItem('pz_archive')||'[]'), 
+        drivers: JSON.parse(localStorage.getItem('pz_drivers')||'[]'), // Nuovo: Array per i Fattorini
 
         // Stato Ordine Corrente
         activeCat:'Pizze',
@@ -550,11 +606,12 @@
         calculatedOrderTotal: 0, 
         total:0, 
         selectedItemIndex: null,
+        lastSelectedItem: null, // Nuovo: Per l'evidenziazione
         searchTerm: '',
 
         // Stato Composizione
         tempMeterItem: null, 
-        tempHalfPizzaItem: null, // Nuovo: Dati per Pizza Metà
+        tempHalfPizzaItem: null, 
         tempModCat: 'Più', 
 
         // Dati per il Modale/Finalizzazione
@@ -574,11 +631,18 @@
         notes: '',
         tableNumber: '', 
         hour: getDefaultHour(),
+        driver: '', // Nuovo: Fattorino assegnato
 
         // Dati per Impostazioni
         newMenuCat: '', newProdCat: '', newName: '', newPrice: '',
         newModCat: '', newModProdCat: '', newModName: '', newModPrice: 0,
         newZoneName: '', newZonePrice: 0, 
+        newDriverName: '', // Nuovo: Nome per nuovo fattorino
+
+        // Dati per Storico/Statistiche
+        selectedDriver: '', // Nuovo: Filtro fattorino nello storico
+        driverStats: { totalOrders: 0, totalRevenue: 0 }, // Nuovo: Statistiche filtrate
+
 
         // Funzione di Calcolo Prezzo Metà Pizza Arrotondato
         roundHalfEuro(price) {
@@ -591,6 +655,7 @@
             localStorage.setItem('pz_modifiers',JSON.stringify(this.modifiers));
             localStorage.setItem('pz_zones',JSON.stringify(this.deliveryZones));
             localStorage.setItem('pz_archive',JSON.stringify(this.archive)); 
+            localStorage.setItem('pz_drivers',JSON.stringify(this.drivers)); // Salva Fattorini
         },
         
         // Computed property per il filtro
@@ -610,6 +675,37 @@
         },
         get availableSchiacciateItems() {
             return (this.menu['Schiacciate'] || []).filter(p => !p.isFinished);
+        },
+
+        // Computed per gli ordini archiviati filtrati
+        get filteredArchive() {
+            const todayKey = getTodayKey();
+            const todayOrders = this.archive.filter(o => 
+                new Date(o.archivedDate).toISOString().substring(0, 10) === todayKey
+            );
+
+            if (!this.selectedDriver) {
+                return todayOrders;
+            }
+
+            return todayOrders.filter(o => o.driver === this.selectedDriver);
+        },
+        
+        // Funzione di calcolo statistiche fattorino
+        calculateDriverStats() {
+            const todayKey = getTodayKey();
+            const filtered = this.archive.filter(o => 
+                o.mode === 'consegna' && 
+                new Date(o.archivedDate).toISOString().substring(0, 10) === todayKey &&
+                (!this.selectedDriver || o.driver === this.selectedDriver)
+            );
+            
+            this.driverStats.totalOrders = filtered.length;
+            this.driverStats.totalRevenue = filtered.reduce((sum, order) => sum + order.total, 0);
+        },
+        
+        get availableDrivers() {
+            return this.drivers;
         },
 
 
@@ -667,10 +763,21 @@
         // --- Logica Calcoli Comuni ---
         calculateItemTotal(item) {
             let itemTotal = item.prezzo;
-            if (item.isMeter) {
-                item.sections.forEach(section => {
-                    itemTotal += section.modifiers.reduce((s, m) => s + m.prezzo, 0);
-                });
+            if (item.isHalfPizza) {
+                 // Per la pizza metà il prezzo è salvato direttamente su item.prezzo dopo il calcolo
+                 itemTotal = item.prezzo;
+            } else if (item.isMeter) {
+                // Calcola il prezzo base dalla somma dei prezzi base dei gusti * peso della sezione
+                let basePrice = item.sections.reduce((sum, section) => {
+                    const gustoItem = [...this.availableBaseItems, ...this.availableSchiacciateItems].find(p => p.nome === section.gusto);
+                    return sum + (gustoItem ? gustoItem.prezzo * section.size : 0);
+                }, 0);
+                
+                // Aggiorna item.prezzo con il prezzo base calcolato + il prezzo iniziale del prodotto (che rappresenta il costo extra per essere "metro")
+                itemTotal = basePrice + item.prezzo; 
+
+                // Aggiunge i modificatori per sezione
+                itemTotal += item.sections.reduce((s, section) => s + section.modifiers.reduce((mSum, m) => mSum + m.prezzo, 0), 0);
             } else if (item.modifiers) {
                 itemTotal += item.modifiers.reduce((s, m) => s + m.prezzo, 0);
             }
@@ -684,9 +791,11 @@
             this.total = this.calculatedOrderTotal + this.deliveryCost;
         },
 
-        // --- Logica Inserimento Articoli/Modificatori (Mantenuta) ---
+        // --- Logica Inserimento Articoli/Modificatori ---
         handleItemClick(p) {
             if (p.isFinished) return; 
+            
+            this.lastSelectedItem = p; // Evidenzia l'elemento nel menu
 
             if (p.isMeter) {
                 if (!this.availableBaseItems.length && !this.availableSchiacciateItems.length) {
@@ -694,7 +803,7 @@
                     return;
                 }
                 this.startMeterComposition(p);
-            } else if (p.isHalfPizza) { // Gestione nuova Pizza Metà
+            } else if (p.isHalfPizza) { 
                 if (!this.availableBaseItems.length && !this.availableSchiacciateItems.length) {
                     alert("Devi prima aggiungere prodotti disponibili nelle categorie 'Pizze' e/o 'Schiacciate' per usarli come gusti base.");
                     return;
@@ -716,6 +825,7 @@
             if (this.order[index] && (this.order[index].isMeter || this.order[index].isHalfPizza)) {
                  this.selectedItemIndex = null; // Disabilita modificatori per prodotti composti
             }
+            this.lastSelectedItem = null; // Rimuovi evidenziazione dal menu
         },
         addExtra(mod){
             if(this.selectedItemIndex === null || this.order.length === 0 || this.order[this.selectedItemIndex].isMeter || this.order[this.selectedItemIndex].isHalfPizza) {
@@ -737,15 +847,17 @@
             }
             this.order.splice(i,1);
             this.calc();
+            this.lastSelectedItem = null;
         },
         
-        // --- LOGICA PRODOTTI COMPOSTI (Aggiornata per la Metà Pizza) ---
+        // --- LOGICA PRODOTTI COMPOSTI (Aggiornata per prezzo e UX) ---
         cancelComposition() {
             if (confirm("Sei sicuro di voler annullare la composizione?")) {
                 this.tempMeterItem = null;
                 this.tempHalfPizzaItem = null;
                 this.showMeterModal = false;
                 this.showHalfPizzaModal = false;
+                this.lastSelectedItem = null; // Rimuovi evidenziazione
             }
         },
         
@@ -757,10 +869,19 @@
                 section.modifiers = section.modifiers || []; 
                 section.name = section.name || `Sezione`; 
             });
+            // Imposta un prezzo iniziale temporaneo per il calcolo in tempo reale
+            baseItem.prezzo = p.prezzo; 
             this.tempMeterItem = baseItem;
             this.tempModCat = 'Più';
             this.showMeterModal = true;
             this.showHalfPizzaModal = false; 
+        },
+        updateMeterPrice() {
+            // Ricalcola il prezzo al volo nel modale
+            if (this.tempMeterItem) {
+                // Questo ricalcola il totale del solo articolo temporaneo
+                this.calculateItemTotal(this.tempMeterItem); 
+            }
         },
         addMeterModifier(sectionIndex, mod) {
             this.tempMeterItem.sections[sectionIndex].modifiers.push(JSON.parse(JSON.stringify(mod)));
@@ -778,12 +899,16 @@
                 return;
             }
             
+            // Assicura che il prezzo finale sia calcolato e salvato sull'oggetto prima di aggiungerlo
+            this.calculateItemTotal(this.tempMeterItem); 
+
             this.order.push(this.tempMeterItem);
             this.selectedItemIndex = this.order.length - 1; 
             this.calc();
 
             this.tempMeterItem = null;
             this.showMeterModal = false;
+            this.lastSelectedItem = null;
         },
 
         // Logica Pizza Metà
@@ -792,7 +917,7 @@
                 ...JSON.parse(JSON.stringify(p)),
                 gusto1: '',
                 gusto2: '',
-                originalPrice: 0 // Usiamo prezzo per salvare il prezzo calcolato
+                prezzo: 0 // Inizializza a 0, sarà aggiornato da updateHalfPizzaPrice
             };
             this.showHalfPizzaModal = true;
             this.showMeterModal = false;
@@ -815,21 +940,22 @@
         },
 
         addHalfPizzaToOrder() {
-            if (!this.tempHalfPizzaItem.gusto1 || !this.tempHalfPizzaItem.gusto2) {
-                alert("Seleziona entrambi i gusti.");
+            if (!this.tempHalfPizzaItem.gusto1 || !this.tempHalfPizzaItem.gusto2 || this.tempHalfPizzaItem.prezzo === 0) {
+                alert("Seleziona entrambi i gusti per calcolare il prezzo.");
                 return;
             }
-
+            
             this.order.push(this.tempHalfPizzaItem);
             this.selectedItemIndex = this.order.length - 1;
             this.calc();
 
             this.tempHalfPizzaItem = null;
             this.showHalfPizzaModal = false;
+            this.lastSelectedItem = null;
         },
 
         
-        // --- Logica Ordine e Finalizzazione (Aggiornata con Tavolo/Ritiro) ---
+        // --- Logica Ordine e Finalizzazione (Aggiornata con Fattorino) ---
         resetCurrentOrderState() {
             this.order = [];
             this.selectedItemIndex = null;
@@ -839,6 +965,7 @@
             this.tempMeterItem = null; 
             this.tempHalfPizzaItem = null;
             this.searchTerm = '';
+            this.lastSelectedItem = null;
             
             this.mode = '';
             this.customer = this.phone = this.address = this.streetNumber = this.town = '';
@@ -847,6 +974,7 @@
             this.notes = ''; 
             this.tableNumber = ''; 
             this.hour = getDefaultHour();
+            this.driver = ''; // Reset fattorino
         },
 
         editOrder(id) {
@@ -868,6 +996,7 @@
             this.notes = orderToEdit.notes || '';
             this.tableNumber = orderToEdit.tableNumber || ''; 
             this.hour = orderToEdit.hour;
+            this.driver = orderToEdit.driver || ''; // Carica fattorino
 
             this.calc();
             this.view = 'inserimento';
@@ -887,7 +1016,6 @@
             
             this.resetCurrentOrderState();
             
-            // Copia i dati principali dell'ordine, escludendo id e stato
             const duplicatedOrder = JSON.parse(JSON.stringify(order));
             
             this.order = duplicatedOrder.items; 
@@ -901,7 +1029,8 @@
             this.town = duplicatedOrder.town || '';
             this.notes = duplicatedOrder.notes || '';
             this.tableNumber = duplicatedOrder.tableNumber || '';
-            this.hour = getDefaultHour(); // Imposta l'orario di ritiro/consegna al default
+            this.driver = duplicatedOrder.driver || ''; // Copia fattorino
+            this.hour = getDefaultHour(); 
 
             this.calc();
             this.view = 'inserimento';
@@ -917,7 +1046,8 @@
             } else {
                 this.deliveryCost = 0;
                 this.zoneName = '';
-                this.town = ''; // Reset anche Paese per coerenza
+                this.town = ''; 
+                this.driver = ''; // Resetta fattorino se non è consegna
             }
             this.calc();
         },
@@ -930,6 +1060,7 @@
                 this.deliveryCost = 0;
                 this.notes = '';
                 this.tableNumber = '';
+                this.driver = ''; // Resetta fattorino se nuovo ordine
                 this.hour = getDefaultHour();
                 this.calc(); 
             } 
@@ -952,7 +1083,7 @@
                 return;
             }
 
-            // Verifica campi obbligatori
+            // Verifica campi obbligatori (driver non è obbligatorio, è opzionale)
             if (!this.customer || !this.mode || !this.hour || 
                 (this.mode !== 'consegna' && !this.tableNumber.trim()) || 
                 (this.mode !== 'banco' && !this.phone.trim()) || 
@@ -976,6 +1107,7 @@
                 notes: this.notes.trim(),
                 tableNumber: this.tableNumber.trim(), 
                 hour: this.hour,
+                driver: this.mode === 'consegna' ? this.driver : '', // Salva il fattorino solo per la consegna
                 status: 'In preparazione' 
             };
 
@@ -997,7 +1129,7 @@
             this.view = 'ordini';
         },
         
-        // --- Gestione Stato Ordini (Aggiornata per l'Archiviazione) ---
+        // --- Gestione Stato Ordini e Archiviazione con Robustezza ---
         advance(o){
             const st=["In preparazione","Pronto","Completato"];
             const i=st.indexOf(o.status);
@@ -1005,9 +1137,9 @@
                 o.status=st[i+1];
                 
                 if (o.status === 'Completato') {
-                    // Sposta nell'archivio e rimuovi dagli ordini attivi
                     this.archiveOrder(o);
                     this.orders.splice(this.orders.findIndex(order => order.id === o.id), 1);
+                    this.calculateDriverStats(); // Aggiorna statistiche
                 }
                 
                 this.saveData();
@@ -1022,15 +1154,28 @@
         },
 
         delOrder(id){
-            if(confirm("Sei sicuro di voler eliminare questo ordine?")) {
-                this.orders=this.orders.filter(o=>o.id!==id);
+            const orderIndex = this.orders.findIndex(o => o.id === id);
+            if (orderIndex === -1) return;
+
+            const o = this.orders[orderIndex];
+
+            let confirmationMessage = "Vuoi eliminare definitivamente l'ordine #" + id + "?";
+            
+            // Aggiungi robustezza: se non è "Completato" chiede verifica.
+            if (o.status !== 'Completato') {
+                confirmationMessage = "ATTENZIONE: L'ordine #" + id + " è in stato '" + o.status + "'. Se è stato completato e ritirato, avanzalo a 'Completato' per salvare i dati di vendita.\n\n" + confirmationMessage + " (PERDERAI i dati di vendita)";
+            }
+            
+            if(confirm(confirmationMessage)) {
+                this.orders.splice(orderIndex, 1);
                 this.saveData();
             }
         },
         
-        // --- Funzioni di Stampa e Condivisione (Aggiornate con Metà Pizza) ---
+        // --- Funzioni di Stampa e Condivisione (Omessa per brevità, non modificata) ---
         
         formatOrderForSharing(id) {
+            // ... (implementazione omessa) ...
             const order = this.orders.find(o => o.id === id) || this.archive.find(o => o.id === id);
             if (!order) return "";
             
@@ -1044,6 +1189,10 @@
             if (order.tableNumber) {
                 text += `**Tavolo/Ritiro: ${order.tableNumber}**\n`;
             }
+            if (order.driver) {
+                text += `**Fattorino: ${order.driver}**\n`;
+            }
+
 
             if (order.mode === 'consegna') {
                 text += `📍 Indirizzo: ${order.address} ${order.streetNumber}, ${order.town}\n`;
@@ -1083,7 +1232,7 @@
             });
 
             text += `--------------------------------\n`;
-            text += `Totale prodotti: €${(order.total - order.deliveryCost).toFixed(2)}\n`;
+            text += `Totale prodotti: €${(order.total - (order.deliveryCost || 0)).toFixed(2)}\n`;
             if (order.deliveryCost > 0) {
                 text += `Costo Consegna: €${order.deliveryCost.toFixed(2)}\n`;
             }
@@ -1111,6 +1260,10 @@
             if (order.tableNumber) {
                 printContent += `<p style="font-size: 1.1rem; font-weight: bold; color: #e31b23;">Tavolo/Ritiro: ${order.tableNumber}</p>`;
             }
+             if (order.driver) {
+                printContent += `<p style="font-size: 0.9rem; font-weight: bold; color: #10b981;">Fattorino: ${order.driver}</p>`;
+            }
+
 
             if (order.mode === 'consegna') {
                 printContent += `
@@ -1158,8 +1311,8 @@
             printContent += `
                     </ul>
                     <hr>
-                    <p>Totale: €${(order.total - order.deliveryCost).toFixed(2)}</p>
-                    ${order.deliveryCost > 0 ? `<p>Costo Consegna: €${order.deliveryCost.toFixed(2)}</p>` : ''}
+                    <p>Totale: €${(order.total - (order.deliveryCost || 0)).toFixed(2)}</p>
+                    ${(order.deliveryCost || 0) > 0 ? `<p>Costo Consegna: €${order.deliveryCost.toFixed(2)}</p>` : ''}
                     <h3>TOTALE COMPLESSIVO: €${order.total.toFixed(2)}</h3>
                     <p style="text-align: center;">Grazie per l'ordine!</p>
                 </div>
@@ -1216,7 +1369,25 @@
             this.showShareModal = true;
         },
 
-        // --- Logica Impostazioni (Aggiornata per la Gestione Scorte) ---
+
+        // --- Logica Impostazioni e Gestione Fattorini ---
+        addDriver() {
+            const name = this.newDriverName.trim();
+            if (name && !this.drivers.includes(name)) {
+                this.drivers.push(name);
+                this.saveData();
+                this.newDriverName = '';
+            } else if (name) {
+                alert("Questo fattorino è già nell'elenco.");
+            }
+        },
+        deleteDriver(i) {
+            if (confirm("Sei sicuro di voler eliminare questo fattorino?")) {
+                this.drivers.splice(i, 1);
+                this.saveData();
+            }
+        },
+
         toggleFinished(cat, i) {
             const item = this.menu[cat][i];
             item.isFinished = !item.isFinished;
@@ -1304,7 +1475,15 @@
                 if(!this.modifiers[cat].length) delete this.modifiers[cat];
                 this.saveData();
             }
-        }
+        },
+        // Inizializza le statistiche del fattorino quando lo storico è visualizzato
+        initDriverStats() {
+             // Inizializza le statistiche quando si passa alla vista "storico"
+            if (this.view === 'storico') {
+                this.calculateDriverStats();
+            }
+        },
+
     }).mount()
 </script>
 </body>
