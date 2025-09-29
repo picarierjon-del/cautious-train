@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Pizzeria Avanzato (v16 - Interfaccia Pulita)</title>
+    <title>Gestionale Pizzeria Avanzato (v17 - Funzionale)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
@@ -498,14 +498,7 @@
             <h3>Gestione Menu Prodotti</h3>
             <form id="add-product-form">
                 <select id="product-type-select">
-                    <option value="pizze">Pizza</option>
-                    <option value="baby">Baby</option>
-                    <option value="schiacciate">Schiacciate</option>
-                    <option value="grandi">Grandi</option>
-                    <option value="mezzometro">Mezzo Metro</option>
-                    <option value="bibite">Bibita</option>
-                    <option value="aggiunte">Aggiunta</option>
-                </select>
+                    </select>
                 <input type="text" id="product-name" placeholder="Nome Prodotto" required>
                 <input type="number" id="product-price" placeholder="Prezzo (€)" step="0.01" required>
                 <button type="submit">Aggiungi Prodotto</button>
@@ -722,6 +715,7 @@
                     <i class="fas fa-${mod.icon}"></i>
                     <strong>${mod.nome}</strong>
                 `;
+                // Assicurati che l'handler sia corretto per aprire la modal
                 btn.addEventListener('click', () => handler(`MODIFIER_SELECTION`, 0.00, mod.mod));
                 bar.appendChild(btn);
             });
@@ -838,11 +832,11 @@
                     let modifierDisplay = "";
                     if (item.modifiers && item.modifiers.length > 0) {
                         modifierDisplay = item.modifiers.map(mod => {
-                             const priceText = mod.price > 0 ? `(€${mod.price.toFixed(2)})` : '';
+                             const priceText = mod.price > 0 ? ` (€${mod.price.toFixed(2)})` : '';
                              itemTotal += mod.price;
                              return `<li>${mod.modifier.replace('Meno', 'SENZA').toUpperCase()} ${mod.addonName.toUpperCase()}${priceText}</li>`;
                         }).join('');
-                        modifierDisplay = `<ul style="list-style:none; padding: 0; margin: 0; font-size: 0.8em; color: #555;">${modifierDisplay}</ul>`;
+                        modifierDisplay = `<ul style="list-style:none; padding: 0 0 0 10px; margin: 0; font-size: 0.8em; color: #555;">${modifierDisplay}</ul>`;
                     }
 
 
@@ -1614,12 +1608,12 @@
             renderMainOrder(); 
             switchSection('order-entry-section'); 
 
-            // Navigazione
+            // Navigazione (Tasti in basso)
             document.getElementById('nav-order-entry').addEventListener('click', () => switchSection('order-entry-section'));
             document.getElementById('nav-orders-list').addEventListener('click', () => switchSection('orders-list-section'));
             document.getElementById('nav-settings').addEventListener('click', () => switchSection('settings-section'));
 
-            // Menu principale
+            // Menu principale (Pizze, Bibite, ecc.)
             document.querySelectorAll('.menu-btn:not(.mod-menu-btn)').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     document.querySelectorAll('.menu-btn:not(.mod-menu-btn)').forEach(b => b.classList.remove('active-category'));
