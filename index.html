@@ -371,20 +371,20 @@
         <div style="margin-bottom: 15px;">
             <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtra per Fattorino:</label>
             <select v-model="selectedDriver" @change="calculateDriverStats" style="padding: 8px; border-radius: 6px; width: 100%;">
-                <option value="">Tutti i Fattorini</option>
+                <option value="">Tutti i Fattorini (Solo Consegne)</option>
                 <option v-for="driver in availableDrivers" :value="driver">{{ driver }}</option>
             </select>
         </div>
 
         <div v-if="selectedDriver || driverStats.totalOrders > 0" style="background: #f0f0f0; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
             <p style="margin: 0; font-weight: 700;">{{ selectedDriver ? 'Statistiche di ' + selectedDriver : 'Totale Consegne' }} ({{ archiveDateFilterDisplay }}):</p>
-            <p style="margin: 5px 0 0;">Consegne: **{{ driverStats.totalOrders }}** | Totale Incasso: **€{{ driverStats.totalRevenue.toFixed(2) }}**</p>
+            <p style="margin: 5px 0 0;">Ordini: **{{ driverStats.totalOrders }}** | Totale Incasso: **€{{ driverStats.totalRevenue.toFixed(2) }}**</p>
         </div>
 
         <h3 style="color:#6b7280;">Ordini Completati</h3>
         <div v-if="!filteredArchive.length">Nessun ordine completato per la data selezionata.</div>
         <div class="archive-order-card" v-for="o in filteredArchive.slice().reverse()" :key="o.id">
-            <h5>#{{o.id}} – {{new Date(o.archivedDate).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
+            <h5>#{{o.id}} – {{new Date(o.archivedTime).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
             <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})
                 <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6; margin-left: 10px;">Tavolo/Ritiro: {{o.tableNumber}}</span>
             </p>
@@ -584,12 +584,12 @@
 
             <div class="form-row">
                 <label for="date">Data Ordine *</label>
-                <input type="date" id="date" v-model="date" required :min="minDate">
+                <input type="date" id="date" v-model="date" required :min="minDate" @change="recalculateSlotLoad">
             </div>
 
             <div class="form-row">
                 <label for="hour">Ora di Ritiro/Consegna *</label>
-                <input type="time" id="hour" v-model="hour" required>
+                <input type="time" id="hour" v-model="hour" required @change="recalculateSlotLoad">
             </div>
             
             <div v-if="currentSlotLoad > pizzaCapacityPerSlot" 
@@ -956,9 +956,16 @@
 
         // LOGICA CAPACITÀ PRODUTTIVA (NUOVA)
         get currentSlotLoad() {
-            if (!this.date || !this.hour || this.order.length === 0) return 0;
-            // Ottiene il carico dello slot PER L'ORDINE CORRENTE e TUTTI GLI ALTRI
+            // Calcolato come proprietà computata per reagire a date, ore e ordine
+            if (!this.date || !this.hour || (this.order.length === 0 && !this.editingOrderId)) return 0;
             return this.getSlotLoad(this.date, this.hour);
+        },
+        // Metodo per forzare il ricalcolo del carico dello slot (chiamato da @change su date/hour)
+        recalculateSlotLoad() {
+             // Forza Vue a ricalcolare il valore 'currentSlotLoad'
+             // Non è necessario fare nulla qui, basta che sia chiamato da un evento per pulire il caching.
+             // La logica è tutta nel getter 'currentSlotLoad'.
+             console.log("Slot load check triggered.");
         },
         // FINE LOGICA CAPACITÀ PRODUTTIVA
 
@@ -1004,7 +1011,7 @@
         // LOGICA STORICO
         get filteredArchive() {
             const dateStr = this.archiveDateFilter;
-            return this.archive.filter(o => o.archivedDate.startsWith(dateStr));
+            return this.archive.filter(o => o.archivedDate && o.archivedDate.startsWith(dateStr));
         },
         get dailyTotal() {
             return this.filteredArchive.reduce((sum, o) => sum + o.total, 0);
@@ -1699,6 +1706,7 @@
         selectMode(m) {
             this.mode = m;
             this.updateDeliveryCost();
+            this.recalculateSlotLoad(); // Nuova
         },
         updateDeliveryCost() {
             if (this.mode === 'consegna' && this.zoneName) {
@@ -1707,6 +1715,7 @@
             } else {
                 this.deliveryCost = 0;
             }
+            this.recalculateSlotLoad(); // Nuova
         },
         resetCurrentOrderState() {
             this.order = [];
@@ -1749,6 +1758,9 @@
             this.view = 'inserimento';
             this.selectedItemIndex = null;
             this.lastSelectedItem = null; 
+            
+            // Forza il ricalcolo del carico dello slot per l'ordine in modifica
+            this.recalculateSlotLoad(); 
         },
         cancelEdit() {
             this.resetCurrentOrderState();
@@ -1794,26 +1806,24 @@
              if (order) {
                  order.driver = driver;
                  this.saveData();
-                 this.calculateDriverStats(); 
+                 this.calculateDriverStats(); // Ricalcola le statistiche dopo l'aggiornamento
              }
          },
         calculateDriverStats() {
             const dateStr = this.archiveDateFilter;
-            const filtered = this.archive.filter(o => o.archivedDate.startsWith(dateStr));
+            const filtered = this.archive.filter(o => o.archivedDate && o.archivedDate.startsWith(dateStr));
 
             this.driverStats.totalOrders = 0;
             this.driverStats.totalRevenue = 0;
 
-            let stats = filtered;
+            let stats = filtered.filter(o => o.mode === 'consegna'); // Filtra per sole consegne per le stats iniziali
             
             if (this.selectedDriver) {
-                stats = filtered.filter(o => o.driver === this.selectedDriver);
-            } else {
-                // Se non è selezionato nessun driver, si contano solo le consegne (mode=consegna)
-                // Se vuoi contare TUTTI gli ordini (anche asporto/banco) togli la condizione (o.mode === 'consegna')
-                stats = filtered.filter(o => o.mode === 'consegna');
-            }
-            
+                // Filtra solo gli ordini assegnati a quel fattorino (anche asporto/banco se gestiti)
+                stats = filtered.filter(o => o.driver === this.selectedDriver); 
+            } 
+            // Se selectedDriver è vuoto, rimane il filtro originale (solo consegne senza driver)
+
             this.driverStats.totalOrders = stats.length;
             this.driverStats.totalRevenue = stats.reduce((sum, o) => sum + o.total, 0);
         },
@@ -1972,6 +1982,7 @@
             this.zoneName = this.deliveryZones[0]?.name || ''; 
             this.updateDeliveryCost(); 
             this.showModal = true;
+            this.recalculateSlotLoad(); // Nuova
         },
 
         // Inizializzazione
