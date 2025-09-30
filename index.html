@@ -118,6 +118,24 @@
             .print-scontrino th, .print-scontrino td { text-align: left; padding: 2px 0; }
             .print-scontrino .total-row { font-size: 11pt; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
         }
+
+        /* Stili per le Impostazioni (aggiunti/integrati) */
+        .settings h3 { color: #444; margin-top: 15px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .settings form { display: flex; gap: 5px; margin-bottom: 15px; }
+        .settings form input, .settings form select, .settings form button { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        .settings form input[type="text"], .settings form input[type="number"], .settings form select { flex-grow: 1; }
+        .settings form button { background: #10b981; color: #fff; border: none; cursor: pointer; }
+        
+        .settings-list { margin-bottom: 20px; }
+        .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 5px; }
+        .settings-item span { flex-grow: 1; }
+        .settings-item .remove { background: #b91c1c; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+
+        .item-status { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 6px; }
+        .item-status button { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
+        .item-status .available { background: #22c55e; color: #fff; }
+        .item-status .finished { background: #b91c1c; color: #fff; }
+
     </style>
 </head>
 <body>
@@ -400,8 +418,87 @@
 
         <hr style="margin: 20px 0;">
 
-        <h2>Impostazioni Menu</h2>
-        <p>Le impostazioni avanzate per Menu, Modificatori, Zone di consegna e Articoli Finiti sono qui omesse per brevità ma dovrebbero esistere nel tuo file.</p>
+        <h2>Gestione Menu e Articoli</h2>
+        <div class="cat-row">
+            <button class="cat-btn" v-for="c in Object.keys(menu)" :key="c"
+                    :class="{active:activeSettingsCat===c}" @click="activeSettingsCat=c">{{c}}</button>
+        </div>
+
+        <form @submit.prevent="addCategory" style="margin-bottom: 20px;">
+            <input type="text" v-model="newCategoryName" placeholder="Nome Nuova Categoria" required>
+            <button type="submit">Aggiungi Categoria</button>
+        </form>
+
+        <div v-if="activeSettingsCat">
+            <h3>Articoli in {{ activeSettingsCat }} <button class="remove" @click="deleteCategory(activeSettingsCat)">Rimuovi Categoria</button></h3>
+            
+            <div class="settings-list">
+                <div class="settings-item" v-for="(item, i) in menu[activeSettingsCat]" :key="i">
+                    <span>
+                        {{item.nome}} - €{{item.prezzo.toFixed(2)}} 
+                        <span v-if="item.isMeter">(Mezzo Metro)</span>
+                        <span v-if="item.isHalfPizza">(Metà Pizza)</span>
+                    </span>
+                    <div class="item-status">
+                        <button v-if="item.isFinished" @click="toggleItemFinished(activeSettingsCat, i)" class="available">Disponibile</button>
+                        <button v-else @click="toggleItemFinished(activeSettingsCat, i)" class="finished">Finito</button>
+                        <button class="remove" @click="deleteItem(activeSettingsCat, i)">Elimina</button>
+                    </div>
+                </div>
+            </div>
+
+            <form @submit.prevent="addItemToCategory">
+                <input type="text" v-model="newItemName" placeholder="Nome Articolo" required>
+                <input type="number" step="0.01" v-model.number="newItemPrice" placeholder="Prezzo" required>
+                <button type="submit">Aggiungi Articolo</button>
+            </form>
+        </div>
+
+        <hr style="margin: 20px 0;">
+
+        <h2>Gestione Modificatori</h2>
+        <div class="mod-row">
+            <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
+                    :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeSettingsModCat===cat}"
+                    @click="activeSettingsModCat=cat">{{cat.toUpperCase()}}</button>
+        </div>
+
+        <div v-if="activeSettingsModCat">
+            <h3>Modificatori in {{ activeSettingsModCat }}</h3>
+            
+            <div class="settings-list">
+                <div class="settings-item" v-for="(mod, i) in modifiers[activeSettingsModCat]" :key="i">
+                    <span>{{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span></span>
+                    <div class="item-status">
+                        <button v-if="mod.isFinished" @click="toggleModifierFinished(activeSettingsModCat, i)" class="available">Disponibile</button>
+                        <button v-else @click="toggleModifierFinished(activeSettingsModCat, i)" class="finished">Finito</button>
+                        <button class="remove" @click="deleteModifier(activeSettingsModCat, i)">Elimina</button>
+                    </div>
+                </div>
+            </div>
+
+            <form @submit.prevent="addModifierToCategory">
+                <input type="text" v-model="newModifierName" placeholder="Nome Modificatore" required>
+                <input type="number" step="0.01" v-model.number="newModifierPrice" placeholder="Costo (0 per gratis)" required>
+                <button type="submit">Aggiungi Modificatore</button>
+            </form>
+        </div>
+
+        <hr style="margin: 20px 0;">
+
+        <h2>Zone di Consegna (Delivery)</h2>
+        <div class="settings-list">
+            <div class="settings-item" v-for="(zone, i) in deliveryZones" :key="i">
+                <span>{{zone.name}} - €{{zone.price.toFixed(2)}}</span>
+                <button class="remove" @click="deleteZone(i)">Elimina</button>
+            </div>
+        </div>
+        <form @submit.prevent="addZone">
+            <input type="text" v-model="newZoneName" placeholder="Nome Zona (es. Centro)" required>
+            <input type="number" step="0.01" v-model.number="newZonePrice" placeholder="Costo (€)" required>
+            <button type="submit">Aggiungi Zona</button>
+        </form>
+
     </section>
 </main>
 
@@ -748,6 +845,18 @@
         // Stati Ordine semplificati
         orderStatuses: ["In preparazione", "Pronto"],
 
+        // Dati per Impostazioni
+        activeSettingsCat: 'Pizze', 
+        activeSettingsModCat: 'Più',
+        newCategoryName: '',
+        newItemName: '',
+        newItemPrice: 0,
+        newModifierName: '',
+        newModifierPrice: 0,
+        newZoneName: '',
+        newZonePrice: 0,
+        newDriverName: '',
+
         get calculatedOrderTotal(){
             if (this.order.length === 0) return 0;
             return this.order.reduce((sum, item) => sum + this.calculateItemTotal(item), 0);
@@ -867,9 +976,8 @@
         },
         // --- FINE LOGICA STORICO ---
 
+        // METODI PRINCIPALI
 
-        // METODI PRINCIPALI (OMESSI PER BREVITA' MA ESSENZIALI)
-        
         saveData(){
             localStorage.setItem('pz_menu',JSON.stringify(this.menu));
             localStorage.setItem('pz_orders',JSON.stringify(this.orders));
@@ -913,8 +1021,14 @@
         
         // Logica per l'aggiunta di un prodotto base o composizione
         handleItemClick(item) {
+            if (item.isFinished) return; // Non cliccabile se finito
+            
             this.lastSelectedItem = item; 
             if (item.isMeter) {
+                if (!this.canComposeMeter) {
+                    alert("Non puoi comporre un Mezzo Metro se non hai pizze base nel Menu!");
+                    return;
+                }
                 this.tempMeterItem = JSON.parse(JSON.stringify(item));
                 this.tempMeterItem.sections.forEach(s => {
                     s.gusto = ''; 
@@ -924,6 +1038,10 @@
                 this.gustoSearchTerm = '';
                 this.showMeterModal = true;
             } else if (item.isHalfPizza) {
+                if (!this.canComposeHalfPizza) {
+                     alert("Non puoi comporre una Pizza a Metà se non hai pizze base nel Menu!");
+                    return;
+                }
                 this.tempHalfPizzaItem = JSON.parse(JSON.stringify(item));
                 this.tempHalfPizzaItem.gusto1 = '';
                 this.tempHalfPizzaItem.gusto2 = '';
@@ -953,6 +1071,8 @@
                 alert("Seleziona prima un articolo nel carrello!");
                 return;
             }
+            if (modifier.isFinished) return; // Modificatore non aggiungibile se finito
+            
             const item = this.order[this.selectedItemIndex];
             if (item.isMeter || item.isHalfPizza) return; 
             
@@ -1077,10 +1197,10 @@
             this.showModal = false;
             this.view = 'ordini';
         },
-        
+
         // Logica Stampa Selettiva
         printOrder(orderId, type) {
-            const order = this.orders.find(o => o.id === orderId);
+            const order = this.orders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId); // Cerca anche nell'archivio
             if (!order) return;
 
             const printContainer = document.getElementById('print-content-comanda');
@@ -1263,8 +1383,145 @@
 
             return html;
         },
-        
-        // Altre funzioni di utilità
+
+        // --- FUNZIONI DI IMPOSTAZIONI ---
+
+        // Gestione Categorie
+        addCategory() {
+            const name = this.newCategoryName.trim();
+            if (name && !this.menu[name]) {
+                this.menu[name] = [];
+                this.newCategoryName = '';
+                this.activeSettingsCat = name;
+                this.saveData();
+            } else if (this.menu[name]) {
+                alert("Categoria già esistente!");
+            }
+        },
+        deleteCategory(cat) {
+            if (confirm(`Sei sicuro di voler eliminare la categoria "${cat}"? Verranno eliminati anche tutti gli articoli al suo interno.`)) {
+                delete this.menu[cat];
+                this.activeSettingsCat = Object.keys(this.menu)[0] || null;
+                this.saveData();
+            }
+        },
+
+        // Gestione Articoli
+        addItemToCategory() {
+            const cat = this.activeSettingsCat;
+            const name = this.newItemName.trim();
+            const price = parseFloat(this.newItemPrice);
+
+            if (name && price >= 0) {
+                const existing = this.menu[cat].some(item => item.nome.toLowerCase() === name.toLowerCase());
+                if (existing) {
+                    alert("Articolo già esistente in questa categoria!");
+                    return;
+                }
+                
+                let newItem = { nome: name, prezzo: price };
+                // Se la categoria è per pizze composte, forza le proprietà
+                if (cat.includes("Metà")) newItem.isHalfPizza = true;
+                if (cat.includes("Metro") || cat.includes("Grande")) {
+                    newItem.isMeter = true;
+                    // Definizione sezioni di default
+                    if (cat.includes("Due")) newItem.sections = [{name:"Metà A", size:0.5}, {name:"Metà B", size:0.5}];
+                    else if (cat.includes("Tre")) newItem.sections = [{name:"Terzo 1", size:0.33}, {name:"Terzo 2", size:0.33}, {name:"Terzo 3", size:0.33}];
+                    else newItem.sections = [{name:"Gusto Unico", size:1}];
+                }
+
+                this.menu[cat].push(newItem);
+                this.newItemName = '';
+                this.newItemPrice = 0;
+                this.saveData();
+            }
+        },
+        deleteItem(cat, index) {
+            if (confirm(`Sei sicuro di voler eliminare l'articolo "${this.menu[cat][index].nome}"?`)) {
+                this.menu[cat].splice(index, 1);
+                this.saveData();
+            }
+        },
+        toggleItemFinished(cat, index) {
+            const item = this.menu[cat][index];
+            item.isFinished = !item.isFinished;
+            this.saveData();
+        },
+
+        // Gestione Modificatori
+        addModifierToCategory() {
+            const cat = this.activeSettingsModCat;
+            const name = this.newModifierName.trim();
+            const price = parseFloat(this.newModifierPrice);
+
+            if (name && price >= 0) {
+                const existing = this.modifiers[cat].some(mod => mod.nome.toLowerCase() === name.toLowerCase());
+                if (existing) {
+                    alert("Modificatore già esistente in questa categoria!");
+                    return;
+                }
+                this.modifiers[cat].push({ nome: name, prezzo: price });
+                this.newModifierName = '';
+                this.newModifierPrice = 0;
+                this.saveData();
+            }
+        },
+        deleteModifier(cat, index) {
+            if (confirm(`Sei sicuro di voler eliminare il modificatore "${this.modifiers[cat][index].nome}"?`)) {
+                this.modifiers[cat].splice(index, 1);
+                this.saveData();
+            }
+        },
+        toggleModifierFinished(cat, index) {
+            const mod = this.modifiers[cat][index];
+            mod.isFinished = !mod.isFinished;
+            this.saveData();
+        },
+
+        // Gestione Zone
+        addZone() {
+            const name = this.newZoneName.trim();
+            const price = parseFloat(this.newZonePrice);
+
+            if (name && price >= 0) {
+                const existing = this.deliveryZones.some(z => z.name.toLowerCase() === name.toLowerCase());
+                if (existing) {
+                    alert("Zona già esistente!");
+                    return;
+                }
+                this.deliveryZones.push({ name: name, price: price });
+                this.newZoneName = '';
+                this.newZonePrice = 0;
+                this.saveData();
+            }
+        },
+        deleteZone(index) {
+             if (confirm(`Sei sicuro di voler eliminare la zona "${this.deliveryZones[index].name}"?`)) {
+                this.deliveryZones.splice(index, 1);
+                this.saveData();
+            }
+        },
+
+        // Gestione Fattorini
+        addDriver() {
+             const name = this.newDriverName.trim();
+             if (name && !this.drivers.includes(name)) {
+                 this.drivers.push(name);
+                 this.newDriverName = '';
+                 this.saveData();
+             } else if (this.drivers.includes(name)) {
+                 alert("Fattorino già esistente!");
+             }
+        },
+        deleteDriver(index) {
+            if (confirm(`Sei sicuro di voler eliminare il fattorino "${this.drivers[index]}"?`)) {
+                this.drivers.splice(index, 1);
+                this.saveData();
+            }
+        },
+        // --- FINE FUNZIONI DI IMPOSTAZIONI ---
+
+        // Altre funzioni di utilità (MANTENUTE)
         getModifierCategory(modName) {
             for (const cat in this.modifiers) {
                 if (this.modifiers[cat].some(m => m.nome === modName)) {
@@ -1302,10 +1559,286 @@
             const diffMinutes = (orderTime - now) / 60000;
             return diffMinutes <= 5 && diffMinutes >= 0 && o.date === getTodayDateString();
         },
+        selectMode(m) {
+            this.mode = m;
+            this.updateDeliveryCost();
+        },
+        updateDeliveryCost() {
+            if (this.mode === 'consegna' && this.zoneName) {
+                const zone = this.deliveryZones.find(z => z.name === this.zoneName);
+                this.deliveryCost = zone ? zone.price : 0;
+            } else {
+                this.deliveryCost = 0;
+            }
+        },
+        resetCurrentOrderState() {
+            this.order = [];
+            this.editingOrderId = null;
+            this.mode = '';
+            this.customer = '';
+            this.phone = '';
+            this.address = '';
+            this.streetNumber = '';
+            this.zoneName = '';
+            this.deliveryCost = 0;
+            this.town = '';
+            this.notes = '';
+            this.tableNumber = '';
+            this.date = getTodayDateString();
+            this.hour = getDefaultHour();
+            this.accontoRicevuto = null;
+            this.selectedItemIndex = null;
+            this.lastSelectedItem = null;
+        },
+        editOrder(id) {
+            const orderToEdit = this.orders.find(o => o.id === id);
+            if (!orderToEdit) return;
+
+            this.editingOrderId = id;
+            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); // Deep copy
+            this.mode = orderToEdit.mode;
+            this.customer = orderToEdit.customer;
+            this.phone = orderToEdit.phone;
+            this.address = orderToEdit.address;
+            this.streetNumber = orderToEdit.streetNumber;
+            this.zoneName = orderToEdit.zone;
+            this.town = orderToEdit.town;
+            this.notes = orderToEdit.notes;
+            this.tableNumber = orderToEdit.tableNumber;
+            this.date = orderToEdit.date;
+            this.hour = orderToEdit.hour;
+            this.accontoRicevuto = orderToEdit.acconto;
+            this.updateDeliveryCost();
+            this.view = 'inserimento';
+            this.selectedItemIndex = null;
+            this.lastSelectedItem = null; 
+        },
+        cancelEdit() {
+            this.resetCurrentOrderState();
+            this.view = 'ordini';
+        },
+        getNextStatus(currentStatus) {
+            const index = this.orderStatuses.indexOf(currentStatus);
+            if (index === -1 || index === this.orderStatuses.length - 1) {
+                return "Archivia"; 
+            }
+            return this.orderStatuses[index + 1];
+        },
+        advance(order) {
+            const nextStatus = this.getNextStatus(order.status);
+            if (nextStatus === "Archivia") {
+                this.closeOrderAndArchive(order);
+            } else {
+                order.status = nextStatus;
+                this.saveData();
+                alert(`Ordine #${order.id} avanzato a: ${nextStatus}`);
+            }
+        },
+        closeOrderAndArchive(order) {
+            if (confirm(`Sei sicuro di voler CHIUDERE e ARCHIVIARE l'ordine #${order.id}?`)) {
+                order.archivedDate = new Date().toISOString().substring(0, 10); 
+                order.archivedTime = new Date().getTime(); 
+                this.archive.push(order);
+                this.orders = this.orders.filter(o => o.id !== order.id);
+                this.saveData();
+                this.calculateDriverStats(); 
+                alert(`Ordine #${order.id} archiviato!`);
+            }
+        },
+        updateActiveOrderDriver(id, driver) {
+            const order = this.orders.find(o => o.id === id);
+            if (order) {
+                order.driver = driver;
+                this.saveData();
+            }
+        },
+        updateArchiveDriver(id, driver) {
+             const order = this.archive.find(o => o.id === id);
+             if (order) {
+                 order.driver = driver;
+                 this.saveData();
+                 this.calculateDriverStats(); 
+             }
+         },
+        calculateDriverStats() {
+            const dateStr = this.archiveDateFilter;
+            const filtered = this.archive.filter(o => o.archivedDate.startsWith(dateStr));
+
+            this.driverStats.totalOrders = 0;
+            this.driverStats.totalRevenue = 0;
+
+            let stats = filtered;
+            
+            if (this.selectedDriver) {
+                stats = filtered.filter(o => o.driver === this.selectedDriver);
+            } else {
+                // Se non è selezionato nessun driver, si contano solo le consegne (mode=consegna)
+                // Se vuoi contare TUTTI gli ordini (anche asporto/banco) togli la condizione (o.mode === 'consegna')
+                stats = filtered.filter(o => o.mode === 'consegna');
+            }
+            
+            this.driverStats.totalOrders = stats.length;
+            this.driverStats.totalRevenue = stats.reduce((sum, o) => sum + o.total, 0);
+        },
+        duplicateOrder(order) {
+            if (confirm(`Sei sicuro di voler DUPLICARE l'ordine #${order.id}?`)) {
+                this.resetCurrentOrderState(); 
+                
+                this.order = JSON.parse(JSON.stringify(order.items)); 
+                this.mode = order.mode;
+                this.customer = order.customer;
+                this.phone = order.phone;
+                this.address = order.address;
+                this.streetNumber = order.streetNumber;
+                this.zoneName = order.zone;
+                this.town = order.town;
+                this.notes = order.notes;
+                this.tableNumber = order.tableNumber;
+                this.accontoRicevuto = order.acconto; 
+
+                // Suggerisce per oggi o il giorno archiviato
+                this.date = getTodayDateString(); 
+                this.hour = getDefaultHour(); 
+
+                this.updateDeliveryCost();
+                this.view = 'inserimento';
+                this.showModal = true; 
+            }
+        },
+        showShareMenu(orderId) {
+            this.selectedOrderIdForShare = orderId;
+            this.showShareModal = true;
+        },
+        shareViaWhatsapp(order) {
+            let message = `*Nuovo Ordine Pizzeria Smart* - #${order.id}\n`;
+            message += `\n*Modalità:* ${order.mode.toUpperCase()}`;
+            message += `\n*Cliente:* ${order.customer}`;
+            message += `\n*Ora:* ${order.hour} (${this.formatDate(order.date)})`;
+            
+            if (order.mode === 'consegna') {
+                message += `\n*Indirizzo:* ${order.address} ${order.streetNumber}, ${order.town} (${order.zone})`;
+                message += `\n*Telefono:* ${order.phone}`;
+            } else if (order.mode === 'asporto') {
+                message += `\n*Telefono:* ${order.phone}`;
+            }
+            if (order.tableNumber) {
+                 message += `\n*Tavolo/Ritiro:* ${order.tableNumber}`;
+            }
+            if (order.notes) {
+                message += `\n*Note:* ${order.notes}`;
+            }
+            if (order.driver) {
+                message += `\n*Fattorino:* ${order.driver}`;
+            }
+            
+            message += `\n\n*Ordine:*`;
+            order.items.forEach(item => {
+                let itemLine = `\n- 1x ${item.nome}`;
+
+                if (item.isHalfPizza) {
+                    itemLine += ` (${item.gusto1} / ${item.gusto2})`;
+                    
+                    const mods1 = item.modifiers1?.map(m => m.nome).join(', ');
+                    const mods2 = item.modifiers2?.map(m => m.nome).join(', ');
+                    if (mods1) itemLine += `\n  - Metà 1: ${mods1}`;
+                    if (mods2) itemLine += `\n  - Metà 2: ${mods2}`;
+
+                } else if (item.isMeter) {
+                    item.sections.forEach(section => {
+                         itemLine += `\n  - ${section.name}: ${section.gusto}`;
+                         if (section.modifiers?.length) {
+                             itemLine += ` (${section.modifiers.map(m => m.nome).join(', ')})`;
+                         }
+                    });
+                } else if (item.modifiers?.length) {
+                    itemLine += ` (${item.modifiers.map(m => m.nome).join(', ')})`;
+                }
+                message += itemLine;
+            });
+
+            message += `\n\n*TOTALE: €${order.total.toFixed(2)}*`;
+
+            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+            this.showShareModal = false;
+        },
         
+        // Logica composizione Mezzo Metro
+        addMeterModifier(secIdx, modifier) {
+             if (modifier.isFinished) return;
+             
+             const newMod = JSON.parse(JSON.stringify(modifier));
+             if (!this.tempMeterItem.sections[secIdx].modifiers) {
+                 this.tempMeterItem.sections[secIdx].modifiers = [];
+             }
+             this.tempMeterItem.sections[secIdx].modifiers.push(newMod);
+        },
+        removeMeterModifier(secIdx, modIdx) {
+            this.tempMeterItem.sections[secIdx].modifiers.splice(modIdx, 1);
+        },
+        cancelMeterComposition() {
+            this.tempMeterItem = null;
+            this.showMeterModal = false;
+            this.lastSelectedItem = null; 
+        },
+        addMeterToOrder() {
+            if (!this.isMeterValid) return;
+            const itemToAdd = JSON.parse(JSON.stringify(this.tempMeterItem));
+            this.order.push(itemToAdd);
+            this.selectedItemIndex = this.order.length - 1;
+            this.tempMeterItem = null;
+            this.showMeterModal = false;
+        },
+        get calculateTempMeterTotal() {
+            return this.tempMeterItem ? this.calculateItemTotal(this.tempMeterItem) : 0;
+        },
+
+        // Logica composizione Pizza a Metà
+        addHalfPizzaModifier(half, modifier) {
+            if (modifier.isFinished) return;
+
+            const newMod = JSON.parse(JSON.stringify(modifier));
+            if (half === 1) {
+                if (!this.tempHalfPizzaItem.modifiers1) this.tempHalfPizzaItem.modifiers1 = [];
+                this.tempHalfPizzaItem.modifiers1.push(newMod);
+            } else {
+                if (!this.tempHalfPizzaItem.modifiers2) this.tempHalfPizzaItem.modifiers2 = [];
+                this.tempHalfPizzaItem.modifiers2.push(newMod);
+            }
+        },
+        removeHalfPizzaModifier(half, modIdx) {
+            if (half === 1) {
+                this.tempHalfPizzaItem.modifiers1.splice(modIdx, 1);
+            } else {
+                this.tempHalfPizzaItem.modifiers2.splice(modIdx, 1);
+            }
+        },
+        cancelHalfPizzaComposition() {
+            this.tempHalfPizzaItem = null;
+            this.showHalfPizzaModal = false;
+            this.lastSelectedItem = null; 
+        },
+        addHalfPizzaToOrder() {
+            if (!this.isHalfPizzaValid) return;
+            const itemToAdd = JSON.parse(JSON.stringify(this.tempHalfPizzaItem));
+            this.order.push(itemToAdd);
+            this.selectedItemIndex = this.order.length - 1;
+            this.tempHalfPizzaItem = null;
+            this.showHalfPizzaModal = false;
+        },
+        get calculateTempHalfPizzaTotal() {
+            return this.tempHalfPizzaItem ? this.calculateItemTotal(this.tempHalfPizzaItem) : 0;
+        },
+        selectItem(index) {
+            this.selectedItemIndex = this.selectedItemIndex === index ? null : index;
+        },
+        openModal() {
+            this.zoneName = this.deliveryZones[0]?.name || ''; 
+            this.updateDeliveryCost(); 
+            this.showModal = true;
+        },
+
         // Inizializzazione
         mounted() {
-            // Se non ci sono driver, aggiungi uno di default per l'asporto/banco
             if (this.drivers.length === 0) {
                 this.drivers = ["Mario Rossi", "Luca Bianchi"];
                 this.saveData();
