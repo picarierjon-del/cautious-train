@@ -833,7 +833,7 @@
         pizzaCapacityPerSlot: parseInt(localStorage.getItem('pz_capacity')) || 15, 
         slotDurationMinutes: parseInt(localStorage.getItem('pz_slotDuration')) || 5,   
         
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5,"unitWeight":1},{"nome":"Diavola","prezzo":7.5,"unitWeight":1},{"nome":"Quattro Formaggi","prezzo":9,"unitWeight":1},{"nome":"Gorgonzola e Speck","prezzo":10.5,"unitWeight":1}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5,"unitWeight":0},{"nome":"Coca Cola 33cl","prezzo":2.5,"unitWeight":0},{"nome":"Birra Artigianale","prezzo":5.5,"unitWeight":0}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5,"unitWeight":0.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5,"unitWeight":0.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true,"unitWeight":1}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}],"unitWeight":1},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size:0.5}],"unitWeight":1},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size:0.33}],"unitWeight":1}]}'),
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5,"unitWeight":1},{"nome":"Diavola","prezzo":7.5,"unitWeight":1},{"nome":"Quattro Formaggi","prezzo":9,"unitWeight":1},{"nome":"Gorgonzola e Speck","prezzo":10.5,"unitWeight":1}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5,"unitWeight":0},{"nome":"Coca Cola 33cl","prezzo":2.5,"unitWeight":0},{"nome":"Birra Artigianale","prezzo":5.5,"unitWeight":0}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5,"unitWeight":0.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5,"unitWeight":0.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true,"unitWeight":1}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}],"unitWeight":1},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size:0.5}],"unitWeight":1},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}],"unitWeight":1}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2},{"nome":"Aggiunta Pomodoro","prezzo":0.5}],"Senza":[{"nome":"Senza olive","prezzo":0},{"nome":"Senza sale","prezzo":0}],"Poco":[{"nome":"Poco cotta","prezzo":0}],"Abbondante":[{"nome":"Basilico abbondante","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
@@ -936,7 +936,12 @@
         },
         // NEW: Getter per tutte le pizze (usato come suggerimento nei gusti delle composizioni)
         get allPizze() {
-            return (this.menu["Pizze"] || []).filter(p => !p.isFinished);
+            // Filtra solo gli elementi che hanno senso essere gusti (pizze, schiacciate)
+            const gusti = [].concat(
+                this.menu["Pizze"] || [], 
+                this.menu["Schiacciate"] || []
+            ).filter(p => !p.isFinished && !p.isMeter && !p.isHalfPizza);
+            return gusti;
         },
         get filteredAvailableItems() {
             let items = this.menu[this.activeCat] || [];
@@ -1156,131 +1161,722 @@
             }
         },
         
-        // ... (Altri metodi come calculateItemTotal, handleItemClick, addItem, etc. rimangono invariati o con minime correzioni)
+        // Funzioni Menu
+        handleItemClick(item) {
+            if (item.isFinished) return;
+            this.lastSelectedItem = item;
 
-        calculateItemTotal(item) {
-            let total = item.prezzo || 0;
-            
-            // Calcolo modificatori standard
-            if (item.modifiers && !item.isMeter && !item.isHalfPizza) {
-                total += item.modifiers.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
-            }
-
-            // Calcolo modificatori Mezzo Metro
-            if (item.isMeter && item.sections) {
-                total += item.sections.reduce((sectionSum, section) => {
-                    if (section.modifiers) {
-                        return sectionSum + section.modifiers.reduce((modSum, mod) => modSum + (mod.prezzo || 0), 0);
-                    }
-                    return sectionSum;
-                }, 0);
-            }
-
-            // Calcolo modificatori Pizza a Metà (CORREZIONE: Prezzo Base è 0, il costo deriva solo dai Modificatori)
-            if (item.isHalfPizza) {
-                if (item.modifiers1) {
-                    total += item.modifiers1.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
+            if (item.isMeter) {
+                if (!this.canComposeMeter) {
+                     alert("Impossibile comporre il Mezzo Metro: assicurati di avere pizze/gusti nel menu per la selezione.");
+                     return;
                 }
-                if (item.modifiers2) {
-                    total += item.modifiers2.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
+                this.tempMeterItem = JSON.parse(JSON.stringify(item));
+                // Inizializza le sezioni con il nome del gusto vuoto e i modificatori vuoti
+                this.tempMeterItem.sections.forEach(s => {
+                    s.gusto = ''; 
+                    s.modifiers = [];
+                });
+                this.gustoSearchTerm = '';
+                this.tempModCat = 'Più';
+                this.showMeterModal = true;
+            } else if (item.isHalfPizza) {
+                 if (!this.canComposeHalfPizza) {
+                     alert("Impossibile comporre la Pizza a Metà: assicurati di avere pizze/gusti nel menu per la selezione.");
+                     return;
+                }
+                this.tempHalfPizzaItem = JSON.parse(JSON.stringify(item));
+                this.tempHalfPizzaItem.gusto1 = '';
+                this.tempHalfPizzaItem.gusto2 = '';
+                this.tempHalfPizzaItem.modifiers1 = [];
+                this.tempHalfPizzaItem.modifiers2 = [];
+                this.gustoSearchTerm = '';
+                this.tempModCat = 'Più';
+                this.showHalfPizzaModal = true;
+            } else {
+                this.addItem(item);
+            }
+        },
+        addItem(item) {
+            const newItem = JSON.parse(JSON.stringify(item)); 
+            newItem.modifiers = [];
+            this.order.push(newItem);
+            this.selectedItemIndex = this.order.length - 1;
+        },
+        removeItem(index) {
+            this.order.splice(index, 1);
+            this.selectedItemIndex = null;
+        },
+        selectItem(index) {
+            this.selectedItemIndex = index;
+            this.activeModCat = 'Più';
+            this.modifierSearchTerm = '';
+        },
+        addExtra(modifier) {
+            if (this.selectedItemIndex === null || modifier.isFinished || this.order[this.selectedItemIndex].isMeter || this.order[this.selectedItemIndex].isHalfPizza) return;
+            
+            const item = this.order[this.selectedItemIndex];
+            const newMod = JSON.parse(JSON.stringify(modifier));
+            if (!item.modifiers) item.modifiers = [];
+
+            // Controlla se il modificatore è di tipo "Senza" e se l'ingrediente è già stato rimosso
+            if (this.activeModCat === 'Senza') {
+                if (item.modifiers.some(m => m.nome === modifier.nome && this.getModifierCategory(m.nome) === 'Senza')) {
+                    alert(`Il modificatore "${modifier.nome}" è già stato rimosso.`);
+                    return;
+                }
+            } else {
+                 // Impedisci l'aggiunta di modificatori multipli dello stesso tipo "Più/Poco/Abbondante"
+                if (item.modifiers.some(m => m.nome === modifier.nome && this.getModifierCategory(m.nome) === this.activeModCat)) {
+                    alert(`Il modificatore "${modifier.nome}" è già stato aggiunto.`);
+                    return;
                 }
             }
-            
-            return total;
+
+            item.modifiers.push(newMod);
+            // Forza l'aggiornamento per ricalcolare il totale
+            this.order = [...this.order]; 
+        },
+        removeModifier(itemIndex, modIndex) {
+            this.order[itemIndex].modifiers.splice(modIndex, 1);
+            // Forza l'aggiornamento
+            this.order = [...this.order]; 
+            if (this.order[itemIndex].modifiers.length === 0) {
+                 this.order[itemIndex].modifiers = undefined;
+            }
+        },
+        getModifierCategory(modifierName) {
+            for (const cat in this.modifiers) {
+                if (this.modifiers[cat].some(mod => mod.nome === modifierName)) {
+                    return cat;
+                }
+            }
+            return 'Più'; // Default
+        },
+        getModifierIcon(category) {
+            switch (category) {
+                case 'Più': return '➕';
+                case 'Senza': return '➖';
+                case 'Poco': return '🤏';
+                case 'Abbondante': return '👑';
+                default: return '';
+            }
         },
 
-        calculateOrderLoad(orderItems) {
-            return orderItems.reduce((totalLoad, item) => {
-                let load = item.unitWeight !== undefined ? item.unitWeight : 0; 
-
-                if (item.unitWeight === undefined) {
-                    if (item.isMeter || item.isHalfPizza) {
-                        load = 1; 
-                    } else if (this.menu["Pizze"]?.some(p => p.nome === item.nome)) {
-                        load = 1;
-                    } else if (this.menu["Schiacciate"]?.some(p => p.nome === item.nome)) {
-                        load = 0.5; 
-                    } else {
-                        load = 0; 
-                    }
-                }
-                
-                return totalLoad + load;
-            }, 0);
-        },
+        calculateItemTotal, // Usa la funzione helper
+        calculateOrderLoad, // Usa la funzione helper
 
         // Logica composizione Mezzo Metro
-        addMeterModifier(secIdx, modifier) {
-             if (modifier.isFinished) return;
-             
-             const newMod = JSON.parse(JSON.stringify(modifier));
-             if (!this.tempMeterItem.sections[secIdx].modifiers) {
-                 this.tempMeterItem.sections[secIdx].modifiers = [];
-             }
-             this.tempMeterItem.sections[secIdx].modifiers.push(newMod);
-        },
-        removeMeterModifier(secIdx, modIdx) {
-            this.tempMeterItem.sections[secIdx].modifiers.splice(modIdx, 1);
-        },
-        cancelMeterComposition() {
-            this.tempMeterItem = null;
-            this.showMeterModal = false;
-            this.lastSelectedItem = null; 
-            this.gustoSearchTerm = ''; // Pulisce il filtro
-        },
-        addMeterToOrder() {
-            if (!this.isMeterValid) return;
-            const itemToAdd = JSON.parse(JSON.stringify(this.tempMeterItem));
-            this.order.push(itemToAdd);
-            this.selectedItemIndex = this.order.length - 1;
-            this.tempMeterItem = null;
-            this.showMeterModal = false;
-            this.gustoSearchTerm = ''; // Pulisce il filtro
-        },
-        get calculateTempMeterTotal() {
-            return this.tempMeterItem ? this.calculateItemTotal(this.tempMeterItem) : 0;
-        },
-
-        // Logica composizione Pizza a Metà
-        addHalfPizzaModifier(half, modifier) {
-            if (modifier.isFinished) return;
-
-            const newMod = JSON.parse(JSON.stringify(modifier));
-            if (half === 1) {
-                if (!this.tempHalfPizzaItem.modifiers1) this.tempHalfPizzaItem.modifiers1 = [];
-                this.tempHalfPizzaItem.modifiers1.push(newMod);
-            } else {
-                if (!this.tempHalfPizzaItem.modifiers2) this.tempHalfPizzaItem.modifiers2 = [];
-                this.tempHalfPizzaItem.modifiers2.push(newMod);
-            }
-        },
-        removeHalfPizzaModifier(half, modIdx) {
-            if (half === 1) {
-                this.tempHalfPizzaItem.modifiers1.splice(modIdx, 1);
-            } else {
-                this.tempHalfPizzaItem.modifiers2.splice(modIdx, 1);
-            }
-        },
-        cancelHalfPizzaComposition() {
-            this.tempHalfPizzaItem = null;
-            this.showHalfPizzaModal = false;
-            this.lastSelectedItem = null; 
-            this.gustoSearchTerm = ''; // Pulisce il filtro
-        },
-        addHalfPizzaToOrder() {
-            if (!this.isHalfPizzaValid) return;
-            const itemToAdd = JSON.parse(JSON.stringify(this.tempHalfPizzaItem));
-            this.order.push(itemToAdd);
-            this.selectedItemIndex = this.order.length - 1;
-            this.tempHalfPizzaItem = null;
-            this.showHalfPizzaModal = false;
-            this.gustoSearchTerm = ''; // Pulisce il filtro
-        },
-        get calculateTempHalfPizzaTotal() {
-            return this.tempHalfPizzaItem ? this.calculateItemTotal(this.tempHalfPizzaItem) : 0;
-        },
+        addMeterModifier,
+        removeMeterModifier,
+        cancelMeterComposition,
+        addMeterToOrder,
         
-        // ... (Il resto delle funzioni di gestione degli ordini e delle impostazioni rimane invariato)
+        // Logica composizione Pizza a Metà
+        addHalfPizzaModifier,
+        removeHalfPizzaModifier,
+        cancelHalfPizzaComposition,
+        addHalfPizzaToOrder,
+
+        // Logica Modale e Finalizzazione
+        openModal() {
+            this.showModal = true;
+            this.mode = this.mode || 'consegna'; 
+            this.date = this.date || getTodayDateString(); 
+            this.hour = this.hour || getDefaultHour();
+            this.recalculateSlotLoad(); 
+        },
+        selectMode(modeId) {
+            this.mode = modeId;
+            if (modeId !== 'consegna') {
+                this.deliveryCost = 0;
+            } else {
+                this.updateDeliveryCost();
+            }
+        },
+        updateDeliveryCost() {
+            const zone = this.deliveryZones.find(z => z.name === this.zoneName);
+            this.deliveryCost = zone ? zone.price : 0;
+        },
+        filterCustomers() {
+             const term = this.customer.toLowerCase().trim();
+             if (term.length < 2) {
+                 this.filteredCustomerSuggestions = [];
+                 return;
+             }
+             this.filteredCustomerSuggestions = this.customerData
+                 .filter(c => c.customer.toLowerCase().includes(term) || (c.phone && c.phone.includes(term)))
+                 .slice(0, 10);
+        },
+        loadCustomerData(customerEntry) {
+            // Questo metodo viene chiamato quando un utente seleziona un suggerimento
+            this.customer = customerEntry.customer;
+            this.phone = customerEntry.phone || '';
+            this.address = customerEntry.address || '';
+            this.streetNumber = customerEntry.streetNumber || '';
+            this.zoneName = customerEntry.zone || '';
+            this.town = customerEntry.town || '';
+            this.updateDeliveryCost();
+            this.filteredCustomerSuggestions = []; // Pulisci i suggerimenti
+        },
+        saveCustomerData() {
+            if (this.customer && this.phone) {
+                const existingIndex = this.customerData.findIndex(c => c.phone === this.phone);
+
+                const newEntry = {
+                    customer: this.customer.trim(),
+                    phone: this.phone.trim(),
+                    address: this.address.trim(),
+                    streetNumber: this.streetNumber.trim(),
+                    zone: this.zoneName,
+                    town: this.town.trim()
+                };
+
+                if (existingIndex !== -1) {
+                    // Aggiorna
+                    this.customerData.splice(existingIndex, 1, newEntry);
+                } else {
+                    // Aggiungi
+                    this.customerData.push(newEntry);
+                }
+                // Limita a 1000 i clienti per non appesantire il localStorage
+                if (this.customerData.length > 1000) {
+                     this.customerData = this.customerData.slice(this.customerData.length - 1000);
+                }
+            }
+        },
+        confermaOrdine() {
+            this.saveCustomerData();
+            
+            const newOrder = {
+                id: this.editingOrderId || Date.now(),
+                customer: this.customer.trim(),
+                mode: this.mode,
+                items: JSON.parse(JSON.stringify(this.order)),
+                deliveryCost: this.deliveryCost,
+                total: this.total,
+                status: this.orderStatuses[0],
+                phone: this.phone.trim(),
+                address: this.address.trim(),
+                streetNumber: this.streetNumber.trim(),
+                zone: this.zoneName,
+                town: this.town.trim(),
+                notes: this.notes.trim(),
+                tableNumber: this.tableNumber.trim(),
+                date: this.date, 
+                hour: this.hour,
+                driver: this.driver,
+                acconto: this.accontoRicevuto || 0, 
+            };
+            
+            if (this.editingOrderId) {
+                const index = this.orders.findIndex(o => o.id === this.editingOrderId);
+                if (index !== -1) {
+                    this.orders.splice(index, 1, newOrder);
+                }
+            } else {
+                this.orders.push(newOrder);
+            }
+
+            this.resetFormState();
+            this.saveData();
+            this.view = 'ordini';
+        },
+        resetFormState() {
+            this.order = [];
+            this.customer = '';
+            this.mode = '';
+            this.phone = '';
+            this.address = '';
+            this.streetNumber = '';
+            this.zoneName = '';
+            this.deliveryCost = 0;
+            this.town = '';
+            this.notes = '';
+            this.tableNumber = '';
+            this.date = getTodayDateString(); 
+            this.hour = getDefaultHour(); 
+            this.driver = '';
+            this.selectedItemIndex = null;
+            this.editingOrderId = null;
+            this.showModal = false;
+            this.accontoRicevuto = null;
+            this.lastSelectedItem = null;
+        },
+
+        // Logica Ordini
+        filteredActiveOrders() {
+            let filtered = this.orders.filter(o => {
+                const orderDateStr = o.date;
+                const todayStr = getTodayDateString();
+                const tomorrowStr = getTomorrowLocalString();
+                
+                let dateMatch = true;
+                if (this.activeDateFilter === 'today') {
+                    dateMatch = orderDateStr === todayStr;
+                } else if (this.activeDateFilter === 'tomorrow') {
+                    dateMatch = orderDateStr === tomorrowStr;
+                } else if (this.activeDateFilter === 'future') {
+                    dateMatch = orderDateStr > tomorrowStr;
+                }
+                
+                if (!dateMatch) return false;
+
+                const term = this.activeOrderSearchTerm.toLowerCase();
+                if (!term) return true;
+
+                return o.customer.toLowerCase().includes(term) ||
+                       o.address.toLowerCase().includes(term) ||
+                       o.phone.includes(term) ||
+                       (o.tableNumber && o.tableNumber.toLowerCase().includes(term));
+            }).sort((a, b) => {
+                // Ordina prima per data, poi per ora
+                const dateA = new Date(`${a.date}T${a.hour}`);
+                const dateB = new Date(`${b.date}T${b.hour}`);
+                if (dateA - dateB !== 0) {
+                    return dateA - dateB;
+                }
+                // Se la data/ora è uguale, ordina per stato (Pronto ultimo)
+                if (a.status === 'Pronto' && b.status !== 'Pronto') return 1;
+                if (a.status !== 'Pronto' && b.status === 'Pronto') return -1;
+                return a.id - b.id; 
+            });
+
+            return filtered;
+        },
+        getNextStatus(currentStatus) {
+            const index = this.orderStatuses.indexOf(currentStatus);
+            return index < this.orderStatuses.length - 1 ? this.orderStatuses[index + 1] : "Chiudi Ordine";
+        },
+        advance(order) {
+            const index = this.orders.findIndex(o => o.id === order.id);
+            if (index === -1) return;
+
+            const currentStatus = order.status;
+            const nextStatus = this.getNextStatus(currentStatus);
+
+            if (nextStatus === "Chiudi Ordine") {
+                this.closeOrderAndArchive(order);
+            } else {
+                this.orders[index].status = nextStatus;
+                this.saveData();
+            }
+        },
+        closeOrderAndArchive(order) {
+             if (confirm(`Confermi di voler chiudere e archiviare l'ordine #${order.id} di ${order.customer}?`)) {
+                const index = this.orders.findIndex(o => o.id === order.id);
+                if (index !== -1) {
+                    const archivedOrder = this.orders.splice(index, 1)[0];
+                    archivedOrder.archivedTime = Date.now();
+                    this.archive.push(archivedOrder);
+                    this.saveData();
+                    this.calculateDriverStats(); // Aggiorna le statistiche
+                }
+             }
+        },
+        editOrder(id) {
+            const orderToEdit = this.orders.find(o => o.id === id);
+            if (orderToEdit) {
+                this.resetFormState(); 
+                this.editingOrderId = orderToEdit.id;
+                this.order = JSON.parse(JSON.stringify(orderToEdit.items));
+                this.customer = orderToEdit.customer;
+                this.mode = orderToEdit.mode;
+                this.phone = orderToEdit.phone;
+                this.address = orderToEdit.address;
+                this.streetNumber = orderToEdit.streetNumber;
+                this.zoneName = orderToEdit.zone;
+                this.town = orderToEdit.town;
+                this.notes = orderToEdit.notes;
+                this.tableNumber = orderToEdit.tableNumber;
+                this.date = orderToEdit.date;
+                this.hour = orderToEdit.hour;
+                this.driver = orderToEdit.driver;
+                this.deliveryCost = orderToEdit.deliveryCost;
+                this.accontoRicevuto = orderToEdit.acconto;
+                this.view = 'inserimento';
+            }
+        },
+        cancelEdit() {
+            this.resetFormState();
+            this.view = 'ordini';
+        },
+        duplicateOrder(order) {
+            if (confirm(`Vuoi duplicare l'ordine #${order.id} di ${order.customer} per un nuovo inserimento?`)) {
+                this.resetFormState(); 
+                this.order = JSON.parse(JSON.stringify(order.items));
+                this.customer = order.customer;
+                this.mode = order.mode;
+                this.phone = order.phone;
+                this.address = order.address;
+                this.streetNumber = order.streetNumber;
+                this.zoneName = order.zone;
+                this.town = order.town;
+                this.notes = order.notes;
+                this.tableNumber = order.tableNumber;
+                this.date = order.date;
+                this.hour = order.hour;
+                this.driver = order.driver;
+                this.deliveryCost = order.deliveryCost;
+                this.accontoRicevuto = order.acconto;
+                this.view = 'inserimento'; 
+            }
+        },
+        updateActiveOrderDriver(orderId, driverName) {
+            const order = this.orders.find(o => o.id === orderId);
+            if (order) {
+                order.driver = driverName;
+                this.saveData();
+            }
+        },
+        updateArchiveDriver(orderId, driverName) {
+             const order = this.archive.find(o => o.id === orderId);
+             if (order) {
+                 order.driver = driverName;
+                 this.saveData();
+                 this.calculateDriverStats(); 
+             }
+        },
+        isFutureOrder(order) {
+            const orderDateTime = new Date(`${order.date}T${order.hour}`.replace(/-/g, '/'));
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); 
+            return orderDateTime > today && order.date !== getTodayDateString();
+        },
+        isUrgent(order) {
+            const orderDateTime = new Date(`${order.date}T${order.hour}`.replace(/-/g, '/'));
+            const now = new Date();
+            const diffMinutes = Math.floor((orderDateTime - now) / 60000);
+            return diffMinutes > 0 && diffMinutes <= 5;
+        },
+        isNear(order) {
+             const orderDateTime = new Date(`${order.date}T${order.hour}`.replace(/-/g, '/'));
+             const now = new Date();
+             const diffMinutes = Math.floor((orderDateTime - now) / 60000);
+             return diffMinutes > 5 && diffMinutes <= 15;
+        },
+        formatDate(dateStr) {
+            const date = new Date(dateStr.replace(/-/g, '/'));
+            const today = new Date(getTodayDateString().replace(/-/g, '/'));
+            const tomorrow = new Date(getTomorrowLocalString().replace(/-/g, '/'));
+
+            if (date.getTime() === today.getTime()) return "Oggi";
+            if (date.getTime() === tomorrow.getTime()) return "Domani";
+            return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+        },
+        showShareMenu(id) {
+            this.selectedOrderIdForShare = id;
+            this.showShareModal = true;
+        },
+        shareViaWhatsapp(order) {
+            if (!order) return;
+            const itemDetails = order.items.map(i => {
+                let detail = `- ${i.nome} `;
+                if (i.isHalfPizza) {
+                    detail = `- 🍕 ${i.nome} (${i.gusto1} / ${i.gusto2})`;
+                    if (i.modifiers1?.length || i.modifiers2?.length) detail += ' (Modifiche)';
+                } else if (i.isMeter) {
+                    detail = `- 🍕 ${i.nome} (${i.sections.length} Gusti)`;
+                } else if (i.modifiers?.length) {
+                    detail += ` (${i.modifiers.map(m => m.nome).join(', ')})`;
+                }
+                detail += ` (€${this.calculateItemTotal(i).toFixed(2)})`;
+                return detail;
+            }).join('\n');
+
+            let message = `*ORDINE PIZZERIA SMART #${order.id}*\n\n`;
+            message += `Modalità: *${order.mode.toUpperCase()}*\n`;
+            message += `Ora: *${order.hour}* (${this.formatDate(order.date)})\n`;
+            message += `Cliente: ${order.customer}\n`;
+            if (order.phone) message += `Tel: ${order.phone}\n`;
+            if (order.mode === 'consegna') {
+                 message += `Indirizzo: ${order.address} ${order.streetNumber}, ${order.town} (${order.zone})\n`;
+            } else if (order.tableNumber) {
+                 message += `Ritiro/Tavolo: ${order.tableNumber}\n`;
+            }
+            if (order.notes) message += `*Note:* ${order.notes}\n`;
+            message += `\n*Dettaglio Articoli:*\n${itemDetails}\n`;
+            message += `\n*TOTALE: €${order.total.toFixed(2)}*\n`;
+            
+            if (order.acconto > 0) {
+                 message += `Acconto: €${order.acconto.toFixed(2)}\n`;
+                 const resto = order.acconto - order.total;
+                 if (resto > 0) {
+                     message += `*RESTO DA DARE: €${resto.toFixed(2)}*\n`;
+                 }
+            }
+            
+            if (order.driver) {
+                message += `\n*Fattorino Assegnato:* ${order.driver}`;
+            }
+
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        },
+        printOrder(orderId, type) {
+            const order = this.orders.find(o => o.id === orderId);
+            if (!order) return;
+
+            let content = '';
+            if (type === 'comanda') {
+                content = this.generateComanda(order);
+                document.getElementById('print-content-comanda').innerHTML = content;
+                window.onafterprint = () => document.getElementById('print-content-comanda').style.display = 'none';
+                document.getElementById('print-content-comanda').style.display = 'block';
+            } else if (type === 'scontrino') {
+                content = this.generateScontrino(order);
+                document.getElementById('print-content-scontrino').innerHTML = content;
+                window.onafterprint = () => document.getElementById('print-content-scontrino').style.display = 'none';
+                document.getElementById('print-content-scontrino').style.display = 'block';
+            }
+
+            // Stampa e nascondi
+            window.print();
+        },
+        generateComanda(order) {
+             let comanda = `<h1>COMANDA CUCINA #${order.id}</h1>`;
+             comanda += `<h2>${order.mode.toUpperCase()} - ${order.hour}</h2>`;
+             
+             if (order.mode === 'consegna') {
+                 comanda += `<p>Cliente: ${order.customer}</p>`;
+                 comanda += `<p>Indirizzo: ${order.address} ${order.streetNumber}, ${order.town} (**${order.zone}**)</p>`;
+             } else if (order.mode === 'asporto') {
+                 comanda += `<p>Ritiro: ${order.customer} (Num: ${order.tableNumber})</p>`;
+             } else if (order.mode === 'banco') {
+                 comanda += `<p>Tavolo: ${order.tableNumber}</p>`;
+             }
+
+             if (order.notes) {
+                 comanda += `<p class="note">NOTE: ${order.notes}</p>`;
+             }
+             
+             comanda += '<h2>DETTAGLIO ORDINE</h2><ul>';
+
+             order.items.forEach(item => {
+                 comanda += `<li>`;
+                 
+                 // Pizze divise / Mezzo Metro
+                 if (item.isHalfPizza) {
+                     comanda += `<p class="item-name">🍕 ${item.nome}</p>`;
+                     comanda += `<ul class="mod-list">`;
+                     comanda += `<li>** Metà 1: ${item.gusto1} **`;
+                     if (item.modifiers1 && item.modifiers1.length) {
+                         comanda += ` (${item.modifiers1.map(m => m.nome).join(', ')})`;
+                     }
+                     comanda += `</li>`;
+                     comanda += `<li>** Metà 2: ${item.gusto2} **`;
+                     if (item.modifiers2 && item.modifiers2.length) {
+                         comanda += ` (${item.modifiers2.map(m => m.nome).join(', ')})`;
+                     }
+                     comanda += `</li>`;
+                     comanda += `</ul>`;
+                 } else if (item.isMeter) {
+                     comanda += `<p class="item-name">🍕 ${item.nome}</p>`;
+                     comanda += `<ul class="mod-list">`;
+                     item.sections.forEach(sec => {
+                         comanda += `<li>${sec.name}: **${sec.gusto}**`;
+                         if (sec.modifiers && sec.modifiers.length) {
+                             comanda += ` (${sec.modifiers.map(m => m.nome).join(', ')})`;
+                         }
+                         comanda += `</li>`;
+                     });
+                     comanda += `</ul>`;
+                 } 
+                 // Articoli standard
+                 else {
+                     comanda += `<span class="item-name">${item.nome}</span>`;
+                     if (item.modifiers && item.modifiers.length) {
+                         comanda += `<ul class="mod-list">`;
+                         item.modifiers.forEach(mod => {
+                             comanda += `<li>* ${mod.nome}</li>`;
+                         });
+                         comanda += `</ul>`;
+                     }
+                 }
+                 comanda += `</li>`;
+             });
+             
+             comanda += '</ul>';
+             comanda += `<p style="text-align: right; margin-top: 15px;">**Totale: €${order.total.toFixed(2)}**</p>`;
+
+             return comanda;
+        },
+        generateScontrino(order) {
+            let scontrino = `<h1>SCONTRINO FISCALE</h1>`;
+            scontrino += `<p>Data/Ora: ${new Date(order.id).toLocaleDateString()} ${order.hour}</p>`;
+            scontrino += `<p>Ordine: #${order.id} | Cliente: ${order.customer}</p>`;
+            if (order.tableNumber) scontrino += `<p>Tavolo/Ritiro: ${order.tableNumber}</p>`;
+
+            scontrino += '<table><thead><tr><th>Descrizione</th><th>Totale</th></tr></thead><tbody>';
+
+            order.items.forEach(item => {
+                const itemTotal = this.calculateItemTotal(item);
+                let name = item.nome;
+                if (item.isHalfPizza) name = `M-Piz. (${item.gusto1}/${item.gusto2})`;
+                else if (item.isMeter) name = `M-Metro (${item.sections.length}G.)`;
+
+                scontrino += `<tr><td>${name}</td><td>€${itemTotal.toFixed(2)}</td></tr>`;
+            });
+            
+            if (order.deliveryCost > 0) {
+                 scontrino += `<tr><td>Costo Consegna (${order.zone})</td><td>€${order.deliveryCost.toFixed(2)}</td></tr>`;
+            }
+
+            scontrino += `<tr class="total-row"><td>TOTALE COMPLESSIVO</td><td>€${order.total.toFixed(2)}</td></tr>`;
+            
+            if (order.acconto > 0) {
+                scontrino += `<tr><td>Acconto/Contanti</td><td>€${order.acconto.toFixed(2)}</td></tr>`;
+                const resto = order.acconto - order.total;
+                if (resto > 0) {
+                     scontrino += `<tr class="total-row" style="color:#e31b23;"><td>RESTO</td><td>€${resto.toFixed(2)}</td></tr>`;
+                }
+            }
+
+            scontrino += '</tbody></table>';
+            scontrino += `<p style="text-align: center; margin-top: 15px;">Grazie e arrivederci!</p>`;
+
+            return scontrino;
+        },
+
+
+        // Logica Statistiche/Storico
+        filteredArchive() {
+            return this.archive.filter(o => o.date === this.archiveDateFilter);
+        },
+        get dailyTotal() {
+            return this.filteredArchive.reduce((sum, o) => sum + o.total, 0);
+        },
+        calculateDriverStats() {
+            let totalOrders = 0;
+            let totalRevenue = 0;
+
+            this.filteredArchive.filter(o => o.mode === 'consegna').forEach(order => {
+                if (!this.selectedDriver || order.driver === this.selectedDriver) {
+                    totalOrders++;
+                    totalRevenue += order.total; 
+                }
+            });
+
+            this.driverStats.totalOrders = totalOrders;
+            this.driverStats.totalRevenue = totalRevenue;
+        },
+
+        // Logica Impostazioni
+        addCategory() {
+            const name = this.newCategoryName.trim();
+            if (name && !this.menu[name]) {
+                this.menu[name] = [];
+                this.activeSettingsCat = name;
+                this.newCategoryName = '';
+                this.saveData();
+            }
+        },
+        deleteCategory(category) {
+             if (Object.keys(this.menu).length <= 1) {
+                alert("Impossibile eliminare l'ultima categoria rimasta.");
+                return;
+             }
+             if (confirm(`Sei sicuro di voler eliminare la categoria "${category}" e tutti i suoi articoli?`)) {
+                delete this.menu[category];
+                this.activeSettingsCat = Object.keys(this.menu)[0]; // Seleziona la prima categoria rimasta
+                this.saveData();
+             }
+        },
+        addItemToCategory() {
+            const cat = this.activeSettingsCat;
+            const name = this.newItemName.trim();
+            const price = parseFloat(this.newItemPrice);
+            const weight = parseFloat(this.newItemWeight);
+
+            if (name && price >= 0) {
+                // Aggiunta logica per i tipi speciali (Mezzo Metro/Pizza Metà)
+                let item = {
+                    nome: name, 
+                    prezzo: price, 
+                    unitWeight: isNaN(weight) ? 1 : weight
+                };
+                
+                if (cat === 'Pizza Metà') {
+                    item.isHalfPizza = true;
+                    item.unitWeight = 1; 
+                } else if (cat === 'Mezzo Metro') {
+                    item.isMeter = true;
+                    // Logica di default per le sezioni
+                    item.sections = [{ name: 'Gusto Unico', size: 1 }]; 
+                    item.unitWeight = 1;
+                }
+                
+                this.menu[cat].push(item);
+                this.newItemName = '';
+                this.newItemPrice = 0;
+                this.newItemWeight = 1;
+                this.saveData();
+            }
+        },
+        deleteItem(category, index) {
+            if (confirm(`Sei sicuro di voler eliminare l'articolo "${this.menu[category][index].nome}"?`)) {
+                this.menu[category].splice(index, 1);
+                this.saveData();
+            }
+        },
+        toggleItemFinished(category, index) {
+            const item = this.menu[category][index];
+            item.isFinished = !item.isFinished;
+            this.saveData();
+        },
+        addModifierToCategory() {
+            const cat = this.activeSettingsModCat;
+            const name = this.newModifierName.trim();
+            const price = parseFloat(this.newModifierPrice);
+            if (name) {
+                this.modifiers[cat].push({ nome: name, prezzo: price >= 0 ? price : 0 });
+                this.newModifierName = '';
+                this.newModifierPrice = 0;
+                this.saveData();
+            }
+        },
+        deleteModifier(category, index) {
+            if (confirm(`Sei sicuro di voler eliminare il modificatore "${this.modifiers[category][index].nome}"?`)) {
+                this.modifiers[category].splice(index, 1);
+                this.saveData();
+            }
+        },
+        toggleModifierFinished(category, index) {
+            const mod = this.modifiers[category][index];
+            mod.isFinished = !mod.isFinished;
+            this.saveData();
+        },
+        addZone() {
+            const name = this.newZoneName.trim();
+            const price = parseFloat(this.newZonePrice);
+            if (name && price >= 0) {
+                this.deliveryZones.push({ name: name, price: price });
+                this.newZoneName = '';
+                this.newZonePrice = 0;
+                this.saveData();
+            }
+        },
+        deleteZone(index) {
+            if (confirm(`Sei sicuro di voler eliminare la zona "${this.deliveryZones[index].name}"?`)) {
+                this.deliveryZones.splice(index, 1);
+                this.saveData();
+            }
+        },
+        addDriver() {
+            const name = this.newDriverName.trim();
+            if (name && !this.drivers.includes(name)) {
+                this.drivers.push(name);
+                this.newDriverName = '';
+                this.saveData();
+            }
+        },
+        deleteDriver(index) {
+            if (confirm(`Sei sicuro di voler eliminare il fattorino "${this.drivers[index]}"?`)) {
+                this.drivers.splice(index, 1);
+                this.saveData();
+                this.calculateDriverStats(); // Ricalcola per sicurezza
+            }
+        },
 
         // Inizializzazione
         mounted() {
