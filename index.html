@@ -9,10 +9,37 @@
         /* Stili Generali */
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif; background: #f7f7fa; color: #333; padding-bottom: 90px; }
         header { background: #e31b23; color: #fff; padding: 14px; text-align: center; font-weight: 700; font-size: 1.2rem; }
+        
+        /* NEW: Stili Accesso e Navigazione */
         nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; border-top: 1px solid #ddd; background: #fff; z-index: 50; }
         nav button { flex: 1; border: none; background: none; padding: 6px 0; color: #777; font-size: .8rem; display: flex; flex-direction: column; align-items: center; }
         nav button i { font-size: 1.3rem; margin-bottom: 2px; }
         nav button.active { color: #e31b23; }
+
+        .auth-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #f7f7fa;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .auth-screen h2 { color: #e31b23; }
+        .pin-input {
+            width: 150px;
+            padding: 12px;
+            font-size: 1.5rem;
+            text-align: center;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .error-message { color: #b91c1c; font-weight: 600; }
+        
         main { padding: 12px; max-width: 480px; margin: auto; }
         h2 { color: #e31b23; margin: 8px 0; }
         
@@ -100,18 +127,20 @@
             body, html { margin: 0; padding: 0; }
             .print-container { display: block; max-width: 100%; font-size: 11pt; }
 
-            /* Stili specifici per la comanda */
-            .print-comanda { font-family: monospace; font-size: 12pt; line-height: 1.4; padding: 10px; }
-            .print-comanda h1 { font-size: 16pt; text-align: center; margin: 0 0 10px 0; }
-            .print-comanda h2 { font-size: 14pt; border-bottom: 1px solid #000; padding-bottom: 5px; margin: 10px 0; }
-            .print-comanda ul { list-style: none; padding: 0; margin: 0 0 10px 0; }
-            .print-comanda ul li { border-bottom: 1px dotted #888; padding: 4px 0; }
-            .print-comanda .item-name { font-weight: bold; font-size: 13pt; }
-            .print-comanda .mod-list { font-size: 11pt; margin-top: 2px; padding-left: 10px; }
-            .print-comanda .mod-list li { border: none; }
-            .print-comanda .note { color: #b91c1c; margin-top: 8px; font-weight: bold; }
+            /* Stili specifici per la comanda - RESA DI FACILE LETTURA E SENZA PREZZI */
+            .print-comanda { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif; font-size: 14pt; line-height: 1.6; padding: 10px; width: 80mm; margin: 0 auto; }
+            .print-comanda h1 { font-size: 18pt; text-align: center; margin: 0 0 10px 0; border-bottom: 2px solid #000; padding-bottom: 5px; }
+            .print-comanda h2 { font-size: 16pt; margin: 10px 0 5px 0; color: #e31b23; }
+            .print-comanda ul { list-style: none; padding: 0; margin: 0 0 15px 0; }
+            .print-comanda ul li { border-bottom: 1px dashed #888; padding: 6px 0; }
+            .print-comanda .item-name { font-weight: bold; font-size: 15pt; display: block; }
+            .print-comanda .mod-list { font-size: 13pt; margin-top: 4px; padding-left: 15px; }
+            .print-comanda .mod-list li { border: none; font-style: italic; color: #444; }
+            .print-comanda .note { color: #b91c1c; margin-top: 10px; font-weight: bold; font-size: 14pt; border: 1px solid #b91c1c; padding: 5px; border-radius: 4px;}
+            .print-comanda .driver-info { margin-top: 10px; font-size: 14pt; font-weight: bold; color: #3b82f6;}
 
-            /* Stili specifici per lo scontrino */
+
+            /* Stili specifici per lo scontrino (Mantiene prezzi) */
             .print-scontrino { font-family: monospace; font-size: 10pt; line-height: 1.3; width: 80mm; margin: 0 auto; }
             .print-scontrino h1 { font-size: 12pt; text-align: center; margin: 0 0 5px 0; }
             .print-scontrino table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
@@ -148,7 +177,16 @@
 <body>
 <header>Pizzeria Smart</header>
 
-<main id="app">
+<div class="auth-screen" v-if="!isAuthenticated">
+    <h2>Accesso Richiesto</h2>
+    <p>Inserisci il codice di accesso per procedere.</p>
+    <input type="password" v-model="pinInput" placeholder="PIN" class="pin-input" @keyup.enter="checkAccess">
+    <button @click="checkAccess" class="final-btn" style="width: 150px;">Accedi</button>
+    <p v-if="authError" class="error-message">{{ authError }}</p>
+    <p style="margin-top: 20px; color: #6b7280;">*PIN Operatore: 1234 | PIN Sviluppatore: 5678910*</p>
+</div>
+
+<main id="app" v-show="isAuthenticated">
     <section v-show="view==='inserimento'">
         <h2>{{ editingOrderId ? 'Modifica Ordine #' + editingOrderId : 'Crea Nuovo Ordine' }}</h2>
         
@@ -181,7 +219,9 @@
 
         <div class="grid">
             <div class="item" v-for="p in filteredAvailableItems" :key="p.nome" @click="handleItemClick(p)" :class="{disabled: p.isFinished || (p.isMeter && !canComposeMeter) || (p.isHalfPizza && !canComposeHalfPizza), 'active-menu-selection': lastSelectedItem === p}">
-                <strong>{{p.nome}}</strong>
+                <strong v-if="p.isHalfPizza">🍕 Metà Gusti</strong>
+                <strong v-else-if="p.isMeter">📏 Mezzo Metro</strong>
+                <strong v-else>{{p.nome}}</strong>
                 <span v-if="p.isFinished" style="color:#b91c1c; font-weight:700;">(FINITO)</span>
                 <span v-else-if="p.isMeter || p.isHalfPizza">€{{(p.isMeter || p.isHalfPizza ? 'COMPOSTO' : p.prezzo.toFixed(2))}}</span>
                 <span v-else>€{{p.prezzo.toFixed(2)}}</span>
@@ -199,7 +239,7 @@
                 <li v-for="(i,idx) in order" :key="idx" @click="selectItem(idx)">
                     <div class="order-item" :class="{selected: selectedItemIndex === idx}">
                         <span v-if="i.isHalfPizza">🍕 {{i.nome}} ({{i.gusto1}} / {{i.gusto2}})</span>
-                        <span v-else-if="i.isMeter">🍕 {{i.nome}} ({{i.sections.length}} Gusti)</span>
+                        <span v-else-if="i.isMeter">📏 {{i.nome}} ({{i.sections.length}} Gusti)</span>
                         <span v-else>{{i.nome}}</span>
                         <span>€{{calculateItemTotal(i).toFixed(2)}} <button @click.stop="removeItem(idx)" style="border:none;background:none;color:#e31b23">✖️</button></span>
                     </div>
@@ -262,7 +302,7 @@
         </div>
     </section>
 
-    <section v-show="view==='ordini'">
+    <section v-show="view==='ordini'" v-if="isAdminOrDev">
         <h2>Ordini Attivi</h2>
         <input type="search" v-model="activeOrderSearchTerm" placeholder="Cerca per Cliente, Tavolo, Indirizzo..." class="search-input">
         
@@ -303,7 +343,7 @@
             <ul class="order-items">
                 <li v-for="it in o.items">
                     <span v-if="it.isHalfPizza">🍕 {{it.nome}} ({{it.gusto1}} / {{it.gusto2}})</span>
-                    <span v-else-if="it.isMeter">🍕 {{it.nome}}</span>
+                    <span v-else-if="it.isMeter">📏 {{it.nome}}</span>
                     <span v-else>{{ it.nome }}</span>
                      – €{{ calculateItemTotal(it).toFixed(2) }}
                     
@@ -360,7 +400,10 @@
             </div>
         </div>
     </section>
-
+    <section v-show="view==='ordini'" v-else>
+        <h2>Accesso Negato</h2>
+        <p style="color: #b91c1c; font-weight: 600;">Per visualizzare e gestire gli ordini, devi accedere con il PIN Operatore o Sviluppatore.</p>
+    </section>
     <section v-show="view==='storico'">
         <h2>Storico e Statistiche</h2>
         
@@ -409,7 +452,7 @@
         </div>
     </section>
 
-    <section v-show="view==='impostazioni'" class="settings">
+    <section v-show="view==='impostazioni'" class="settings" v-if="isDeveloper">
         
         <h2>Gestione Dati e Manutenzione 💾</h2>
 
@@ -533,9 +576,13 @@
         </form>
 
     </section>
-</main>
+     <section v-show="view==='impostazioni'" v-else>
+        <h2>Accesso Negato</h2>
+        <p style="color: #b91c1c; font-weight: 600;">Per visualizzare e modificare le impostazioni, devi accedere con il PIN Sviluppatore.</p>
+    </section>
+    </main>
 
-<nav>
+<nav v-show="isAuthenticated">
     <button :class="{active:view==='inserimento'}" @click="view='inserimento'"><i class="fa-solid fa-cash-register"></i>Inserimento</button>
     <button :class="{active:view==='ordini'}" @click="view='ordini'"><i class="fa-solid fa-clipboard-list"></i>Ordini</button>
     <button :class="{active:view==='storico'}" @click="view='storico'; calculateDriverStats();"><i class="fa-solid fa-chart-line"></i>Storico</button>
@@ -785,6 +832,104 @@
 </div>
 <script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.iife.js"></script>
 <script>
+    // ⭐ FUNZIONI HELPER GLOBALI (Risolvono l'errore iniziale di codice) ⭐
+
+    function calculateItemTotal(item) {
+        let total = item.prezzo || 0;
+
+        // Aggiungi costo dei modificatori standard
+        if (item.modifiers && item.modifiers.length > 0) {
+            total += item.modifiers.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
+        }
+
+        // Aggiungi costo dei modificatori per Metà Pizza
+        if (item.isHalfPizza) {
+            if (item.modifiers1 && item.modifiers1.length > 0) {
+                total += item.modifiers1.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
+            }
+            if (item.modifiers2 && item.modifiers2.length > 0) {
+                total += item.modifiers2.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
+            }
+        }
+        
+        // Aggiungi costo dei modificatori per Mezzo Metro
+        if (item.isMeter && item.sections) {
+            item.sections.forEach(section => {
+                if (section.modifiers && section.modifiers.length > 0) {
+                    total += section.modifiers.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
+                }
+            });
+            
+            // NEW: Nel caso in cui il prezzo base sia 0 (es. per il calcolo dinamico in futuro),
+            // ma ora è sempre presente, lo lasciamo inalterato.
+        }
+
+        return total;
+    }
+    
+    // Funzione per calcolare il carico UP (Unità Pizza) di un ordine
+    function calculateOrderLoad(items) {
+        return items.reduce((sum, item) => sum + (item.unitWeight || 1), 0);
+    }
+    
+    // Funzioni di composizione (Mezzo Metro/Metà Pizza)
+    function addMeterModifier(secIdx, modifier) {
+        if (!this.tempMeterItem || !this.tempMeterItem.sections[secIdx]) return;
+        const section = this.tempMeterItem.sections[secIdx];
+        if (!section.modifiers) section.modifiers = [];
+        const newMod = JSON.parse(JSON.stringify(modifier));
+        section.modifiers.push(newMod);
+    }
+
+    function removeMeterModifier(secIdx, modIdx) {
+        if (!this.tempMeterItem || !this.tempMeterItem.sections[secIdx]) return;
+        this.tempMeterItem.sections[secIdx].modifiers.splice(modIdx, 1);
+    }
+
+    function cancelMeterComposition() {
+        this.tempMeterItem = null;
+        this.showMeterModal = false;
+    }
+
+    function addMeterToOrder() {
+        if (!this.isMeterValid) return;
+        const newItem = JSON.parse(JSON.stringify(this.tempMeterItem));
+        this.order.push(newItem);
+        this.selectedItemIndex = this.order.length - 1;
+        this.tempMeterItem = null;
+        this.showMeterModal = false;
+    }
+
+    function addHalfPizzaModifier(halfNum, modifier) {
+        if (!this.tempHalfPizzaItem) return;
+        const mods = halfNum === 1 ? 'modifiers1' : 'modifiers2';
+        if (!this.tempHalfPizzaItem[mods]) this.tempHalfPizzaItem[mods] = [];
+        const newMod = JSON.parse(JSON.stringify(modifier));
+        this.tempHalfPizzaItem[mods].push(newMod);
+    }
+
+    function removeHalfPizzaModifier(halfNum, modIdx) {
+        if (!this.tempHalfPizzaItem) return;
+        const mods = halfNum === 1 ? 'modifiers1' : 'modifiers2';
+        this.tempHalfPizzaItem[mods].splice(modIdx, 1);
+    }
+
+    function cancelHalfPizzaComposition() {
+        this.tempHalfPizzaItem = null;
+        this.showHalfPizzaModal = false;
+    }
+
+    function addHalfPizzaToOrder() {
+        if (!this.isHalfPizzaValid) return;
+        const newItem = JSON.parse(JSON.stringify(this.tempHalfPizzaItem));
+        this.order.push(newItem);
+        this.selectedItemIndex = this.order.length - 1;
+        this.tempHalfPizzaItem = null;
+        this.showHalfPizzaModal = false;
+    }
+
+    // ⭐ /FUNZIONI HELPER GLOBALI ⭐
+
     // ⭐ FUNZIONI HELPER PER GESTIRE LE DATE LOCALI ⭐
     function getTodayLocalString() {
         const today = new Date();
@@ -827,13 +972,54 @@
         selectedOrderIdForShare: null,
         editingOrderId: null, 
         
+        // NEW: Stato Autenticazione
+        isAuthenticated: false,
+        isAdmin: false,
+        isDeveloper: false,
+        pinInput: '',
+        authError: '',
+        ADMIN_PIN: "1234",
+        DEV_PIN: "5678910",
+        
+        get isAdminOrDev() {
+            return this.isAdmin || this.isDeveloper;
+        },
+
+        checkAccess() {
+            this.authError = '';
+            const pin = this.pinInput.trim();
+
+            if (pin === this.ADMIN_PIN) {
+                this.isAdmin = true;
+                this.isAuthenticated = true;
+                this.pinInput = '';
+                // NEW: Dopo l'accesso admin, la view predefinita diventa 'ordini'
+                this.view = 'ordini'; 
+            } else if (pin === this.DEV_PIN) {
+                this.isAdmin = true; // Anche il dev ha accesso agli ordini
+                this.isDeveloper = true;
+                this.isAuthenticated = true;
+                this.pinInput = '';
+                // NEW: Dopo l'accesso dev, la view predefinita diventa 'impostazioni'
+                this.view = 'impostazioni';
+            } else if (pin === '') {
+                 this.isAuthenticated = true; // Accesso limitato solo a "Inserimento" e "Storico"
+                 this.isAdmin = false;
+                 this.isDeveloper = false;
+                 this.view = 'inserimento';
+            } else {
+                this.authError = 'PIN non valido.';
+            }
+        },
+        // /NEW
+
         // --- DATI INIZIALI ---
         
         // PARAMETRI CAPACITÀ (SALVATI IN LOCALE)
         pizzaCapacityPerSlot: parseInt(localStorage.getItem('pz_capacity')) || 15, 
         slotDurationMinutes: parseInt(localStorage.getItem('pz_slotDuration')) || 5,   
         
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5,"unitWeight":1},{"nome":"Diavola","prezzo":7.5,"unitWeight":1},{"nome":"Quattro Formaggi","prezzo":9,"unitWeight":1},{"nome":"Gorgonzola e Speck","prezzo":10.5,"unitWeight":1}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5,"unitWeight":0},{"nome":"Coca Cola 33cl","prezzo":2.5,"unitWeight":0},{"nome":"Birra Artigianale","prezzo":5.5,"unitWeight":0}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5,"unitWeight":0.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5,"unitWeight":0.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true,"unitWeight":1}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}],"unitWeight":1},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size:0.5}],"unitWeight":1},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}],"unitWeight":1}]}'),
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5,"unitWeight":1},{"nome":"Diavola","prezzo":7.5,"unitWeight":1},{"nome":"Quattro Formaggi","prezzo":9,"unitWeight":1},{"nome":"Gorgonzola e Speck","prezzo":10.5,"unitWeight":1}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5,"unitWeight":0},{"nome":"Coca Cola 33cl","prezzo":2.5,"unitWeight":0},{"nome":"Birra Artigianale","prezzo":5.5,"unitWeight":0}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5,"unitWeight":0.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5,"unitWeight":0.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true,"unitWeight":1}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}],"unitWeight":1},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}],"unitWeight":1},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}],"unitWeight":1}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2},{"nome":"Aggiunta Pomodoro","prezzo":0.5}],"Senza":[{"nome":"Senza olive","prezzo":0},{"nome":"Senza sale","prezzo":0}],"Poco":[{"nome":"Poco cotta","prezzo":0}],"Abbondante":[{"nome":"Basilico abbondante","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
@@ -845,13 +1031,24 @@
         activeCat:'Pizze',
         activeModCat: 'Più',
         order:[],
-        calculatedOrderTotal: 0, 
+        // NEW: Inserimento delle funzioni helper
+        calculateItemTotal: calculateItemTotal, 
+        calculateOrderLoad: calculateOrderLoad,
+        addMeterModifier: addMeterModifier,
+        removeMeterModifier: removeMeterModifier,
+        cancelMeterComposition: cancelMeterComposition,
+        addMeterToOrder: addMeterToOrder,
+        addHalfPizzaModifier: addHalfPizzaModifier,
+        removeHalfPizzaModifier: removeHalfPizzaModifier,
+        cancelHalfPizzaComposition: cancelHalfPizzaComposition,
+        addHalfPizzaToOrder: addHalfPizzaToOrder,
+        // /NEW
         total:0, 
         selectedItemIndex: null,
         lastSelectedItem: null, 
         searchTerm: '',
         modifierSearchTerm: '', 
-        gustoSearchTerm: '', // Termine di ricerca per i modificatori nei modali di composizione
+        gustoSearchTerm: '', 
 
         // Stato Composizione
         tempMeterItem: null, 
@@ -934,9 +1131,7 @@
         get allItems() {
             return Object.values(this.menu).flat();
         },
-        // NEW: Getter per tutte le pizze (usato come suggerimento nei gusti delle composizioni)
         get allPizze() {
-            // Filtra solo gli elementi che hanno senso essere gusti (pizze, schiacciate)
             const gusti = [].concat(
                 this.menu["Pizze"] || [], 
                 this.menu["Schiacciate"] || []
@@ -948,7 +1143,6 @@
             const term = this.searchTerm.toLowerCase().trim();
 
             if (term) {
-                // Se c'è un termine di ricerca, cerca in tutte le categorie
                 items = this.allItems.filter(p => p.nome.toLowerCase().includes(term));
             }
             return items;
@@ -962,13 +1156,11 @@
             return mods;
         },
         get canComposeMeter(){
-            // Controlla se ci sono pizze disponibili nella categoria Pizze
             return this.menu["Pizze"] && this.menu["Pizze"].some(p => !p.isFinished);
         },
         get canComposeHalfPizza(){
             return this.menu["Pizze"] && this.menu["Pizze"].some(p => !p.isFinished);
         },
-        // NEW: Getter per i modificatori nei modali di composizione (Mezzo Metro/Metà Pizza)
         get filteredTempModifiers() {
             let mods = this.modifiers[this.tempModCat] || [];
             const term = this.gustoSearchTerm.toLowerCase().trim();
@@ -977,14 +1169,20 @@
             }
             return mods;
         },
+        get calculateTempMeterTotal() {
+            if (!this.tempMeterItem) return 0;
+            return calculateItemTotal(this.tempMeterItem);
+        },
+        get calculateTempHalfPizzaTotal() {
+            if (!this.tempHalfPizzaItem) return 0;
+            return calculateItemTotal(this.tempHalfPizzaItem);
+        },
         get isMeterValid() {
             if (!this.tempMeterItem || !this.tempMeterItem.sections) return false;
-            // Valido se tutte le sezioni hanno un gusto e il gusto non è solo spazi bianchi
             return this.tempMeterItem.sections.every(s => s.gusto && s.gusto.trim().length > 0);
         },
         get isHalfPizzaValid() {
             if (!this.tempHalfPizzaItem) return false;
-            // Valido se entrambi i gusti sono stati inseriti e non sono solo spazi bianchi
             return (this.tempHalfPizzaItem.gusto1 && this.tempHalfPizzaItem.gusto1.trim().length > 0) && 
                    (this.tempHalfPizzaItem.gusto2 && this.tempHalfPizzaItem.gusto2.trim().length > 0);
         },
@@ -996,7 +1194,6 @@
             return this.getSlotLoad(this.date, this.hour);
         },
         recalculateSlotLoad() {
-             // Forza Vue a ricalcolare il valore 'currentSlotLoad'
              console.log("Slot load check triggered.");
         },
         calculateSlotTime(date, hour, type) {
@@ -1068,7 +1265,6 @@
             localStorage.setItem('pz_slotDuration', this.slotDurationMinutes.toString());
         },
 
-        // NEW: Funzione per l'esportazione dei dati
         exportData() {
             const dataToExport = {
                 pz_menu: this.menu,
@@ -1096,7 +1292,6 @@
             alert("Dati esportati con successo!");
         },
 
-        // NEW: Funzione per l'importazione dei dati
         importData(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1111,7 +1306,6 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
                     
-                    // Sovrascrivi solo le chiavi esistenti
                     if (importedData.pz_menu) this.menu = importedData.pz_menu;
                     if (importedData.pz_modifiers) this.modifiers = importedData.pz_modifiers;
                     if (importedData.pz_zones) this.deliveryZones = importedData.pz_zones;
@@ -1135,14 +1329,11 @@
             reader.readAsText(file);
         },
 
-        // NEW: Funzione per pulizia cache selettiva
         clearCache() {
              if (confirm("Sei sicuro di voler pulire la cache? Verranno eliminati: Menu, Ordini Attivi, Storico, Modificatori, Zone, Fattorini e Capacità. I DATI DEI CLIENTI SARANNO CONSERVATI.")) {
                 
-                // Salva i dati dei clienti che NON devono essere cancellati
                 const customerDataBackup = localStorage.getItem('pz_customerData');
                 
-                // Chiavi da eliminare
                 const keysToRemove = [
                     'pz_menu', 'pz_modifiers', 'pz_zones', 'pz_drivers', 
                     'pz_capacity', 'pz_slotDuration', 'pz_orders', 'pz_archive'
@@ -1150,13 +1341,11 @@
 
                 keysToRemove.forEach(key => localStorage.removeItem(key));
                 
-                // Ripristina i dati dei clienti
                 if (customerDataBackup) {
                     localStorage.setItem('pz_customerData', customerDataBackup);
                 }
 
                 alert("Cache pulita con successo! (Dati clienti conservati). Ricarica la pagina per applicare i dati iniziali di default.");
-                // Forzare il ricaricamento dell'applicazione per caricare i dati di default
                 window.location.reload(); 
             }
         },
@@ -1172,7 +1361,6 @@
                      return;
                 }
                 this.tempMeterItem = JSON.parse(JSON.stringify(item));
-                // Inizializza le sezioni con il nome del gusto vuoto e i modificatori vuoti
                 this.tempMeterItem.sections.forEach(s => {
                     s.gusto = ''; 
                     s.modifiers = [];
@@ -1219,14 +1407,12 @@
             const newMod = JSON.parse(JSON.stringify(modifier));
             if (!item.modifiers) item.modifiers = [];
 
-            // Controlla se il modificatore è di tipo "Senza" e se l'ingrediente è già stato rimosso
             if (this.activeModCat === 'Senza') {
                 if (item.modifiers.some(m => m.nome === modifier.nome && this.getModifierCategory(m.nome) === 'Senza')) {
                     alert(`Il modificatore "${modifier.nome}" è già stato rimosso.`);
                     return;
                 }
             } else {
-                 // Impedisci l'aggiunta di modificatori multipli dello stesso tipo "Più/Poco/Abbondante"
                 if (item.modifiers.some(m => m.nome === modifier.nome && this.getModifierCategory(m.nome) === this.activeModCat)) {
                     alert(`Il modificatore "${modifier.nome}" è già stato aggiunto.`);
                     return;
@@ -1234,12 +1420,10 @@
             }
 
             item.modifiers.push(newMod);
-            // Forza l'aggiornamento per ricalcolare il totale
             this.order = [...this.order]; 
         },
         removeModifier(itemIndex, modIndex) {
             this.order[itemIndex].modifiers.splice(modIndex, 1);
-            // Forza l'aggiornamento
             this.order = [...this.order]; 
             if (this.order[itemIndex].modifiers.length === 0) {
                  this.order[itemIndex].modifiers = undefined;
@@ -1251,7 +1435,7 @@
                     return cat;
                 }
             }
-            return 'Più'; // Default
+            return 'Più';
         },
         getModifierIcon(category) {
             switch (category) {
@@ -1262,21 +1446,6 @@
                 default: return '';
             }
         },
-
-        calculateItemTotal, // Usa la funzione helper
-        calculateOrderLoad, // Usa la funzione helper
-
-        // Logica composizione Mezzo Metro
-        addMeterModifier,
-        removeMeterModifier,
-        cancelMeterComposition,
-        addMeterToOrder,
-        
-        // Logica composizione Pizza a Metà
-        addHalfPizzaModifier,
-        removeHalfPizzaModifier,
-        cancelHalfPizzaComposition,
-        addHalfPizzaToOrder,
 
         // Logica Modale e Finalizzazione
         openModal() {
@@ -1309,7 +1478,6 @@
                  .slice(0, 10);
         },
         loadCustomerData(customerEntry) {
-            // Questo metodo viene chiamato quando un utente seleziona un suggerimento
             this.customer = customerEntry.customer;
             this.phone = customerEntry.phone || '';
             this.address = customerEntry.address || '';
@@ -1317,7 +1485,7 @@
             this.zoneName = customerEntry.zone || '';
             this.town = customerEntry.town || '';
             this.updateDeliveryCost();
-            this.filteredCustomerSuggestions = []; // Pulisci i suggerimenti
+            this.filteredCustomerSuggestions = [];
         },
         saveCustomerData() {
             if (this.customer && this.phone) {
@@ -1333,13 +1501,10 @@
                 };
 
                 if (existingIndex !== -1) {
-                    // Aggiorna
                     this.customerData.splice(existingIndex, 1, newEntry);
                 } else {
-                    // Aggiungi
                     this.customerData.push(newEntry);
                 }
-                // Limita a 1000 i clienti per non appesantire il localStorage
                 if (this.customerData.length > 1000) {
                      this.customerData = this.customerData.slice(this.customerData.length - 1000);
                 }
@@ -1430,13 +1595,11 @@
                        o.phone.includes(term) ||
                        (o.tableNumber && o.tableNumber.toLowerCase().includes(term));
             }).sort((a, b) => {
-                // Ordina prima per data, poi per ora
                 const dateA = new Date(`${a.date}T${a.hour}`);
                 const dateB = new Date(`${b.date}T${b.hour}`);
                 if (dateA - dateB !== 0) {
                     return dateA - dateB;
                 }
-                // Se la data/ora è uguale, ordina per stato (Pronto ultimo)
                 if (a.status === 'Pronto' && b.status !== 'Pronto') return 1;
                 if (a.status !== 'Pronto' && b.status === 'Pronto') return -1;
                 return a.id - b.id; 
@@ -1470,7 +1633,7 @@
                     archivedOrder.archivedTime = Date.now();
                     this.archive.push(archivedOrder);
                     this.saveData();
-                    this.calculateDriverStats(); // Aggiorna le statistiche
+                    this.calculateDriverStats(); 
                 }
              }
         },
@@ -1571,12 +1734,12 @@
         shareViaWhatsapp(order) {
             if (!order) return;
             const itemDetails = order.items.map(i => {
-                let detail = `- ${i.nome} `;
+                let detail = `- ${i.nome}`;
                 if (i.isHalfPizza) {
-                    detail = `- 🍕 ${i.nome} (${i.gusto1} / ${i.gusto2})`;
+                    detail = `- 🍕 Metà (${i.gusto1} / ${i.gusto2})`;
                     if (i.modifiers1?.length || i.modifiers2?.length) detail += ' (Modifiche)';
                 } else if (i.isMeter) {
-                    detail = `- 🍕 ${i.nome} (${i.sections.length} Gusti)`;
+                    detail = `- 📏 Mezzo Metro (${i.sections.length} Gusti)`;
                 } else if (i.modifiers?.length) {
                     detail += ` (${i.modifiers.map(m => m.nome).join(', ')})`;
                 }
@@ -1618,86 +1781,99 @@
             if (!order) return;
 
             let content = '';
+            const comandaEl = document.getElementById('print-content-comanda');
+            const scontrinoEl = document.getElementById('print-content-scontrino');
+
             if (type === 'comanda') {
                 content = this.generateComanda(order);
-                document.getElementById('print-content-comanda').innerHTML = content;
-                window.onafterprint = () => document.getElementById('print-content-comanda').style.display = 'none';
-                document.getElementById('print-content-comanda').style.display = 'block';
+                comandaEl.innerHTML = content;
+                scontrinoEl.style.display = 'none';
+                comandaEl.style.display = 'block';
             } else if (type === 'scontrino') {
                 content = this.generateScontrino(order);
-                document.getElementById('print-content-scontrino').innerHTML = content;
-                window.onafterprint = () => document.getElementById('print-content-scontrino').style.display = 'none';
-                document.getElementById('print-content-scontrino').style.display = 'block';
+                scontrinoEl.innerHTML = content;
+                comandaEl.style.display = 'none';
+                scontrinoEl.style.display = 'block';
             }
 
             // Stampa e nascondi
             window.print();
+             // Assicurati che l'elemento stampato venga nascosto dopo la stampa (gestito anche da onafterprint)
+            setTimeout(() => {
+                if(type === 'comanda') comandaEl.style.display = 'none';
+                if(type === 'scontrino') scontrinoEl.style.display = 'none';
+            }, 500); 
         },
         generateComanda(order) {
              let comanda = `<h1>COMANDA CUCINA #${order.id}</h1>`;
              comanda += `<h2>${order.mode.toUpperCase()} - ${order.hour}</h2>`;
              
              if (order.mode === 'consegna') {
-                 comanda += `<p>Cliente: ${order.customer}</p>`;
+                 comanda += `<p>Cliente: <strong>${order.customer}</strong></p>`;
                  comanda += `<p>Indirizzo: ${order.address} ${order.streetNumber}, ${order.town} (**${order.zone}**)</p>`;
              } else if (order.mode === 'asporto') {
-                 comanda += `<p>Ritiro: ${order.customer} (Num: ${order.tableNumber})</p>`;
+                 comanda += `<p>Ritiro: <strong>${order.customer}</strong> (Num: <strong>${order.tableNumber}</strong>)</p>`;
              } else if (order.mode === 'banco') {
-                 comanda += `<p>Tavolo: ${order.tableNumber}</p>`;
+                 comanda += `<p>Tavolo: <strong>${order.tableNumber}</strong></p>`;
+             }
+             
+             if (order.driver) {
+                 comanda += `<p class="driver-info">FATTORINO: ${order.driver}</p>`;
              }
 
              if (order.notes) {
-                 comanda += `<p class="note">NOTE: ${order.notes}</p>`;
+                 comanda += `<p class="note">NOTE: ${order.notes.toUpperCase()}</p>`;
              }
              
-             comanda += '<h2>DETTAGLIO ORDINE</h2><ul>';
+             comanda += '<h2>DETTAGLIO PIZZE E ARTICOLI</h2><ul>';
 
              order.items.forEach(item => {
-                 comanda += `<li>`;
+                 // ** COMANDA SENZA PREZZI **
+                 let itemName = item.nome;
+                 if (item.isHalfPizza) itemName = '🍕 PIZZA A METÀ';
+                 if (item.isMeter) itemName = '📏 MEZZO METRO';
+                 if (itemName.toUpperCase().includes('SCHIACCIATA')) itemName = '🫓 SCHIACCIATA GRANDE';
+
+                 comanda += `<li><span class="item-name">${itemName}</span>`;
                  
                  // Pizze divise / Mezzo Metro
                  if (item.isHalfPizza) {
-                     comanda += `<p class="item-name">🍕 ${item.nome}</p>`;
                      comanda += `<ul class="mod-list">`;
-                     comanda += `<li>** Metà 1: ${item.gusto1} **`;
+                     comanda += `<li>** Metà 1: ** ${item.gusto1}`;
                      if (item.modifiers1 && item.modifiers1.length) {
-                         comanda += ` (${item.modifiers1.map(m => m.nome).join(', ')})`;
+                         comanda += ` (${item.modifiers1.map(m => m.nome.toUpperCase()).join(', ')})`;
                      }
                      comanda += `</li>`;
-                     comanda += `<li>** Metà 2: ${item.gusto2} **`;
+                     comanda += `<li>** Metà 2: ** ${item.gusto2}`;
                      if (item.modifiers2 && item.modifiers2.length) {
-                         comanda += ` (${item.modifiers2.map(m => m.nome).join(', ')})`;
+                         comanda += ` (${item.modifiers2.map(m => m.nome.toUpperCase()).join(', ')})`;
                      }
                      comanda += `</li>`;
                      comanda += `</ul>`;
                  } else if (item.isMeter) {
-                     comanda += `<p class="item-name">🍕 ${item.nome}</p>`;
                      comanda += `<ul class="mod-list">`;
                      item.sections.forEach(sec => {
                          comanda += `<li>${sec.name}: **${sec.gusto}**`;
                          if (sec.modifiers && sec.modifiers.length) {
-                             comanda += ` (${sec.modifiers.map(m => m.nome).join(', ')})`;
+                             comanda += ` (${sec.modifiers.map(m => m.nome.toUpperCase()).join(', ')})`;
                          }
                          comanda += `</li>`;
                      });
                      comanda += `</ul>`;
                  } 
                  // Articoli standard
-                 else {
-                     comanda += `<span class="item-name">${item.nome}</span>`;
-                     if (item.modifiers && item.modifiers.length) {
-                         comanda += `<ul class="mod-list">`;
-                         item.modifiers.forEach(mod => {
-                             comanda += `<li>* ${mod.nome}</li>`;
-                         });
-                         comanda += `</ul>`;
-                     }
+                 else if (item.modifiers && item.modifiers.length) {
+                     comanda += `<ul class="mod-list">`;
+                     item.modifiers.forEach(mod => {
+                         comanda += `<li>* ${mod.nome.toUpperCase()}</li>`;
+                     });
+                     comanda += `</ul>`;
                  }
                  comanda += `</li>`;
              });
              
              comanda += '</ul>';
-             comanda += `<p style="text-align: right; margin-top: 15px;">**Totale: €${order.total.toFixed(2)}**</p>`;
+             // ** Totale e Prezzo RIMOOSSI dalla comanda per la cucina **
 
              return comanda;
         },
@@ -1778,7 +1954,7 @@
              }
              if (confirm(`Sei sicuro di voler eliminare la categoria "${category}" e tutti i suoi articoli?`)) {
                 delete this.menu[category];
-                this.activeSettingsCat = Object.keys(this.menu)[0]; // Seleziona la prima categoria rimasta
+                this.activeSettingsCat = Object.keys(this.menu)[0]; 
                 this.saveData();
              }
         },
@@ -1789,7 +1965,6 @@
             const weight = parseFloat(this.newItemWeight);
 
             if (name && price >= 0) {
-                // Aggiunta logica per i tipi speciali (Mezzo Metro/Pizza Metà)
                 let item = {
                     nome: name, 
                     prezzo: price, 
@@ -1801,7 +1976,6 @@
                     item.unitWeight = 1; 
                 } else if (cat === 'Mezzo Metro') {
                     item.isMeter = true;
-                    // Logica di default per le sezioni
                     item.sections = [{ name: 'Gusto Unico', size: 1 }]; 
                     item.unitWeight = 1;
                 }
@@ -1874,7 +2048,7 @@
             if (confirm(`Sei sicuro di voler eliminare il fattorino "${this.drivers[index]}"?`)) {
                 this.drivers.splice(index, 1);
                 this.saveData();
-                this.calculateDriverStats(); // Ricalcola per sicurezza
+                this.calculateDriverStats(); 
             }
         },
 
@@ -1888,6 +2062,9 @@
             this.saveData(); 
             
             this.calculateDriverStats();
+            
+            // NEW: Inizializza lo stato di autenticazione come non autenticato all'avvio
+            this.isAuthenticated = false;
         }
     }).mount()
 </script>
