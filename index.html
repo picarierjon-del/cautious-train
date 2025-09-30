@@ -404,6 +404,18 @@
 
     <section v-show="view==='impostazioni'" class="settings">
         
+        <h2>Gestione Capacità Produttiva</h2>
+        <div class="form-row">
+             <label for="pizzaCapacityPerSlot">Capacità Max (Unità Pizza) per Slot</label>
+             <input type="number" id="pizzaCapacityPerSlot" v-model.number="pizzaCapacityPerSlot" min="1" required @change="saveData">
+         </div>
+         <div class="form-row">
+             <label for="slotDurationMinutes">Durata di uno Slot (minuti)</label>
+             <input type="number" id="slotDurationMinutes" v-model.number="slotDurationMinutes" min="1" required @change="saveData">
+         </div>
+        
+        <hr style="margin: 20px 0;">
+
         <h2>Gestione Fattorini</h2>
         <div class="settings-list">
             <div class="settings-item" v-for="(driver, i) in drivers" :key="i">
@@ -438,6 +450,7 @@
                         {{item.nome}} - €{{item.prezzo.toFixed(2)}} 
                         <span v-if="item.isMeter">(Mezzo Metro)</span>
                         <span v-if="item.isHalfPizza">(Metà Pizza)</span>
+                        <span v-if="item.unitWeight !== undefined">(UP: {{item.unitWeight}})</span>
                     </span>
                     <div class="item-status">
                         <button v-if="item.isFinished" @click="toggleItemFinished(activeSettingsCat, i)" class="available">Disponibile</button>
@@ -450,6 +463,7 @@
             <form @submit.prevent="addItemToCategory">
                 <input type="text" v-model="newItemName" placeholder="Nome Articolo" required>
                 <input type="number" step="0.01" v-model.number="newItemPrice" placeholder="Prezzo" required>
+                 <input type="number" step="0.1" v-model.number="newItemWeight" placeholder="UP (0.0 - 1.0)" required>
                 <button type="submit">Aggiungi Articolo</button>
             </form>
         </div>
@@ -578,6 +592,11 @@
                 <input type="time" id="hour" v-model="hour" required>
             </div>
             
+            <div v-if="currentSlotLoad > pizzaCapacityPerSlot" 
+                 style="background: #fef2f2; border: 1px solid #f87171; color: #b91c1c; padding: 10px; border-radius: 6px; margin-top: 10px;">
+                ⚠️ **Slot Pieno!** Il carico attuale è di **{{ currentSlotLoad.toFixed(1) }} UP**. La capacità massima è **{{ pizzaCapacityPerSlot }} UP**.
+                <br>Suggeriamo di spostare l'orario di {{ slotDurationMinutes }} minuti.
+            </div>
             <div class="form-row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
                 <label for="acconto">Acconto Ricevuto / Contanti (opzionale)</label>
                 <input type="number" step="0.01" id="acconto" v-model.number="accontoRicevuto" placeholder="0.00">
@@ -588,7 +607,9 @@
 
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" @click="showModal=false">Annulla</button>
-                <button type="submit" class="btn-confirm">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
+                <button type="submit" class="btn-confirm"
+                        :disabled="editingOrderId ? false : currentSlotLoad > pizzaCapacityPerSlot"
+                        >{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
             </div>
         </form>
     </div>
@@ -785,7 +806,12 @@
         editingOrderId: null, 
         
         // --- DATI INIZIALI ---
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Intera (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":14,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
+        
+        // PARAMETRI CAPACITÀ (SALVATI IN LOCALE)
+        pizzaCapacityPerSlot: parseInt(localStorage.getItem('pz_capacity')) || 15, 
+        slotDurationMinutes: parseInt(localStorage.getItem('pz_slotDuration')) || 5,   
+        
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5,"unitWeight":1},{"nome":"Diavola","prezzo":7.5,"unitWeight":1},{"nome":"Quattro Formaggi","prezzo":9,"unitWeight":1},{"nome":"Gorgonzola e Speck","prezzo":10.5,"unitWeight":1}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5,"unitWeight":0},{"nome":"Coca Cola 33cl","prezzo":2.5,"unitWeight":0},{"nome":"Birra Artigianale","prezzo":5.5,"unitWeight":0}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5,"unitWeight":0.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5,"unitWeight":0.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true,"unitWeight":1}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}],"unitWeight":1},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}],"unitWeight":1},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}],"unitWeight":1}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2},{"nome":"Aggiunta Pomodoro","prezzo":0.5}],"Senza":[{"nome":"Senza olive","prezzo":0},{"nome":"Senza sale","prezzo":0}],"Poco":[{"nome":"Poco cotta","prezzo":0}],"Abbondante":[{"nome":"Basilico abbondante","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
@@ -851,6 +877,7 @@
         newCategoryName: '',
         newItemName: '',
         newItemPrice: 0,
+        newItemWeight: 1, 
         newModifierName: '',
         newModifierPrice: 0,
         newZoneName: '',
@@ -927,6 +954,14 @@
         },
         // --- FINE LOGICA MENU ---
 
+        // LOGICA CAPACITÀ PRODUTTIVA (NUOVA)
+        get currentSlotLoad() {
+            if (!this.date || !this.hour || this.order.length === 0) return 0;
+            // Ottiene il carico dello slot PER L'ORDINE CORRENTE e TUTTI GLI ALTRI
+            return this.getSlotLoad(this.date, this.hour);
+        },
+        // FINE LOGICA CAPACITÀ PRODUTTIVA
+
         // LOGICA ORDINE ATTIVO E FILTRI
         get filteredActiveOrders() {
             let filtered = [...this.orders].sort((a, b) => {
@@ -986,6 +1021,10 @@
             localStorage.setItem('pz_archive',JSON.stringify(this.archive)); 
             localStorage.setItem('pz_drivers',JSON.stringify(this.drivers)); 
             localStorage.setItem('pz_customerData',JSON.stringify(this.customerData)); 
+            
+            // SALVATAGGIO PARAMETRI CAPACITÀ
+            localStorage.setItem('pz_capacity', this.pizzaCapacityPerSlot.toString());
+            localStorage.setItem('pz_slotDuration', this.slotDurationMinutes.toString());
         },
 
         calculateItemTotal(item) {
@@ -1017,6 +1056,97 @@
             }
             
             return total;
+        },
+
+        /**
+         * Calcola il carico di Unità Pizza (UP) di un ordine.
+         */
+        calculateOrderLoad(orderItems) {
+            return orderItems.reduce((totalLoad, item) => {
+                let load = item.unitWeight !== undefined ? item.unitWeight : 0; // Se non definito, non conta (peso 0)
+
+                // FORZA IL PESO 1 UP per pizze e prodotti complessi se non specificato un peso
+                if (item.unitWeight === undefined) {
+                    if (item.isMeter || item.isHalfPizza) {
+                        load = 1; 
+                    } else if (this.menu["Pizze"]?.some(p => p.nome === item.nome)) {
+                        load = 1;
+                    } else if (this.menu["Schiacciate"]?.some(p => p.nome === item.nome)) {
+                        load = 0.5; // Esempio per le schiacciate
+                    } else {
+                        load = 0; // Bibite e altro non contano
+                    }
+                }
+                
+                return totalLoad + load;
+            }, 0);
+        },
+
+        /**
+         * Calcola l'orario di inizio/fine dello slot di tempo
+         */
+        calculateSlotTime(date, hour, type) {
+            const dateTimeStr = `${date}T${hour}:00`;
+            const dateObj = new Date(dateTimeStr.replace(/-/g, '/')); // Fix per compatibilità
+            
+            if (isNaN(dateObj.getTime())) {
+                const now = new Date();
+                return now;
+            }
+
+            const minutes = dateObj.getMinutes();
+            const slotDuration = this.slotDurationMinutes;
+            
+            // Calcola l'inizio dello slot: arrotonda per difetto al multiplo di slotDuration più vicino
+            const startMinutes = Math.floor(minutes / slotDuration) * slotDuration;
+            
+            // Crea l'oggetto data per l'inizio dello slot
+            const slotStart = new Date(dateObj);
+            slotStart.setMinutes(startMinutes, 0, 0); 
+            
+            if (type === 'start') {
+                return slotStart;
+            } else {
+                // Calcola la fine dello slot (inizio + durata)
+                const slotEnd = new Date(slotStart);
+                slotEnd.setMinutes(slotEnd.getMinutes() + slotDuration);
+                return slotEnd;
+            }
+        },
+        
+        /**
+         * Verifica il carico totale di un determinato slot (data e ora).
+         */
+        getSlotLoad(date, hour) {
+            // Se la data o l'ora non sono valide, ritorna 0 per evitare errori
+            if (!date || !hour) return 0;
+
+            const slotStart = this.calculateSlotTime(date, hour, 'start');
+            const slotEnd = this.calculateSlotTime(date, hour, 'end');
+
+            let totalLoad = 0;
+
+            // 1. Controlla gli ordini attivi e già presi in carico (escludendo l'ordine in modifica)
+            this.orders.forEach(order => {
+                if (this.editingOrderId && order.id === this.editingOrderId) {
+                    return; // Ignora l'ordine che sto modificando
+                }
+                
+                // Crea un oggetto Data valido per il confronto
+                const orderDateTime = new Date(`${order.date}T${order.hour}`.replace(/-/g, '/'));
+                
+                if (orderDateTime >= slotStart && orderDateTime < slotEnd) {
+                    totalLoad += this.calculateOrderLoad(order.items);
+                }
+            });
+
+            // 2. Aggiunge il carico dell'ordine corrente che si sta per salvare
+            if (!this.editingOrderId) {
+                 totalLoad += this.calculateOrderLoad(this.order);
+            }
+
+
+            return totalLoad;
         },
         
         // Logica per l'aggiunta di un prodotto base o composizione
@@ -1154,6 +1284,11 @@
             if (!this.date || !this.hour) {
                  alert("Inserisci Data e Ora di ritiro/consegna!");
                  return;
+            }
+            
+            if (!this.editingOrderId && this.currentSlotLoad > this.pizzaCapacityPerSlot) {
+                alert("ATTENZIONE: Lo slot orario selezionato è pieno! Si prega di selezionare un'altra ora.");
+                return;
             }
 
             let ord = {
@@ -1411,15 +1546,16 @@
             const cat = this.activeSettingsCat;
             const name = this.newItemName.trim();
             const price = parseFloat(this.newItemPrice);
+            const weight = parseFloat(this.newItemWeight);
 
-            if (name && price >= 0) {
+            if (name && price >= 0 && weight >= 0) {
                 const existing = this.menu[cat].some(item => item.nome.toLowerCase() === name.toLowerCase());
                 if (existing) {
                     alert("Articolo già esistente in questa categoria!");
                     return;
                 }
                 
-                let newItem = { nome: name, prezzo: price };
+                let newItem = { nome: name, prezzo: price, unitWeight: weight };
                 // Se la categoria è per pizze composte, forza le proprietà
                 if (cat.includes("Metà")) newItem.isHalfPizza = true;
                 if (cat.includes("Metro") || cat.includes("Grande")) {
@@ -1433,6 +1569,7 @@
                 this.menu[cat].push(newItem);
                 this.newItemName = '';
                 this.newItemPrice = 0;
+                this.newItemWeight = 1;
                 this.saveData();
             }
         },
@@ -1841,8 +1978,12 @@
         mounted() {
             if (this.drivers.length === 0) {
                 this.drivers = ["Mario Rossi", "Luca Bianchi"];
-                this.saveData();
             }
+            // Assicura che i dati di capacità siano interi
+            this.pizzaCapacityPerSlot = parseInt(localStorage.getItem('pz_capacity')) || 15;
+            this.slotDurationMinutes = parseInt(localStorage.getItem('pz_slotDuration')) || 5;
+            this.saveData(); 
+            
             this.calculateDriverStats();
         }
     }).mount()
