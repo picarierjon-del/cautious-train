@@ -598,7 +598,7 @@
     <div class="modal-content">
         <h3>Componi {{ tempMeterItem?.nome }}</h3>
         <p>Sezioni: {{ tempMeterItem?.sections.length }}</p>
-        <div v-for="(section, secIdx) in tempMeterItem.sections" :key="secIdx" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 6px;">
+        <div v-for="(section, secIdx) in tempMeterItem.sections" :key="secIdx" style="margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; border-radius: 6px;">
             <strong>{{ section.name }}</strong> ({{ (section.size * 100).toFixed(0) }}%)
             
             <div class="form-row">
@@ -606,12 +606,12 @@
                 <input type="text" v-model="section.gusto" placeholder="Nome Pizza/Gusto..." @input="tempMeterItem.sections[secIdx].gusto = section.gusto">
             </div>
 
-            <div class="form-row">
+            <div class="form-row" style="margin-top: 15px;">
                 <label>Modifiche per {{ section.name }}</label>
-                <div class="mod-row" style="margin-top: 5px;">
+                <div class="mod-row" style="margin-top: 5px; margin-bottom: 8px;">
                     <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                             :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
-                            @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
+                            @click="tempModCat=cat; gustoSearchTerm=''">{{cat.toUpperCase()}}</button>
                 </div>
                 
                 <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
@@ -620,7 +620,7 @@
                     <div class="item" v-for="m in filteredTempModifiers" :key="m.nome + m.prezzo" 
                          @click="addMeterModifier(secIdx, m)"
                          :class="{disabled: m.isFinished}">
-                        {{m.nome}}
+                        <strong>{{m.nome}}</strong>
                         <span v-if="m.prezzo > 0">(+€{{m.prezzo.toFixed(2)}})</span>
                     </div>
                 </div>
@@ -656,17 +656,17 @@
                 <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." required>
             </div>
             <label style="margin-top: 10px; display: block;">Modifiche (Metà 1)</label>
-            <div class="mod-row" style="margin-top: 5px;">
+            <div class="mod-row" style="margin-top: 5px; margin-bottom: 8px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                             :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
-                            @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
+                            @click="tempModCat=cat; gustoSearchTerm=''">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
             <div class="grid" v-if="tempHalfPizzaItem" style="margin-top: 10px;">
                 <div class="item" v-for="m in filteredTempModifiers" :key="m.nome + m.prezzo" 
                      @click="addHalfPizzaModifier(1, m)"
                      :class="{disabled: m.isFinished}">
-                    {{m.nome}}
+                    <strong>{{m.nome}}</strong>
                     <span v-if="m.prezzo > 0">(+€{{m.prezzo.toFixed(2)}})</span>
                 </div>
             </div>
@@ -688,17 +688,17 @@
                 <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." required>
             </div>
              <label style="margin-top: 10px; display: block;">Modifiche (Metà 2)</label>
-            <div class="mod-row" style="margin-top: 5px;">
+            <div class="mod-row" style="margin-top: 5px; margin-bottom: 8px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                             :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
-                            @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
+                            @click="tempModCat=cat; gustoSearchTerm=''">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
             <div class="grid" v-if="tempHalfPizzaItem" style="margin-top: 10px;">
                 <div class="item" v-for="m in filteredTempModifiers" :key="m.nome + m.prezzo" 
                      @click="addHalfPizzaModifier(2, m)"
                      :class="{disabled: m.isFinished}">
-                    {{m.nome}}
+                    <strong>{{m.nome}}</strong>
                     <span v-if="m.prezzo > 0">(+€{{m.prezzo.toFixed(2)}})</span>
                 </div>
             </div>
@@ -808,7 +808,7 @@
         // Stato Composizione
         tempMeterItem: null, 
         tempHalfPizzaItem: null, 
-        tempModCat: 'Più', 
+        tempModCat: 'Più', // Usa lo stesso per entrambi i modal di composizione
 
         // Dati per il Modale/Finalizzazione
         modes:[
