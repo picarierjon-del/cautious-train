@@ -71,14 +71,12 @@
 
         /* Stili Ordini Attivi e Avvisi Temporali */
         .order-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px; position: relative;}
-        /* NUOVO: Ordini Futuri */
         .order-card.future-order { border-left: 5px solid #3b82f6; } 
         .order-card.future-order:before { content: "PRENOTAZIONE"; position: absolute; top: -10px; right: 10px; background: #3b82f6; color: #fff; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
         
         .order-card h4 { margin: 0 0 6px; color: #e31b23; display: flex; justify-content: space-between;}
         .order-items { margin: 0; padding-left: 16px; font-size: .9rem; }
         .order-actions button { margin-top: 6px; margin-right: 6px; background: #e31b23; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
-        .order-actions button.delete { background: #b91c1c; }
         .order-actions button.edit { background: #3b82f6; } 
         .order-actions button.share { background: #10b981; } 
         .order-actions button.duplicate { background: #facc15; color: #333;}
@@ -94,16 +92,14 @@
         .order-card.warning-near:before { content: "ATTENZIONE: Vicino!"; position: absolute; top: -10px; right: 10px; background: #facc15; color: #333; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
         .order-card.warning-urgent:before { content: "URGENTE: Imminente!"; position: absolute; top: -10px; right: 10px; background: #b91c1c; color: #fff; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
 
-        /* Stili per la stampa (nasconde elementi non necessari) - Mantenuti per completezza */
+        /* Stili per la stampa */
         @media print {
             body > *:not(.print-container) { display: none; }
             body, html { margin: 0; padding: 0; }
             .print-container { display: block; max-width: 100%; font-size: 11pt; }
 
-            /* Stili specifici per la comanda */
             .print-comanda { font-family: monospace; font-size: 12pt; line-height: 1.4; padding: 10px; }
             .print-comanda h1 { font-size: 16pt; text-align: center; margin: 0 0 10px 0; }
-            .print-comanda h2 { font-size: 14pt; border-bottom: 1px solid #000; padding-bottom: 5px; margin: 10px 0; }
             .print-comanda ul { list-style: none; padding: 0; margin: 0 0 10px 0; }
             .print-comanda ul li { border-bottom: 1px dotted #888; padding: 4px 0; }
             .print-comanda .item-name { font-weight: bold; font-size: 13pt; }
@@ -111,46 +107,26 @@
             .print-comanda .mod-list li { border: none; }
             .print-comanda .note { color: #b91c1c; margin-top: 8px; font-weight: bold; }
 
-            /* Stili specifici per lo scontrino */
             .print-scontrino { font-family: monospace; font-size: 10pt; line-height: 1.3; width: 80mm; margin: 0 auto; }
-            .print-scontrino h1 { font-size: 12pt; text-align: center; margin: 0 0 5px 0; }
             .print-scontrino table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
-            .print-scontrino th, .print-scontrino td { text-align: left; padding: 2px 0; }
             .print-scontrino .total-row { font-size: 11pt; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
         }
 
-        /* Stili per le Impostazioni (aggiunti/integrati) */
+        /* Stili per le Impostazioni */
         .settings h3 { color: #444; margin-top: 15px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
         .settings form { display: flex; gap: 5px; margin-bottom: 15px; }
         .settings form input, .settings form select, .settings form button { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
-        .settings form input[type="text"], .settings form input[type="number"], .settings form select { flex-grow: 1; }
-        .settings form button { background: #10b981; color: #fff; border: none; cursor: pointer; }
         
-        .settings-list { margin-bottom: 20px; }
-        .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 5px; }
-        .settings-item span { flex-grow: 1; }
-        .settings-item .remove { background: #b91c1c; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
-
-        .item-status { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 6px; }
-        .item-status button { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
-        .item-status .available { background: #22c55e; color: #fff; }
-        .item-status .finished { background: #b91c1c; color: #fff; }
-
-        /* Stili Accesso e Notifiche */
-        .access-container { text-align: center; padding: 50px 20px; }
-        .access-container input { max-width: 250px; margin: 10px auto; display: block; }
-        
-        /* NUOVI STILI PER I RUOLI */
         .role-indicator { font-size: 0.8rem; margin-top: 5px; padding: 3px 6px; border-radius: 4px; font-weight: 700; }
-        .role-indicator.owner { background: #e31b23; color: #fff; } /* Titolare: Rosso Pizzeria */
-        .role-indicator.admin { background: #facc15; color: #333; } /* Admin/Operatore: Giallo */
-        /* FINE NUOVI STILI */
+        .role-indicator.owner { background: #e31b23; color: #fff; } 
+        .role-indicator.admin { background: #facc15; color: #333; } 
 
         .time-capacity { padding: 10px; border: 1px solid #facc15; background-color: #fffbeb; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; }
         .time-capacity.full { border-color: #b91c1c; background-color: #ffecec; color: #b91c1c; font-weight: 700;}
-        .time-capacity.warning { border-color: #facc15; background-color: #fffbeb; }
 
-        .settings-item .actions { display: flex; gap: 5px; }
+        /* NUOVI STILI PER LA COMPOSIZIONE (Metà/Metro) */
+        .composition-options button { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 8px; font-weight: 700; cursor: pointer; background: #fff; }
+        .composition-options button.selected { border-color: #e31b23; background-color: #ffecec; box-shadow: 0 0 0 3px #e31b23; }
 
     </style>
 </head>
@@ -641,19 +617,30 @@
         <div v-if="showMeterModal && tempMeterItem" class="modal-overlay" @click.self="cancelMeterComposition">
             <div class="modal-content">
                 <h3>Componi: {{ tempMeterItem.nome }}</h3>
-                <p style="font-size: 0.9rem; color: #666;">Seleziona i gusti e aggiungi i modificatori per ogni sezione.</p>
+                <p style="font-size: 0.9rem; color: #666;">Prezzo base: €{{ tempMeterItem.prezzo.toFixed(2) }}. Scegli quanti gusti comporre.</p>
                 
                 <div class="order-box" style="margin-bottom: 15px;">
-                    <div v-for="(section, sIdx) in tempMeterItem.sections" :key="sIdx" style="padding: 5px 0; border-bottom: 1px dotted #ddd;">
-                        <span style="font-weight: 700;">{{ section.name }}:</span> 
-                        <span v-if="section.gusto">{{ section.gusto }}</span>
-                        <button v-else @click="section.activeSection = true" class="final-btn" style="padding: 5px 10px; max-width: 150px; background: #3b82f6; margin: 0 5px;">Scegli Gusto</button>
-                        
-                        <div v-if="section.modifiers && section.modifiers.length > 0" style="font-size: 0.8rem; margin-top: 3px; padding-left: 10px;">
-                            <span style="font-style: italic;">Mod: {{ section.modifiers.map(m => m.icon + ' ' + m.nome).join(', ') }}</span>
-                            <button @click="section.modifiers.pop()" class="mod-remove-btn"><i class="fa-solid fa-minus"></i></button>
+                    <p style="font-weight: 700; margin-top: 0;">Seleziona numero gusti:</p>
+                    <div class="composition-options cat-row">
+                        <button v-for="num in [1, 2, 3]" :key="num" 
+                                :class="{'selected': tempMeterItem.gustiCount === num}" 
+                                @click="setMeterGustiCount(num)">
+                            {{ num }} Gusto/i
+                        </button>
+                    </div>
+                    
+                    <div v-if="tempMeterItem.gustiCount > 0">
+                        <div v-for="(section, sIdx) in tempMeterItem.sections" :key="sIdx" style="padding: 5px 0; border-bottom: 1px dotted #ddd;">
+                            <span style="font-weight: 700;">{{ section.name }}:</span> 
+                            <span v-if="section.gusto">{{ section.gusto }}</span>
+                            <button v-else @click="section.activeSection = true" class="final-btn" style="padding: 5px 10px; max-width: 150px; background: #3b82f6; margin: 0 5px;">Scegli Gusto</button>
+                            
+                            <div v-if="section.modifiers && section.modifiers.length > 0" style="font-size: 0.8rem; margin-top: 3px; padding-left: 10px;">
+                                <span style="font-style: italic;">Mod: {{ section.modifiers.map(m => m.icon + ' ' + m.nome).join(', ') }}</span>
+                                <button @click="section.modifiers.pop()" class="mod-remove-btn"><i class="fa-solid fa-minus"></i></button>
+                            </div>
+                            <button v-if="section.gusto" @click="section.activeSection = true" class="final-btn" style="padding: 5px 10px; max-width: 100px; background: #6b7280; margin: 0 5px;">Modifica</button>
                         </div>
-                        <button v-if="section.gusto" @click="section.activeSection = true" class="final-btn" style="padding: 5px 10px; max-width: 100px; background: #6b7280; margin: 0 5px;">Modifica</button>
                     </div>
                     <p class="total">Totale stimato: €{{ calculateTempMeterTotal.toFixed(2) }}</p>
                 </div>
@@ -705,7 +692,7 @@
         <div v-if="showHalfPizzaModal && tempHalfPizzaItem" class="modal-overlay" @click.self="cancelHalfPizzaComposition">
             <div class="modal-content">
                 <h3>Componi: {{ tempHalfPizzaItem.nome }}</h3>
-                <p style="font-size: 0.9rem; color: #666;">Seleziona i due gusti e aggiungi i modificatori specifici.</p>
+                <p style="font-size: 0.9rem; color: #666;">Media arrotondata dei due gusti + aggiunte.</p>
                 
                 <div class="order-box" style="margin-bottom: 15px;">
                     <div style="padding: 5px 0; border-bottom: 1px dotted #ddd;">
@@ -806,14 +793,21 @@
         </div>
 
     </div>
-
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script>
+        // Funzione per clonare oggetti in profondità in modo sicuro
+        function deepClone(obj) {
+            if (obj === null || typeof obj !== 'object') {
+                return obj;
+            }
+            return JSON.parse(JSON.stringify(obj));
+        }
+        
         const app = Vue.createApp({
             data() {
                 return {
                     // Dati Base
-                    view: 'inserimento', // 'inserimento', 'ordini', 'storico', 'impostazioni'
+                    view: 'inserimento', 
                     
                     // Accesso e Sicurezza
                     adminPin: '1234',
@@ -823,8 +817,8 @@
                     userRole: '', 
                     newAdminPin: '',
                     newOwnerPin: '',
-                    
-                    // Dati Menu
+
+                    // Dati Menu (Aggiornati per le nuove categorie)
                     menu: {
                         'Pizza Classica': [
                             { nome: 'Margherita', prezzo: 6.00, isFinished: false },
@@ -837,6 +831,13 @@
                             { nome: 'Pistacchio & Mortazza', prezzo: 12.00, isFinished: false },
                             { nome: 'Gourmet', prezzo: 14.00, isFinished: false },
                         ],
+                        'Pizza a Metà': [
+                            { nome: 'Pizza a Metà', prezzo: 0.00, isHalfPizza: true, isFinished: false }
+                        ],
+                        'Mezzo Metro/Schiac.': [
+                            { nome: 'Mezzo Metro', prezzo: 16.00, isMeter: true, isFinished: false },
+                            { nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, isFinished: false }
+                        ],
                         'Bevande': [
                             { nome: 'Acqua Nat', prezzo: 2.00, isFinished: false },
                             { nome: 'Coca Cola Latta', prezzo: 3.00, isFinished: false },
@@ -844,12 +845,6 @@
                         'Dolci': [
                             { nome: 'Tiramisù', prezzo: 4.50, isFinished: false },
                         ],
-                        'Composizioni': [
-                            // ATTENZIONE: le sezioni e i modificatori sono cloni profondi qui, ma verranno sovrascritti nella logica di composizione
-                            { nome: 'Mezzo Metro', prezzo: 16.00, isMeter: true, isFinished: false, sections: [{name: 'Sezione 1', gusto: null, modifiers: []}, {name: 'Sezione 2', gusto: null, modifiers: []}, {name: 'Sezione 3', gusto: null, modifiers: []}, {name: 'Sezione 4', gusto: null, modifiers: []}] },
-                            { nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, isFinished: false, sections: [{name: 'Metà 1', gusto: null, modifiers: []}, {name: 'Metà 2', gusto: null, modifiers: []}]},
-                            { nome: 'Pizza a Metà', prezzo: 0.00, isHalfPizza: true, isFinished: false, gusto1: null, gusto2: null, modifiers1: [], modifiers2: []}
-                        ]
                     },
                     
                     // Dati Modificatori
@@ -1025,7 +1020,6 @@
                     return this.orderCapacity.warning;
                 },
                 isCapacityFull() {
-                    // Controlla il totale (float) vs Max (int)
                     return this.orderCapacity.remaining <= 0.01; 
                 },
                 minDate() {
@@ -1052,7 +1046,7 @@
                 calculateTempMeterTotal() {
                     if (!this.tempMeterItem) return 0;
                     
-                    let basePrice = this.tempMeterItem.basePrice || this.tempMeterItem.prezzo; // Uso basePrice se disponibile
+                    let basePrice = this.tempMeterItem.prezzo;
                     let modTotal = 0;
 
                     this.tempMeterItem.sections.forEach(section => {
@@ -1062,8 +1056,11 @@
                     return basePrice + modTotal;
                 },
                 isMeterValid() {
-                    if (!this.tempMeterItem) return false;
-                    return this.tempMeterItem.sections.every(section => section.gusto !== null);
+                    if (!this.tempMeterItem || this.tempMeterItem.gustiCount === 0) return false;
+                    // Verifica che tutti i gustiCount selezionati abbiano un gusto assegnato
+                    return this.tempMeterItem.sections
+                        .slice(0, this.tempMeterItem.gustiCount) // Controlla solo le sezioni attive
+                        .every(section => section.gusto !== null);
                 },
                 calculateTempHalfPizzaTotal() {
                     if (!this.tempHalfPizzaItem) return 0;
@@ -1074,20 +1071,22 @@
                     
                     if (!item.gusto1 || !item.gusto2) return 0; 
 
+                    // NUOVA LOGICA: Media e arrotondamento per eccesso
                     const avgBasePrice = (price1 + price2) / 2;
-                    
+                    const roundedPrice = Math.ceil(avgBasePrice * 10) / 10; // Arrotonda al decimo superiore
+
                     let modTotal = 0;
                     modTotal += item.modifiers1.reduce((sum, mod) => sum + mod.prezzo, 0);
                     modTotal += item.modifiers2.reduce((sum, mod) => sum + mod.prezzo, 0);
                     
-                    return avgBasePrice + modTotal;
+                    return roundedPrice + modTotal;
                 },
                 isHalfPizzaValid() {
                     if (!this.tempHalfPizzaItem) return false;
                     return this.tempHalfPizzaItem.gusto1 !== null && this.tempHalfPizzaItem.gusto2 !== null;
                 },
 
-                // --- Ordini Attivi ---
+                // --- Ordini Attivi e Storico (logica invariata) ---
                 filteredActiveOrders() {
                     let orders = this.activeOrders.filter(o => {
                         const orderDate = new Date(o.date);
@@ -1095,7 +1094,6 @@
                         const tomorrow = new Date();
                         tomorrow.setDate(today.getDate() + 1);
 
-                        // Reset time for comparison
                         today.setHours(0, 0, 0, 0);
                         tomorrow.setHours(0, 0, 0, 0);
                         orderDate.setHours(0, 0, 0, 0);
@@ -1128,8 +1126,6 @@
                         return timeA - timeB;
                     });
                 },
-                
-                // --- Storico ---
                 filteredArchive() {
                     let orders = this.archive.filter(o => o.date === this.archiveDateFilter);
                     if (this.selectedDriver) {
@@ -1211,7 +1207,7 @@
                         timeout = setTimeout(() => func.apply(context, args), delay);
                     };
                 },
-                // --- Funzioni di Accesso e Logout ---
+                // --- Funzioni di Accesso e Logout (Invariate) ---
                 grantAccess() {
                     if (this.accessPin === this.ownerPin) {
                         this.isAccessGranted = true;
@@ -1264,11 +1260,8 @@
                         const data = localStorage.getItem('pizzeriaSmartData');
                         if (data) {
                             const parsedData = JSON.parse(data);
-                            // Uso Object.assign per copiare le proprietà, ma bisogna stare attenti
                             Object.assign(this.$data, parsedData);
 
-                            // Inizializza i valori predefiniti per le nuove proprietà se non esistono
-                            // (Mantenuto per la robustezza, ma semplificato)
                             this.adminPin = parsedData.adminPin || '1234';
                             this.ownerPin = parsedData.ownerPin || '0000';
                             this.capacitySettings = parsedData.capacitySettings || { maxPizzas: 20, intervalMinutes: 30 };
@@ -1314,18 +1307,16 @@
                     localStorage.setItem('pizzeriaSmartData', JSON.stringify(dataToSave));
                 },
                 ensureItemStatus() {
+                    // Assicura che le categorie di composizione esistano
+                    if (!this.menu['Pizza a Metà']) this.menu['Pizza a Metà'] = [{ nome: 'Pizza a Metà', prezzo: 0.00, isHalfPizza: true, isFinished: false }];
+                    if (!this.menu['Mezzo Metro/Schiac.']) this.menu['Mezzo Metro/Schiac.'] = [
+                         { nome: 'Mezzo Metro', prezzo: 16.00, isMeter: true, isFinished: false },
+                         { nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, isFinished: false }
+                    ];
+
                     for (const cat in this.menu) {
                         this.menu[cat].forEach(item => {
                             if (item.isFinished === undefined) item.isFinished = false;
-                            // Assicura che le composizioni abbiano la struttura completa
-                            if (item.isMeter && !item.sections) {
-                                item.sections = item.nome === 'Mezzo Metro' ? 
-                                    [{name: 'Sezione 1', gusto: null, modifiers: []}, {name: 'Sezione 2', gusto: null, modifiers: []}, {name: 'Sezione 3', gusto: null, modifiers: []}, {name: 'Sezione 4', gusto: null, modifiers: []}] :
-                                    [{name: 'Metà 1', gusto: null, modifiers: []}, {name: 'Metà 2', gusto: null, modifiers: []}];
-                            }
-                            if (item.isHalfPizza && !item.modifiers1) {
-                                Object.assign(item, { gusto1: null, gusto2: null, modifiers1: [], modifiers2: [] });
-                            }
                         });
                     }
                     for (const cat in this.modifiers) {
@@ -1343,24 +1334,25 @@
                     let modTotal = 0;
                     
                     if (item.isHalfPizza) {
-                        if (!item.gusto1 || !item.gusto2) return 0; // Prezzo 0 se incompleta
+                        if (!item.gusto1 || !item.gusto2) return 0; 
                         
                         const price1 = this.allPizzaGusti.find(g => g.nome === item.gusto1)?.prezzo || 0;
                         const price2 = this.allPizzaGusti.find(g => g.nome === item.gusto2)?.prezzo || 0;
-                        basePrice = (price1 + price2) / 2; 
+                        const avgBasePrice = (price1 + price2) / 2;
+                        basePrice = Math.ceil(avgBasePrice * 10) / 10; // Arrotonda per eccesso al decimo
 
                         modTotal += item.modifiers1.reduce((sum, mod) => sum + mod.prezzo, 0);
                         modTotal += item.modifiers2.reduce((sum, mod) => sum + mod.prezzo, 0);
 
                     } else if (item.isMeter) {
-                        // Per le composizioni, il prezzo di base è il prezzo dell'articolo, a cui si sommano i modificatori
-                        basePrice = item.basePrice || item.prezzo; 
+                        // Per le composizioni a prezzo fisso, il prezzo di base è fisso
+                        basePrice = item.prezzo; 
                         item.sections.forEach(section => {
                             modTotal += section.modifiers.reduce((sum, mod) => sum + mod.prezzo, 0);
                         });
 
                     } else {
-                        // Articoli Standard
+                        basePrice = item.prezzo || 0;
                         modTotal = item.modifiers ? item.modifiers.reduce((sum, mod) => sum + mod.prezzo, 0) : 0;
                     }
                     
@@ -1373,8 +1365,8 @@
                     this.selectedItemIndex = null; 
                     this.lastSelectedItem = item; 
 
-                    // Clona l'oggetto menu base (uso JSON per una copia profonda sicura della composizione)
-                    const newItemBase = JSON.parse(JSON.stringify(item));
+                    // Copia profonda dell'articolo per evitare riferimenti al menu
+                    const newItemBase = deepClone(item); 
                     
                     if (item.isMeter) {
                         this.openMeterCompositionModal(newItemBase);
@@ -1386,19 +1378,10 @@
                 },
                 addItem(item) {
                     if (item.isFinished) return;
-                    const newItem = JSON.parse(JSON.stringify(item));
                     
-                    // Pulisci le proprietà di composizione per l'articolo standard (corretto per evitare errori)
-                    delete newItem.isMeter;
-                    delete newItem.sections;
-                    delete newItem.isHalfPizza;
-                    delete newItem.gusto1;
-                    delete newItem.gusto2;
-                    delete newItem.modifiers1;
-                    delete newItem.modifiers2;
-                    
-                    newItem.modifiers = newItem.modifiers || []; // Assicura che esista
-                    this.order.push(newItem);
+                    // Assicura che modifiers sia sempre presente
+                    item.modifiers = item.modifiers || []; 
+                    this.order.push(item);
                     this.selectedItemIndex = this.order.length - 1; 
                 },
                 removeItem(index) {
@@ -1408,6 +1391,7 @@
                     } else if (this.selectedItemIndex > index) {
                         this.selectedItemIndex--;
                     }
+                    this.order = [...this.order]; // Forzo reattività
                 },
                 selectItem(index) {
                     this.selectedItemIndex = index;
@@ -1421,7 +1405,7 @@
                     }
                     
                     const selectedItem = this.order[this.selectedItemIndex];
-                    const newMod = JSON.parse(JSON.stringify(mod)); 
+                    const newMod = deepClone(mod); 
                     
                     newMod.category = this.activeModCat;
                     newMod.icon = this.getModifierIcon(this.activeModCat);
@@ -1435,7 +1419,6 @@
                     if (this.activeModCat !== 'Senza') {
                         selectedItem.modifiers.push(newMod);
                     }
-                    // Forzo aggiornamento per reattività
                     this.order = [...this.order]; 
                 },
                 getModifierCategory(modName) {
@@ -1458,13 +1441,34 @@
 
                 // --- Composizioni (Mezzo Metro/Schiacciata) ---
                 openMeterCompositionModal(item) {
-                    this.tempMeterItem = JSON.parse(JSON.stringify(item));
-                    this.tempMeterItem.basePrice = item.prezzo; // Salva il prezzo base originale
-                    this.tempMeterItem.sections.forEach(s => s.activeSection = false); 
-                    this.tempMeterItem.sections[0].activeSection = true; 
+                    this.tempMeterItem = deepClone(item);
+                    this.tempMeterItem.gustiCount = 0; // Inizializza conteggio gusti
+                    this.tempMeterItem.sections = []; // Inizializza sezioni
                     this.showMeterModal = true;
                     this.gustoSearchTerm = '';
                     this.modifierSearchTerm = '';
+                },
+                setMeterGustiCount(count) {
+                    this.tempMeterItem.gustiCount = count;
+                    this.tempMeterItem.sections = [];
+                    const totalSections = this.tempMeterItem.nome === 'Mezzo Metro' ? 4 : 2;
+                    
+                    for (let i = 0; i < totalSections; i++) {
+                        // Assegna il nome della sezione al gusto, con un contatore
+                        const gustoIndex = Math.min(i, count - 1); 
+                        const sectionName = `Gusto ${gustoIndex + 1}`;
+                        
+                        this.tempMeterItem.sections.push({
+                            name: `Sezione ${i + 1} (${sectionName})`,
+                            gusto: null,
+                            modifiers: [],
+                            activeSection: false 
+                        });
+                    }
+                    // Apre la prima sezione per la selezione
+                    if (this.tempMeterItem.sections.length > 0) {
+                        this.tempMeterItem.sections[0].activeSection = true;
+                    }
                 },
                 cancelMeterComposition() {
                     this.showMeterModal = false;
@@ -1475,14 +1479,17 @@
                 selectMeterGusto(sectionIndex, gustoName) {
                     this.tempMeterItem.sections[sectionIndex].gusto = gustoName;
                     this.tempMeterItem.sections[sectionIndex].activeSection = false;
-                    if (this.tempMeterItem.sections[sectionIndex + 1]) {
-                        this.tempMeterItem.sections[sectionIndex + 1].activeSection = true;
+                    
+                    // Passa alla sezione successiva solo se entro il limite di sezioni totali
+                    if (sectionIndex < this.tempMeterItem.sections.length - 1) {
+                         this.tempMeterItem.sections[sectionIndex + 1].activeSection = true;
                     }
+
                     this.gustoSearchTerm = '';
                 },
                 addMeterModifier(sectionIndex, mod) {
                     if (mod.isFinished) return;
-                    const newMod = JSON.parse(JSON.stringify(mod));
+                    const newMod = deepClone(mod);
                     newMod.category = this.tempModCat;
                     newMod.icon = this.getModifierIcon(this.tempModCat);
                     
@@ -1500,16 +1507,16 @@
                 },
                 addMeterToOrder() {
                     if (!this.isMeterValid) {
-                        alert('Devi selezionare un gusto per ogni sezione.');
+                        alert('Devi selezionare un gusto per tutte le sezioni definite.');
                         return;
                     }
                     
-                    const finalItem = JSON.parse(JSON.stringify(this.tempMeterItem));
+                    const finalItem = deepClone(this.tempMeterItem);
                     finalItem.prezzo = this.calculateTempMeterTotal; 
                     
                     finalItem.sections.forEach(s => delete s.activeSection);
                     delete finalItem.activeSection; 
-                    delete finalItem.modifiers; 
+                    delete finalItem.gustiCount;
                     
                     this.order.push(finalItem);
                     this.selectedItemIndex = this.order.length - 1; 
@@ -1520,7 +1527,7 @@
                 openHalfPizzaCompositionModal(item) {
                     this.tempHalfPizzaItem = {
                         nome: item.nome, 
-                        prezzo: 0.00, 
+                        prezzo: item.prezzo, 
                         isHalfPizza: true,
                         gusto1: null,
                         gusto2: null,
@@ -1541,15 +1548,16 @@
                 selectHalfPizzaGusto(halfNumber, gustoName) {
                     if (halfNumber === 1) {
                         this.tempHalfPizzaItem.gusto1 = gustoName;
+                        this.tempHalfPizzaItem.activeHalf = 2; // Passa alla metà successiva
                     } else if (halfNumber === 2) {
                         this.tempHalfPizzaItem.gusto2 = gustoName;
+                        this.tempHalfPizzaItem.activeHalf = 0; // Chiude la selezione gusto
                     }
-                    this.tempHalfPizzaItem.activeHalf = 0; 
                     this.gustoSearchTerm = '';
                 },
                 addHalfPizzaModifier(halfNumber, mod) {
                     if (mod.isFinished) return;
-                    const newMod = JSON.parse(JSON.stringify(mod));
+                    const newMod = deepClone(mod);
                     newMod.category = this.tempModCat;
                     newMod.icon = this.getModifierIcon(this.tempModCat);
                     
@@ -1570,7 +1578,7 @@
                         return;
                     }
                     
-                    const finalItem = JSON.parse(JSON.stringify(this.tempHalfPizzaItem));
+                    const finalItem = deepClone(this.tempHalfPizzaItem);
                     finalItem.prezzo = this.calculateTempHalfPizzaTotal; 
                     delete finalItem.activeHalf; 
                     
@@ -1579,7 +1587,7 @@
                     this.cancelHalfPizzaComposition();
                 },
                 
-                // --- Modifica Prezzo Man. ---
+                // --- Modifica Prezzo Man. (Invariata) ---
                 openPriceEditModal(index) {
                     this.tempPriceEditIndex = index;
                     const item = this.order[index];
@@ -1596,7 +1604,7 @@
                     }
                 },
 
-                // --- Funzioni Modal e Finalizzazione Ordine ---
+                // --- Funzioni Modal e Finalizzazione Ordine (Invariate) ---
                 openModal(orderData = null) {
                     const now = new Date();
                     const formattedDate = now.toISOString().slice(0, 10);
@@ -1678,7 +1686,7 @@
                         notes: this.notes,
                         accontoRicevuto: this.accontoRicevuto,
                         total: this.total,
-                        items: JSON.parse(JSON.stringify(this.order)), 
+                        items: deepClone(this.order), 
                         status: 'Preparazione', 
                         driver: '',
                         timestamp: new Date().toISOString() 
@@ -1687,7 +1695,6 @@
                     this.addOrUpdateOrder(newOrder);
                     this.saveCustomerHistory(newOrder);
 
-                    // Reset
                     this.order = [];
                     this.selectedItemIndex = null;
                     this.showModal = false;
@@ -1756,7 +1763,7 @@
                     this.customerHistory = this.customerHistory.slice(0, 50);
                 },
 
-                // --- Funzioni Ordini Attivi ---
+                // --- Funzioni Ordini Attivi (Invariate) ---
                 getNextStatus(currentStatus) {
                     switch (currentStatus) {
                         case 'Preparazione': return 'In Cottura';
@@ -1790,7 +1797,7 @@
                     if (index !== -1) {
                         this.activeOrders.splice(index, 1);
                         
-                        const archivedOrder = JSON.parse(JSON.stringify(order));
+                        const archivedOrder = deepClone(order);
                         archivedOrder.archiveDate = new Date().toISOString(); 
                         this.archive.push(archivedOrder);
                         
@@ -1802,7 +1809,7 @@
                 editOrder(orderId) {
                     const orderToEdit = this.activeOrders.find(o => o.id === orderId);
                     if (orderToEdit) {
-                        this.order = JSON.parse(JSON.stringify(orderToEdit.items)); 
+                        this.order = deepClone(orderToEdit.items); 
                         this.view = 'inserimento';
                         this.openModal(orderToEdit); 
                     }
@@ -1824,7 +1831,7 @@
                     }
                 },
                 duplicateOrder(order) {
-                    const duplicatedOrder = JSON.parse(JSON.stringify(order));
+                    const duplicatedOrder = deepClone(order);
                     
                     duplicatedOrder.id = ++this.lastOrderId;
                     duplicatedOrder.status = 'Preparazione';
@@ -1879,12 +1886,12 @@
                         const itemBase = this.findMenuItemBase(item.nome);
                         const category = itemBase ? itemBase.category : '';
 
-                        if (category === 'Pizza Classica' || category === 'Pizze Speciali') {
+                        if (category.includes('Pizza') && !item.isHalfPizza) {
                             itemPizzaCount += 1;
-                        } else if (item.isMeter && item.nome === 'Mezzo Metro') {
-                            itemPizzaCount += 4; 
                         } else if (item.isHalfPizza) {
                             itemPizzaCount += 1; 
+                        } else if (item.isMeter && item.nome === 'Mezzo Metro') {
+                            itemPizzaCount += 4; 
                         } else if (item.isMeter && item.nome === 'Schiacciata Grande') {
                             itemPizzaCount += 2; 
                         }
@@ -1900,7 +1907,6 @@
                             item.sections.forEach(s => modCount += s.modifiers.filter(m => m.prezzo > 0).length);
                         }
 
-                        // Ponderazione Smart: 0.25 unità di carico per ogni modificatore a pagamento
                         totalPizzas += itemPizzaCount + (modCount * 0.25);
                     });
                     return totalPizzas;
@@ -1958,7 +1964,7 @@
                     }
                 },
 
-                // --- Stampa e Condivisione ---
+                // --- Stampa e Condivisione (Invariate) ---
                 printOrder(orderId, type) {
                     const order = this.activeOrders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId);
                     if (!order) return;
@@ -2037,11 +2043,7 @@
                         }
                         
                         let modsList = '';
-                        if (item.isHalfPizza) {
-                            // La logica di scontrino per le composizioni può essere semplificata o dettagliata in base alle necessità fiscali.
-                        } else if (item.isMeter) {
-                            
-                        } else if (item.modifiers && item.modifiers.length > 0) {
+                        if (item.modifiers && item.modifiers.length > 0) {
                             modsList = item.modifiers.filter(m => m.prezzo > 0)
                                 .map(m => `<br>   +${m.nome} (+€${m.prezzo.toFixed(2)})`)
                                 .join('');
@@ -2099,7 +2101,6 @@
                     
                     const printWindow = window.open('', '_blank', 'height=600,width=400');
                     printWindow.document.write('<html><head><title>Stampa</title>');
-                    // Copia gli stili essenziali per la stampa
                     printWindow.document.write('<style>@media print { body > *:not(.print-container) { display: none; } .print-container { display: block; max-width: 100%; font-size: 11pt; } .print-comanda { font-family: monospace; font-size: 12pt; line-height: 1.4; padding: 10px; } .print-comanda h1 { font-size: 16pt; text-align: center; margin: 0 0 10px 0; } .print-comanda h2 { font-size: 14pt; border-bottom: 1px solid #000; padding-bottom: 5px; margin: 10px 0; } .print-comanda ul { list-style: none; padding: 0; margin: 0 0 10px 0; } .print-comanda ul li { border-bottom: 1px dotted #888; padding: 4px 0; } .print-comanda .item-name { font-weight: bold; font-size: 13pt; } .print-comanda .mod-list { font-size: 11pt; margin-top: 2px; padding-left: 10px; } .print-comanda .mod-list li { border: none; } .print-comanda .note { color: #b91c1c; margin-top: 8px; font-weight: bold; } .print-scontrino { font-family: monospace; font-size: 10pt; line-height: 1.3; width: 80mm; margin: 0 auto; } .print-scontrino h1 { font-size: 12pt; text-align: center; margin: 0 0 5px 0; } .print-scontrino table { width: 100%; border-collapse: collapse; margin-bottom: 5px; } .print-scontrino th, .print-scontrino td { text-align: left; padding: 2px 0; } .print-scontrino .total-row { font-size: 11pt; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; } </style>');
                     printWindow.document.write('</head><body>');
                     printWindow.document.write(printContents);
@@ -2151,7 +2152,7 @@
 
                         if (mods.length > 0) {
                             const modNames = mods.map(m => {
-                                return `${m.icon}${m.nome}`; // Uso direttamente l'icona salvata
+                                return `${m.icon}${m.nome}`; 
                             }).join(', ');
                             itemLine += ` [${modNames}]`;
                         }
@@ -2165,7 +2166,7 @@
                     this.showShareModal = false;
                 },
 
-                // --- Funzioni Storico/Archivio ---
+                // --- Funzioni Storico/Archivio (Invariate) ---
                 calculateDriverStats() {
                     const filteredOrders = this.archive.filter(o => o.date === this.archiveDateFilter);
                     
@@ -2191,7 +2192,7 @@
                     }
                 },
 
-                // --- Funzioni Impostazioni/Gestione Dati ---
+                // --- Funzioni Impostazioni/Gestione Dati (Invariate) ---
                 addItemToCategory() {
                     if (this.newItemName && this.activeSettingsCat) {
                         const newItem = {
@@ -2199,6 +2200,10 @@
                             prezzo: parseFloat(this.newItemPrice || 0),
                             isFinished: false
                         };
+                        // Gestione speciale per le categorie composizioni
+                        if (this.activeSettingsCat === 'Pizza a Metà') newItem.isHalfPizza = true;
+                        if (this.activeSettingsCat === 'Mezzo Metro/Schiac.') newItem.isMeter = true;
+                        
                         this.menu[this.activeSettingsCat].push(newItem);
                         this.newItemName = '';
                         this.newItemPrice = 0;
@@ -2427,7 +2432,6 @@
                 this.loadData();
                 this.updateCapacityWarning(); 
                 
-                // Inizializza Debounce per la ricerca clienti e gusti
                 this.debouncedFilterCustomers = this.debounce(this.filterCustomers, 300);
                 this.debouncedGustoSearch = this.debounce((e) => { this.gustoSearchTerm = e.target.value; }, 300);
 
