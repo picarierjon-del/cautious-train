@@ -204,7 +204,7 @@
                                         <span>{{ mod.icon }} {{ mod.nome }} <span v-if="mod.prezzo > 0">(+€{{ mod.prezzo.toFixed(2) }})</span></span>
                                         <button @click.stop="item.modifiers.splice(modIndex, 1); selectedItemIndex = index;" class="mod-remove-btn"><i class="fa-solid fa-minus"></i></button>
                                     </li>
-                                </ul>
+                                </ul >
                             </div>
                             <div style="text-align: right; display: flex; align-items: center; gap: 8px;">
                                 <span style="font-weight: 700;">€{{ calculateItemTotal(item).toFixed(2) }}</span>
@@ -237,7 +237,7 @@
                     </div>
                 </div>
 
-                <template v-if="selectedItemIndex !== null && !order[selectedItemIndex]?.isMeter && !order[selectedItemIndex]?.isHalfPizza">
+                <template v-if="selectedItemIndex !== null && order[selectedItemIndex] && !order[selectedItemIndex].isMeter && !order[selectedItemIndex].isHalfPizza">
                     <h2>Aggiungi Modificatore a: {{ order[selectedItemIndex].nome }}</h2>
                     <div class="cat-row">
                         <button v-for="(mods, cat) in modifiers" :key="cat" :class="{'cat-btn': true, 'active': activeModCat === cat}" @click="activeModCat = cat; modifierSearchTerm = ''">
@@ -845,6 +845,7 @@
                             { nome: 'Tiramisù', prezzo: 4.50, isFinished: false },
                         ],
                         'Composizioni': [
+                            // ATTENZIONE: le sezioni e i modificatori sono cloni profondi qui, ma verranno sovrascritti nella logica di composizione
                             { nome: 'Mezzo Metro', prezzo: 16.00, isMeter: true, isFinished: false, sections: [{name: 'Sezione 1', gusto: null, modifiers: []}, {name: 'Sezione 2', gusto: null, modifiers: []}, {name: 'Sezione 3', gusto: null, modifiers: []}, {name: 'Sezione 4', gusto: null, modifiers: []}] },
                             { nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, isFinished: false, sections: [{name: 'Metà 1', gusto: null, modifiers: []}, {name: 'Metà 2', gusto: null, modifiers: []}]},
                             { nome: 'Pizza a Metà', prezzo: 0.00, isHalfPizza: true, isFinished: false, gusto1: null, gusto2: null, modifiers1: [], modifiers2: []}
@@ -1051,7 +1052,7 @@
                 calculateTempMeterTotal() {
                     if (!this.tempMeterItem) return 0;
                     
-                    let basePrice = this.tempMeterItem.prezzo;
+                    let basePrice = this.tempMeterItem.basePrice || this.tempMeterItem.prezzo; // Uso basePrice se disponibile
                     let modTotal = 0;
 
                     this.tempMeterItem.sections.forEach(section => {
@@ -1071,7 +1072,6 @@
                     const price1 = this.allPizzaGusti.find(g => g.nome === item.gusto1)?.prezzo || 0;
                     const price2 = this.allPizzaGusti.find(g => g.nome === item.gusto2)?.prezzo || 0;
                     
-                    // Se manca un gusto, il prezzo è 0 per evitare calcoli errati
                     if (!item.gusto1 || !item.gusto2) return 0; 
 
                     const avgBasePrice = (price1 + price2) / 2;
@@ -1230,7 +1230,33 @@
                         this.accessPin = '';
                     }
                 },
-                // ... (Altri metodi di accesso e PIN restano invariati) ...
+                logout() {
+                    this.isAccessGranted = false;
+                    this.userRole = '';
+                    this.view = 'inserimento';
+                    alert('Disconnessione effettuata.');
+                    this.saveData();
+                },
+                saveAdminPin() {
+                    if (this.newAdminPin.length >= 4) {
+                        this.adminPin = this.newAdminPin;
+                        this.newAdminPin = '';
+                        this.saveData();
+                        alert('PIN/Password Operatore aggiornato!');
+                    } else {
+                        alert('Il PIN deve contenere almeno 4 caratteri.');
+                    }
+                },
+                saveOwnerPin() {
+                    if (this.newOwnerPin.length >= 4) {
+                        this.ownerPin = this.newOwnerPin;
+                        this.newOwnerPin = '';
+                        this.saveData();
+                        alert('PIN/Password Titolare aggiornato!');
+                    } else {
+                        alert('Il PIN deve contenere almeno 4 caratteri.');
+                    }
+                },
                 
                 // --- Persistenza Dati (LocalStorage) ---
                 loadData() {
@@ -1238,10 +1264,20 @@
                         const data = localStorage.getItem('pizzeriaSmartData');
                         if (data) {
                             const parsedData = JSON.parse(data);
-                            Object.assign(this, parsedData);
+                            // Uso Object.assign per copiare le proprietà, ma bisogna stare attenti
+                            Object.assign(this.$data, parsedData);
 
                             // Inizializza i valori predefiniti per le nuove proprietà se non esistono
-                            // ... (logica di fallback per le proprietà mancanti) ...
+                            // (Mantenuto per la robustezza, ma semplificato)
+                            this.adminPin = parsedData.adminPin || '1234';
+                            this.ownerPin = parsedData.ownerPin || '0000';
+                            this.capacitySettings = parsedData.capacitySettings || { maxPizzas: 20, intervalMinutes: 30 };
+                            this.drivers = parsedData.drivers || ['Mario', 'Luigi', 'Yoshi'];
+                            this.deliveryZones = parsedData.deliveryZones || [
+                                { name: 'Zona A', price: 3.00 },
+                                { name: 'Zona B', price: 4.00 },
+                            ];
+                            this.customerHistory = parsedData.customerHistory || [];
                             
                             this.archiveDateFilter = new Date().toISOString().slice(0, 10);
                             this.ensureItemStatus();
@@ -1259,7 +1295,45 @@
                         console.error("Errore caricamento dati:", e);
                     }
                 },
-                // ... (saveData, ensureItemStatus restano invariati) ...
+                saveData() {
+                    const dataToSave = {
+                        adminPin: this.adminPin,
+                        ownerPin: this.ownerPin,
+                        isAccessGranted: this.isAccessGranted,
+                        userRole: this.userRole,
+                        menu: this.menu,
+                        modifiers: this.modifiers,
+                        lastOrderId: this.lastOrderId,
+                        activeOrders: this.activeOrders,
+                        archive: this.archive,
+                        deliveryZones: this.deliveryZones,
+                        drivers: this.drivers,
+                        capacitySettings: this.capacitySettings,
+                        customerHistory: this.customerHistory
+                    };
+                    localStorage.setItem('pizzeriaSmartData', JSON.stringify(dataToSave));
+                },
+                ensureItemStatus() {
+                    for (const cat in this.menu) {
+                        this.menu[cat].forEach(item => {
+                            if (item.isFinished === undefined) item.isFinished = false;
+                            // Assicura che le composizioni abbiano la struttura completa
+                            if (item.isMeter && !item.sections) {
+                                item.sections = item.nome === 'Mezzo Metro' ? 
+                                    [{name: 'Sezione 1', gusto: null, modifiers: []}, {name: 'Sezione 2', gusto: null, modifiers: []}, {name: 'Sezione 3', gusto: null, modifiers: []}, {name: 'Sezione 4', gusto: null, modifiers: []}] :
+                                    [{name: 'Metà 1', gusto: null, modifiers: []}, {name: 'Metà 2', gusto: null, modifiers: []}];
+                            }
+                            if (item.isHalfPizza && !item.modifiers1) {
+                                Object.assign(item, { gusto1: null, gusto2: null, modifiers1: [], modifiers2: [] });
+                            }
+                        });
+                    }
+                    for (const cat in this.modifiers) {
+                        this.modifiers[cat].forEach(mod => {
+                            if (mod.isFinished === undefined) mod.isFinished = false;
+                        });
+                    }
+                },
 
                 // --- Funzioni Ordine Corrente ---
                 calculateItemTotal(item) {
@@ -1269,7 +1343,6 @@
                     let modTotal = 0;
                     
                     if (item.isHalfPizza) {
-                        // ... (logica di calcolo Pizza a Metà) ...
                         if (!item.gusto1 || !item.gusto2) return 0; // Prezzo 0 se incompleta
                         
                         const price1 = this.allPizzaGusti.find(g => g.nome === item.gusto1)?.prezzo || 0;
@@ -1280,7 +1353,8 @@
                         modTotal += item.modifiers2.reduce((sum, mod) => sum + mod.prezzo, 0);
 
                     } else if (item.isMeter) {
-                        // ... (logica di calcolo Mezzo Metro) ...
+                        // Per le composizioni, il prezzo di base è il prezzo dell'articolo, a cui si sommano i modificatori
+                        basePrice = item.basePrice || item.prezzo; 
                         item.sections.forEach(section => {
                             modTotal += section.modifiers.reduce((sum, mod) => sum + mod.prezzo, 0);
                         });
@@ -1299,8 +1373,8 @@
                     this.selectedItemIndex = null; 
                     this.lastSelectedItem = item; 
 
-                    // Clona l'oggetto menu base (solo il primo livello)
-                    const newItemBase = Object.assign({}, item); 
+                    // Clona l'oggetto menu base (uso JSON per una copia profonda sicura della composizione)
+                    const newItemBase = JSON.parse(JSON.stringify(item));
                     
                     if (item.isMeter) {
                         this.openMeterCompositionModal(newItemBase);
@@ -1312,9 +1386,9 @@
                 },
                 addItem(item) {
                     if (item.isFinished) return;
-                    // Uso Object.assign per copiare le proprietà senza riferimenti profondi non voluti
-                    const newItem = Object.assign({}, item);
+                    const newItem = JSON.parse(JSON.stringify(item));
                     
+                    // Pulisci le proprietà di composizione per l'articolo standard (corretto per evitare errori)
                     delete newItem.isMeter;
                     delete newItem.sections;
                     delete newItem.isHalfPizza;
@@ -1323,28 +1397,35 @@
                     delete newItem.modifiers1;
                     delete newItem.modifiers2;
                     
-                    // Inizializza array modificatori per articolo standard
-                    newItem.modifiers = []; 
+                    newItem.modifiers = newItem.modifiers || []; // Assicura che esista
                     this.order.push(newItem);
                     this.selectedItemIndex = this.order.length - 1; 
                 },
-                // ... (removeItem e selectItem restano invariati) ...
+                removeItem(index) {
+                    this.order.splice(index, 1);
+                    if (this.selectedItemIndex === index) {
+                        this.selectedItemIndex = null;
+                    } else if (this.selectedItemIndex > index) {
+                        this.selectedItemIndex--;
+                    }
+                },
+                selectItem(index) {
+                    this.selectedItemIndex = index;
+                },
                 
                 // --- Gestione Modificatori Articolo Standard ---
                 addExtra(mod) {
-                    if (mod.isFinished || this.selectedItemIndex === null || this.order[this.selectedItemIndex]?.isMeter || this.order[this.selectedItemIndex]?.isHalfPizza) {
+                    if (mod.isFinished || this.selectedItemIndex === null || !this.order[this.selectedItemIndex] || this.order[this.selectedItemIndex].isMeter || this.order[this.selectedItemIndex].isHalfPizza) {
                         alert("Seleziona prima un articolo standard nel carrello.");
                         return;
                     }
                     
                     const selectedItem = this.order[this.selectedItemIndex];
-                    const newMod = Object.assign({}, mod); // Clona il modificatore
+                    const newMod = JSON.parse(JSON.stringify(mod)); 
                     
-                    // Aggiunge proprietà per la visualizzazione efficiente nel carrello (MIGLIORAMENTO)
                     newMod.category = this.activeModCat;
                     newMod.icon = this.getModifierIcon(this.activeModCat);
                     
-                    // Gestione "Senza"
                     if (this.activeModCat === 'Senza') {
                         selectedItem.modifiers = selectedItem.modifiers.filter(m => 
                             m.nome !== mod.nome
@@ -1355,8 +1436,7 @@
                         selectedItem.modifiers.push(newMod);
                     }
                     // Forzo aggiornamento per reattività
-                    this.order[this.selectedItemIndex] = Object.assign({}, selectedItem); 
-                    this.selectedItemIndex = this.order.length - 1; 
+                    this.order = [...this.order]; 
                 },
                 getModifierCategory(modName) {
                     for (const cat in this.modifiers) {
@@ -1377,16 +1457,37 @@
                 },
 
                 // --- Composizioni (Mezzo Metro/Schiacciata) ---
-                // ... (openMeterCompositionModal, cancelMeterComposition, selectMeterGusto restano simili) ...
+                openMeterCompositionModal(item) {
+                    this.tempMeterItem = JSON.parse(JSON.stringify(item));
+                    this.tempMeterItem.basePrice = item.prezzo; // Salva il prezzo base originale
+                    this.tempMeterItem.sections.forEach(s => s.activeSection = false); 
+                    this.tempMeterItem.sections[0].activeSection = true; 
+                    this.showMeterModal = true;
+                    this.gustoSearchTerm = '';
+                    this.modifierSearchTerm = '';
+                },
+                cancelMeterComposition() {
+                    this.showMeterModal = false;
+                    this.tempMeterItem = null;
+                    this.gustoSearchTerm = '';
+                    this.modifierSearchTerm = '';
+                },
+                selectMeterGusto(sectionIndex, gustoName) {
+                    this.tempMeterItem.sections[sectionIndex].gusto = gustoName;
+                    this.tempMeterItem.sections[sectionIndex].activeSection = false;
+                    if (this.tempMeterItem.sections[sectionIndex + 1]) {
+                        this.tempMeterItem.sections[sectionIndex + 1].activeSection = true;
+                    }
+                    this.gustoSearchTerm = '';
+                },
                 addMeterModifier(sectionIndex, mod) {
                     if (mod.isFinished) return;
-                    const newMod = Object.assign({}, mod);
+                    const newMod = JSON.parse(JSON.stringify(mod));
                     newMod.category = this.tempModCat;
-                    newMod.icon = this.getModifierIcon(this.tempModCat); // Aggiunge icona e categoria
+                    newMod.icon = this.getModifierIcon(this.tempModCat);
                     
                     const sections = this.tempMeterItem.sections;
                     
-                    // Gestione "Senza"
                     if (this.tempModCat === 'Senza') {
                         sections[sectionIndex].modifiers = sections[sectionIndex].modifiers.filter(m => 
                             m.nome !== mod.nome
@@ -1403,7 +1504,7 @@
                         return;
                     }
                     
-                    const finalItem = Object.assign({}, this.tempMeterItem);
+                    const finalItem = JSON.parse(JSON.stringify(this.tempMeterItem));
                     finalItem.prezzo = this.calculateTempMeterTotal; 
                     
                     finalItem.sections.forEach(s => delete s.activeSection);
@@ -1416,16 +1517,44 @@
                 },
 
                 // --- Composizioni (Pizza a Metà) ---
-                // ... (openHalfPizzaCompositionModal, cancelHalfPizzaComposition, selectHalfPizzaGusto restano simili) ...
+                openHalfPizzaCompositionModal(item) {
+                    this.tempHalfPizzaItem = {
+                        nome: item.nome, 
+                        prezzo: 0.00, 
+                        isHalfPizza: true,
+                        gusto1: null,
+                        gusto2: null,
+                        modifiers1: [],
+                        modifiers2: [],
+                        activeHalf: 1 
+                    };
+                    this.showHalfPizzaModal = true;
+                    this.gustoSearchTerm = '';
+                    this.modifierSearchTerm = '';
+                },
+                cancelHalfPizzaComposition() {
+                    this.showHalfPizzaModal = false;
+                    this.tempHalfPizzaItem = null;
+                    this.gustoSearchTerm = '';
+                    this.modifierSearchTerm = '';
+                },
+                selectHalfPizzaGusto(halfNumber, gustoName) {
+                    if (halfNumber === 1) {
+                        this.tempHalfPizzaItem.gusto1 = gustoName;
+                    } else if (halfNumber === 2) {
+                        this.tempHalfPizzaItem.gusto2 = gustoName;
+                    }
+                    this.tempHalfPizzaItem.activeHalf = 0; 
+                    this.gustoSearchTerm = '';
+                },
                 addHalfPizzaModifier(halfNumber, mod) {
                     if (mod.isFinished) return;
-                    const newMod = Object.assign({}, mod);
+                    const newMod = JSON.parse(JSON.stringify(mod));
                     newMod.category = this.tempModCat;
-                    newMod.icon = this.getModifierIcon(this.tempModCat); // Aggiunge icona e categoria
+                    newMod.icon = this.getModifierIcon(this.tempModCat);
                     
                     const modifiersArray = halfNumber === 1 ? this.tempHalfPizzaItem.modifiers1 : this.tempHalfPizzaItem.modifiers2;
                     
-                    // Gestione "Senza"
                     if (this.tempModCat === 'Senza') {
                         const index = modifiersArray.findIndex(m => m.nome === mod.nome);
                         if (index !== -1) modifiersArray.splice(index, 1);
@@ -1441,7 +1570,7 @@
                         return;
                     }
                     
-                    const finalItem = Object.assign({}, this.tempHalfPizzaItem);
+                    const finalItem = JSON.parse(JSON.stringify(this.tempHalfPizzaItem));
                     finalItem.prezzo = this.calculateTempHalfPizzaTotal; 
                     delete finalItem.activeHalf; 
                     
@@ -1454,7 +1583,6 @@
                 openPriceEditModal(index) {
                     this.tempPriceEditIndex = index;
                     const item = this.order[index];
-                    // Se non ha un prezzo manuale, usa il prezzo di vendita calcolato come punto di partenza
                     this.newPriceValue = item.manualPrice !== undefined ? item.manualPrice : this.calculateItemTotal(item); 
                     this.showPriceEditModal = true;
                 },
@@ -1464,18 +1592,70 @@
                         this.showPriceEditModal = false;
                         this.tempPriceEditIndex = null;
                         this.newPriceValue = 0.00;
-                        this.saveData(); // Salva dopo la modifica
+                        this.saveData(); 
                     }
                 },
 
                 // --- Funzioni Modal e Finalizzazione Ordine ---
-                // ... (openModal, selectMode, updateDeliveryCost restano invariati) ...
+                openModal(orderData = null) {
+                    const now = new Date();
+                    const formattedDate = now.toISOString().slice(0, 10);
+                    const formattedHour = now.toTimeString().slice(0, 5);
+                    
+                    if (orderData) {
+                        this.editingOrderId = orderData.id;
+                        this.mode = orderData.mode;
+                        this.customer = orderData.customer;
+                        this.phone = orderData.phone || '';
+                        this.address = orderData.address || '';
+                        this.streetNumber = orderData.streetNumber || '';
+                        this.town = orderData.town || 'Roma';
+                        this.tableNumber = orderData.tableNumber || '';
+                        this.date = orderData.date;
+                        this.hour = orderData.hour;
+                        this.notes = orderData.notes || '';
+                        this.zoneName = orderData.zone || '';
+                        this.accontoRicevuto = orderData.accontoRicevuto || 0.00;
+                        
+                        this.updateDeliveryCost();
+                        
+                    } else {
+                        this.editingOrderId = null;
+                        this.mode = 'banco';
+                        this.customer = '';
+                        this.phone = '';
+                        this.address = '';
+                        this.streetNumber = '';
+                        this.town = 'Roma';
+                        this.tableNumber = '';
+                        this.date = formattedDate;
+                        this.hour = formattedHour;
+                        this.notes = '';
+                        this.zoneName = '';
+                        this.deliveryCost = 0.00;
+                        this.accontoRicevuto = 0.00;
+                    }
+                    
+                    this.updateCapacityWarning(); 
+                    this.showModal = true;
+                },
+                selectMode(newMode) {
+                    this.mode = newMode;
+                    this.updateDeliveryCost();
+                },
+                updateDeliveryCost() {
+                    if (this.mode === 'consegna' && this.zoneName) {
+                        const zone = this.deliveryZones.find(z => z.name === this.zoneName);
+                        this.deliveryCost = zone ? zone.price : 0.00;
+                    } else {
+                        this.deliveryCost = 0.00;
+                    }
+                },
                 confermaOrdine() {
                     if (!this.isOrderFinalizable) {
                         alert("Per finalizzare l'ordine devi inserire Cliente e Articoli. Controlla anche Indirizzo e Zona se in modalità Consegna.");
                         return;
                     }
-                    // ... (logica di avviso capacità e conferma) ...
                     if (this.isCapacityFull) {
                         if (!confirm("ATTENZIONE: La fascia oraria è al completo. Vuoi comunque confermare l'ordine?")) {
                             return;
@@ -1516,10 +1696,24 @@
                     this.saveData(); 
                 },
                 
-                // ... (addOrUpdateOrder, saveCustomerHistory, loadCustomerData restano invariati) ...
-                
-                // --- Gestione Cliente (MIGLIORAMENTO DEBOUNCE) ---
-                debouncedFilterCustomers: null, // Sarà inizializzato in mounted
+                addOrUpdateOrder(newOrder) {
+                    if (this.editingOrderId) {
+                        const index = this.activeOrders.findIndex(o => o.id === this.editingOrderId);
+                        if (index !== -1) {
+                            newOrder.status = this.activeOrders[index].status;
+                            newOrder.driver = this.activeOrders[index].driver;
+                            this.activeOrders.splice(index, 1, newOrder);
+                            alert(`Ordine #${newOrder.id} modificato con successo!`);
+                        }
+                    } else {
+                        this.activeOrders.push(newOrder);
+                        alert(`Ordine #${newOrder.id} inserito con successo!`);
+                    }
+                },
+
+                // --- Gestione Cliente (DEBOUNCE) ---
+                debouncedFilterCustomers: null, 
+                debouncedGustoSearch: null,
                 filterCustomers() {
                     const term = this.customer.toLowerCase().trim();
                     if (term.length < 2) {
@@ -1532,12 +1726,149 @@
                         data.phone.includes(term)
                     ).slice(0, 5);
                 },
+                loadCustomerData(data) {
+                    this.customer = data.customer;
+                    this.phone = data.phone;
+                    this.address = data.address;
+                    this.streetNumber = data.streetNumber;
+                    this.town = data.town;
+                    this.zoneName = data.zone;
+                    this.filteredCustomerSuggestions = [];
+                    this.updateDeliveryCost();
+                },
+                saveCustomerHistory(order) {
+                    const data = {
+                        customer: order.customer,
+                        phone: order.phone,
+                        address: order.address,
+                        streetNumber: order.streetNumber,
+                        town: order.town,
+                        zone: order.zone,
+                        timestamp: new Date().getTime()
+                    };
+
+                    this.customerHistory = this.customerHistory.filter(h => 
+                        !(h.customer === data.customer && h.address === data.address)
+                    );
+
+                    this.customerHistory.push(data);
+                    this.customerHistory.sort((a, b) => b.timestamp - a.timestamp);
+                    this.customerHistory = this.customerHistory.slice(0, 50);
+                },
 
                 // --- Funzioni Ordini Attivi ---
-                // ... (getNextStatus, advance, archiveOrder, editOrder, cancelEdit, updateActiveOrderDriver, duplicateOrder restano invariati) ...
+                getNextStatus(currentStatus) {
+                    switch (currentStatus) {
+                        case 'Preparazione': return 'In Cottura';
+                        case 'In Cottura': return 'Pronto/In Consegna';
+                        case 'Pronto/In Consegna': return 'Archivia Ordine';
+                        default: return 'Archivia Ordine';
+                    }
+                },
+                advance(order) {
+                    let nextStatus;
+                    switch (order.status) {
+                        case 'Preparazione':
+                            nextStatus = 'In Cottura';
+                            break;
+                        case 'In Cottura':
+                            nextStatus = 'Pronto/In Consegna';
+                            break;
+                        case 'Pronto/In Consegna':
+                            this.archiveOrder(order);
+                            return; 
+                        default:
+                            this.archiveOrder(order);
+                            return;
+                    }
+                    
+                    order.status = nextStatus;
+                    this.saveData();
+                },
+                archiveOrder(order) {
+                    const index = this.activeOrders.findIndex(o => o.id === order.id);
+                    if (index !== -1) {
+                        this.activeOrders.splice(index, 1);
+                        
+                        const archivedOrder = JSON.parse(JSON.stringify(order));
+                        archivedOrder.archiveDate = new Date().toISOString(); 
+                        this.archive.push(archivedOrder);
+                        
+                        this.saveData();
+                        alert(`Ordine #${order.id} archiviato con successo.`);
+                        this.updateCapacityWarning(); 
+                    }
+                },
+                editOrder(orderId) {
+                    const orderToEdit = this.activeOrders.find(o => o.id === orderId);
+                    if (orderToEdit) {
+                        this.order = JSON.parse(JSON.stringify(orderToEdit.items)); 
+                        this.view = 'inserimento';
+                        this.openModal(orderToEdit); 
+                    }
+                },
+                cancelEdit() {
+                    this.order = [];
+                    this.selectedItemIndex = null;
+                    this.editingOrderId = null;
+                    this.showModal = false;
+                    this.updateCapacityWarning();
+                    alert("Modifica annullata. Carrello resettato.");
+                },
+                updateActiveOrderDriver(orderId, driverName) {
+                    const order = this.activeOrders.find(o => o.id === orderId);
+                    if (order) {
+                        order.driver = driverName;
+                        this.saveData();
+                        alert(`Fattorino per Ordine #${orderId} assegnato a ${driverName || 'Nessuno'}.`);
+                    }
+                },
+                duplicateOrder(order) {
+                    const duplicatedOrder = JSON.parse(JSON.stringify(order));
+                    
+                    duplicatedOrder.id = ++this.lastOrderId;
+                    duplicatedOrder.status = 'Preparazione';
+                    duplicatedOrder.timestamp = new Date().toISOString();
+                    duplicatedOrder.driver = '';
+                    
+                    this.order = duplicatedOrder.items;
+                    this.selectedItemIndex = null;
+                    this.view = 'inserimento';
+                    
+                    const now = new Date();
+                    const formattedDate = now.toISOString().slice(0, 10);
+                    const formattedHour = now.toTimeString().slice(0, 5);
+                    duplicatedOrder.date = formattedDate;
+                    duplicatedOrder.hour = formattedHour;
+                    
+                    this.openModal(duplicatedOrder);
+                    alert(`Ordine #${order.id} duplicato nel carrello. Conferma l'inserimento.`);
+                },
 
-                // --- Avvisi Temporali e Capacità (MIGLIORAMENTO LOGICA PONDERATA) ---
-                // ... (isFutureOrder, isNear, isUrgent restano invariati) ...
+                // --- Avvisi Temporali e Capacità (Logica Smart) ---
+                isFutureOrder(order) {
+                    const orderTime = new Date(`${order.date}T${order.hour}`);
+                    const now = new Date();
+                    return orderTime.getTime() > now.getTime() + (60 * 60 * 1000); 
+                },
+                isNear(order) {
+                    if (order.status === 'Pronto/In Consegna') {
+                        const orderTime = new Date(`${order.date}T${order.hour}`);
+                        const now = new Date();
+                        const diffMinutes = (orderTime.getTime() - now.getTime()) / (60 * 1000);
+                        return diffMinutes > 5 && diffMinutes <= 15;
+                    }
+                    return false;
+                },
+                isUrgent(order) {
+                    if (order.status === 'Pronto/In Consegna') {
+                        const orderTime = new Date(`${order.date}T${order.hour}`);
+                        const now = new Date();
+                        const diffMinutes = (orderTime.getTime() - now.getTime()) / (60 * 1000);
+                        return diffMinutes <= 5 && diffMinutes > 0;
+                    }
+                    return false;
+                },
                 
                 calculateOrderWeightedPizzas(items) {
                     let totalPizzas = 0;
@@ -1551,14 +1882,13 @@
                         if (category === 'Pizza Classica' || category === 'Pizze Speciali') {
                             itemPizzaCount += 1;
                         } else if (item.isMeter && item.nome === 'Mezzo Metro') {
-                            itemPizzaCount += 4; // 4 porzioni
+                            itemPizzaCount += 4; 
                         } else if (item.isHalfPizza) {
-                            itemPizzaCount += 1; // 1 pizza
+                            itemPizzaCount += 1; 
                         } else if (item.isMeter && item.nome === 'Schiacciata Grande') {
-                            itemPizzaCount += 2; // 2 porzioni
+                            itemPizzaCount += 2; 
                         }
 
-                        // Calcola modificatori a pagamento (ponderazione extra)
                         if (item.modifiers) {
                             modCount += item.modifiers.filter(m => m.prezzo > 0).length;
                         } 
@@ -1570,7 +1900,7 @@
                             item.sections.forEach(s => modCount += s.modifiers.filter(m => m.prezzo > 0).length);
                         }
 
-                        // Aggiunge la ponderazione: 0.25 unità di carico per ogni modificatore a pagamento
+                        // Ponderazione Smart: 0.25 unità di carico per ogni modificatore a pagamento
                         totalPizzas += itemPizzaCount + (modCount * 0.25);
                     });
                     return totalPizzas;
@@ -1588,7 +1918,6 @@
                     const slotMinutes = this.capacitySettings.intervalMinutes;
                     const maxPizzas = this.capacitySettings.maxPizzas;
 
-                    // Calcola l'inizio del blocco temporale
                     const tempDate = new Date(targetDateTime);
                     const minutes = tempDate.getMinutes();
                     const startMinutes = Math.floor(minutes / slotMinutes) * slotMinutes;
@@ -1596,10 +1925,8 @@
                     const intervalStart = tempDate.getTime();
                     const intervalEnd = intervalStart + (slotMinutes * 60 * 1000);
 
-                    // Calcolo pizze ponderate per l'ordine corrente
                     const currentOrderWeightedPizzas = this.calculateOrderWeightedPizzas(this.order);
 
-                    // Ordini attivi che cadono in questo slot
                     let totalWeightedPizzasInSlot = 0;
                     this.activeOrders.forEach(o => {
                         if (o.id === this.editingOrderId) return; 
@@ -1616,7 +1943,6 @@
                     this.orderCapacity.interval = intervalStart;
                     this.orderCapacity.total = totalWeightedPizzasInSlot;
                     this.orderCapacity.remaining = maxPizzas - totalWeightedPizzasInSlot;
-                    // Avviso all'80% di capacità
                     this.orderCapacity.warning = totalWeightedPizzasInSlot >= maxPizzas * 0.8; 
                 },
 
@@ -1633,16 +1959,458 @@
                 },
 
                 // --- Stampa e Condivisione ---
-                // ... (printOrder, generateComandaHTML, generateScontrinoHTML, printContent restano simili) ...
-                
+                printOrder(orderId, type) {
+                    const order = this.activeOrders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId);
+                    if (!order) return;
+
+                    const printComanda = document.getElementById('print-content-comanda');
+                    const printScontrino = document.getElementById('print-content-scontrino');
+                    
+                    printComanda.innerHTML = '';
+                    printScontrino.innerHTML = '';
+
+                    if (type === 'comanda') {
+                        printComanda.innerHTML = this.generateComandaHTML(order);
+                        this.printContent('comanda');
+                    } else if (type === 'scontrino') {
+                        printScontrino.innerHTML = this.generateScontrinoHTML(order);
+                        this.printContent('scontrino');
+                    }
+                },
+                generateComandaHTML(order) {
+                    let itemsHtml = order.items.map(item => {
+                        let modsHtml = '';
+                        
+                        if (item.isHalfPizza) {
+                            modsHtml = `
+                                <ul class="mod-list">
+                                    <li>Metà 1: ${item.gusto1} - ${item.modifiers1.map(m => m.nome).join(', ')}</li>
+                                    <li>Metà 2: ${item.gusto2} - ${item.modifiers2.map(m => m.nome).join(', ')}</li>
+                                </ul>
+                            `;
+                        } else if (item.isMeter) {
+                            modsHtml = `
+                                <ul class="mod-list">
+                                    ${item.sections.map(s => `<li>${s.name}: ${s.gusto} - ${s.modifiers.map(m => m.nome).join(', ')}</li>`).join('')}
+                                </ul>
+                            `;
+                        } else if (item.modifiers && item.modifiers.length > 0) {
+                            modsHtml = `<ul class="mod-list">${item.modifiers.map(mod => `<li>${mod.icon} ${mod.nome}</li>`).join('')}</ul>`;
+                        }
+                        
+                        return `<li><span class="item-name">1x ${item.nome}</span>${modsHtml}</li>`;
+                    }).join('');
+                    
+                    let addressHtml = '';
+                    if (order.mode === 'consegna') {
+                        addressHtml = `
+                            <p style="margin: 5px 0 0;"><strong>Indirizzo:</strong> ${order.address} ${order.streetNumber}, ${order.zone}</p>
+                            <p style="margin: 0;"><strong>Tel:</strong> ${order.phone}</p>
+                        `;
+                    }
+                    
+                    let noteHtml = order.notes ? `<p class="note">NOTE: ${order.notes}</p>` : '';
+                    let driverHtml = order.driver ? `<p style="margin-top: 5px;"><strong>Fattorino:</strong> ${order.driver}</p>` : '';
+
+                    return `
+                        <div style="text-align: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 5px;">
+                            <h1>COMANDA PIZZERIA SMART</h1>
+                            <p style="margin: 0; font-size: 10pt;"><strong>N°:</strong> ${order.id} | <strong>Tipo:</strong> ${order.mode.toUpperCase()}</p>
+                            <p style="margin: 0; font-size: 10pt;"><strong>Orario:</strong> ${order.hour} | <strong>Data:</strong> ${this.formatDate(order.date)}</p>
+                            <p style="margin: 0; font-size: 10pt;"><strong>Cliente:</strong> ${order.customer} ${order.tableNumber ? `(${order.tableNumber})` : ''}</p>
+                            ${addressHtml}
+                        </div>
+                        <h2>ARTICOLI</h2>
+                        <ul>${itemsHtml}</ul>
+                        ${noteHtml}
+                        ${driverHtml}
+                        <p style="margin-top: 15px; font-weight: bold; text-align: center;">TOTALE: €${order.total.toFixed(2)}</p>
+                    `;
+                },
+                generateScontrinoHTML(order) {
+                    let itemsHtml = order.items.map(item => {
+                        const displayPrice = this.calculateItemTotal(item);
+                        
+                        let itemName = `1x ${item.nome}`;
+                        if (item.isHalfPizza) {
+                            itemName += ` (${item.gusto1}/${item.gusto2})`;
+                        }
+                        
+                        let modsList = '';
+                        if (item.isHalfPizza) {
+                            // La logica di scontrino per le composizioni può essere semplificata o dettagliata in base alle necessità fiscali.
+                        } else if (item.isMeter) {
+                            
+                        } else if (item.modifiers && item.modifiers.length > 0) {
+                            modsList = item.modifiers.filter(m => m.prezzo > 0)
+                                .map(m => `<br>   +${m.nome} (+€${m.prezzo.toFixed(2)})`)
+                                .join('');
+                        }
+
+                        return `
+                            <tr>
+                                <td>${itemName}${modsList}</td>
+                                <td style="text-align: right;">€${displayPrice.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    let addressHtml = order.mode === 'consegna' ? 
+                        `<tr><td colspan="2">Consegna: ${order.address} ${order.streetNumber}</td></tr>` : 
+                        `<tr><td colspan="2">Modalità: ${order.mode.toUpperCase()} ${order.tableNumber ? `(${order.tableNumber})` : ''}</td></tr>`;
+                    
+                    let accontoHtml = '';
+                    if (order.accontoRicevuto > 0) {
+                        accontoHtml = `
+                            <tr class="total-row"><td>ACCONTO RICEVUTO</td><td style="text-align: right;">-€${order.accontoRicevuto.toFixed(2)}</td></tr>
+                            <tr class="total-row"><td>DA SALDARE</td><td style="text-align: right;">€${(order.total - order.accontoRicevuto).toFixed(2)}</td></tr>
+                        `;
+                        if (order.accontoRicevuto > order.total) {
+                            accontoHtml += `<tr class="total-row"><td>RESTO DA DARE</td><td style="text-align: right;">€${(order.accontoRicevuto - order.total).toFixed(2)}</td></tr>`;
+                        }
+                    }
+
+                    return `
+                        <div style="text-align: center; border-bottom: 1px dashed #000; margin-bottom: 5px; padding-bottom: 5px;">
+                            <h1>PIZZERIA SMART</h1>
+                            <p style="margin: 0; font-size: 8pt;">Indirizzo Pizzeria - P.IVA XXXXXX</p>
+                        </div>
+                        <table>
+                            <tr><td colspan="2">N. Ordine: ${order.id} | ${this.formatDateTime(order.timestamp)}</td></tr>
+                            <tr><td colspan="2">Cliente: ${order.customer}</td></tr>
+                            ${addressHtml}
+                            ${order.mode === 'consegna' ? `<tr><td colspan="2">Costo Consegna: €${order.deliveryCost.toFixed(2)} (${order.zone})</td></tr>` : ''}
+                        </table>
+                        <table style="margin-top: 5px; border-top: 1px dashed #000; padding-top: 5px;">
+                            ${itemsHtml}
+                        </table>
+                        <table>
+                            <tr class="total-row">
+                                <td>TOTALE ORDINE</td>
+                                <td style="text-align: right;">€${order.total.toFixed(2)}</td>
+                            </tr>
+                            ${accontoHtml}
+                        </table>
+                        <p style="text-align: center; margin-top: 10px; font-size: 8pt;">Grazie e Arrivederci!</p>
+                    `;
+                },
+                printContent(contentId) {
+                    const printContents = document.getElementById(`print-content-${contentId}`).outerHTML;
+                    
+                    const printWindow = window.open('', '_blank', 'height=600,width=400');
+                    printWindow.document.write('<html><head><title>Stampa</title>');
+                    // Copia gli stili essenziali per la stampa
+                    printWindow.document.write('<style>@media print { body > *:not(.print-container) { display: none; } .print-container { display: block; max-width: 100%; font-size: 11pt; } .print-comanda { font-family: monospace; font-size: 12pt; line-height: 1.4; padding: 10px; } .print-comanda h1 { font-size: 16pt; text-align: center; margin: 0 0 10px 0; } .print-comanda h2 { font-size: 14pt; border-bottom: 1px solid #000; padding-bottom: 5px; margin: 10px 0; } .print-comanda ul { list-style: none; padding: 0; margin: 0 0 10px 0; } .print-comanda ul li { border-bottom: 1px dotted #888; padding: 4px 0; } .print-comanda .item-name { font-weight: bold; font-size: 13pt; } .print-comanda .mod-list { font-size: 11pt; margin-top: 2px; padding-left: 10px; } .print-comanda .mod-list li { border: none; } .print-comanda .note { color: #b91c1c; margin-top: 8px; font-weight: bold; } .print-scontrino { font-family: monospace; font-size: 10pt; line-height: 1.3; width: 80mm; margin: 0 auto; } .print-scontrino h1 { font-size: 12pt; text-align: center; margin: 0 0 5px 0; } .print-scontrino table { width: 100%; border-collapse: collapse; margin-bottom: 5px; } .print-scontrino th, .print-scontrino td { text-align: left; padding: 2px 0; } .print-scontrino .total-row { font-size: 11pt; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; } </style>');
+                    printWindow.document.write('</head><body>');
+                    printWindow.document.write(printContents);
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
+                    printWindow.print();
+                },
+                showShareMenu(orderId) {
+                    this.selectedOrderForShare = this.activeOrders.find(o => o.id === orderId);
+                    if (this.selectedOrderForShare) {
+                        this.showShareModal = true;
+                    }
+                },
+                shareViaWhatsapp(order) {
+                    let message = `*Riepilogo Ordine Pizzeria Smart*\n\n`;
+                    message += `*#${order.id}* - ${order.mode.toUpperCase()}\n`;
+                    message += `*Cliente:* ${order.customer}\n`;
+                    message += `*Orario Ritiro/Consegna:* ${this.formatDateTime(order.date + 'T' + order.hour)}\n`;
+
+                    if (order.mode === 'consegna') {
+                        message += `*Indirizzo:* ${order.address} ${order.streetNumber}, ${order.zone}\n`;
+                    } else if (order.tableNumber) {
+                        message += `*Riferimento:* ${order.tableNumber}\n`;
+                    }
+                    if (order.phone) {
+                        message += `*Tel:* ${order.phone}\n`;
+                    }
+                    if (order.notes) {
+                        message += `*Note:* ${order.notes}\n`;
+                    }
+
+                    message += `\n*Articoli:*\n`;
+                    order.items.forEach(item => {
+                        let itemLine = `1x ${item.nome}`;
+                        if (item.isHalfPizza) {
+                            itemLine += ` (${item.gusto1}/${item.gusto2})`;
+                        } else if (item.isMeter) {
+                            itemLine += ` (${item.sections.map(s => s.gusto).join(' / ')})`;
+                        }
+                        
+                        let mods = [];
+                        if (item.isHalfPizza) {
+                             mods = [...item.modifiers1, ...item.modifiers2];
+                        } else if (item.isMeter) {
+                             item.sections.forEach(s => mods.push(...s.modifiers));
+                        } else if (item.modifiers) {
+                            mods = item.modifiers;
+                        }
+
+                        if (mods.length > 0) {
+                            const modNames = mods.map(m => {
+                                return `${m.icon}${m.nome}`; // Uso direttamente l'icona salvata
+                            }).join(', ');
+                            itemLine += ` [${modNames}]`;
+                        }
+                        message += `- ${itemLine}\n`;
+                    });
+
+                    message += `\n*TOTALE: €${order.total.toFixed(2)}*`;
+
+                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                    window.open(whatsappUrl, '_blank');
+                    this.showShareModal = false;
+                },
+
                 // --- Funzioni Storico/Archivio ---
-                // ... (calculateDriverStats, updateArchiveDriver restano invariati) ...
+                calculateDriverStats() {
+                    const filteredOrders = this.archive.filter(o => o.date === this.archiveDateFilter);
+                    
+                    this.driverStats.totalOrders = 0;
+                    this.driverStats.totalRevenue = 0;
+
+                    const ordersToCount = this.selectedDriver 
+                        ? filteredOrders.filter(o => o.driver === this.selectedDriver) 
+                        : filteredOrders;
+
+                    ordersToCount.forEach(o => {
+                        this.driverStats.totalOrders++;
+                        this.driverStats.totalRevenue += o.total;
+                    });
+                },
+                updateArchiveDriver(orderId, driverName) {
+                    const order = this.archive.find(o => o.id === orderId);
+                    if (order) {
+                        order.driver = driverName;
+                        this.saveData();
+                        this.calculateDriverStats(); 
+                        alert(`Fattorino per Ordine Archiviato #${orderId} assegnato a ${driverName || 'Nessuno'}.`);
+                    }
+                },
 
                 // --- Funzioni Impostazioni/Gestione Dati ---
-                // ... (Tutte le funzioni di gestione Menu, Modificatori, Zone, Fattorini restano invariate, ma chiamano saveData() ) ...
+                addItemToCategory() {
+                    if (this.newItemName && this.activeSettingsCat) {
+                        const newItem = {
+                            nome: this.newItemName,
+                            prezzo: parseFloat(this.newItemPrice || 0),
+                            isFinished: false
+                        };
+                        this.menu[this.activeSettingsCat].push(newItem);
+                        this.newItemName = '';
+                        this.newItemPrice = 0;
+                        this.saveData();
+                        alert(`Articolo "${newItem.nome}" aggiunto a ${this.activeSettingsCat}.`);
+                    }
+                },
+                deleteItem(category, index) {
+                    if (confirm(`Sei sicuro di voler eliminare "${this.menu[category][index].nome}" da ${category}?`)) {
+                        this.menu[category].splice(index, 1);
+                        this.saveData();
+                        alert('Articolo eliminato.');
+                    }
+                },
+                toggleItemFinished(category, index) {
+                    const item = this.menu[category][index];
+                    item.isFinished = !item.isFinished;
+                    this.saveData();
+                    alert(`${item.nome} è ora ${item.isFinished ? 'ESAURITO' : 'DISPONIBILE'}.`);
+                },
+                addCategory() {
+                    if (this.newCategoryName && !this.menu[this.newCategoryName]) {
+                        this.menu[this.newCategoryName] = [];
+                        this.activeSettingsCat = this.newCategoryName;
+                        this.newCategoryName = '';
+                        this.saveData();
+                        alert(`Categoria "${this.activeSettingsCat}" aggiunta.`);
+                    } else if (this.newCategoryName) {
+                        alert('Categoria già esistente.');
+                    }
+                },
+                deleteCategory(category) {
+                    if (Object.keys(this.menu).length <= 1) {
+                        alert('Non puoi eliminare l\'unica categoria rimasta.');
+                        return;
+                    }
+                    if (confirm(`Sei sicuro di voler eliminare la categoria "${category}" e tutti i suoi articoli?`)) {
+                        delete this.menu[category];
+                        this.activeSettingsCat = Object.keys(this.menu)[0]; 
+                        this.saveData();
+                        alert('Categoria eliminata.');
+                    }
+                },
                 
-                // --- Import/Export ---
-                // ... (exportData, importData, clearCache restano invariati) ...
+                // Modificatori
+                addModifierToCategory() {
+                    if (this.newModifierName && this.activeSettingsModCat) {
+                        const newMod = {
+                            nome: this.newModifierName,
+                            prezzo: parseFloat(this.newModifierPrice || 0),
+                            isFinished: false
+                        };
+                        this.modifiers[this.activeSettingsModCat].push(newMod);
+                        this.newModifierName = '';
+                        this.newModifierPrice = 0;
+                        this.saveData();
+                        alert(`Modificatore "${newMod.nome}" aggiunto a ${this.activeSettingsModCat}.`);
+                    }
+                },
+                deleteModifier(category, index) {
+                    if (confirm(`Sei sicuro di voler eliminare il modificatore "${this.modifiers[category][index].nome}"?`)) {
+                        this.modifiers[category].splice(index, 1);
+                        this.saveData();
+                        alert('Modificatore eliminato.');
+                    }
+                },
+                toggleModifierFinished(category, index) {
+                    const mod = this.modifiers[category][index];
+                    mod.isFinished = !mod.isFinished;
+                    this.saveData();
+                    alert(`Modificatore ${mod.nome} è ora ${mod.isFinished ? 'ESAURITO' : 'DISPONIBILE'}.`);
+                },
+                addModifierCategory() {
+                    if (this.newModifierCategoryName && !this.modifiers[this.newModifierCategoryName]) {
+                        this.modifiers[this.newModifierCategoryName] = [];
+                        this.activeSettingsModCat = this.newModifierCategoryName;
+                        this.newModifierCategoryName = '';
+                        this.saveData();
+                        alert(`Categoria modificatori "${this.activeSettingsModCat}" aggiunta.`);
+                    } else if (this.newModifierCategoryName) {
+                        alert('Categoria modificatori già esistente.');
+                    }
+                },
+                deleteModifierCategory(category) {
+                    if (this.isDefaultModifierCategory(category)) {
+                        alert('Non è possibile eliminare le categorie modificatori predefinite (Più, Senza, Poco, Abbondante).');
+                        return;
+                    }
+                    if (Object.keys(this.modifiers).length <= 4) {
+                        alert('Non puoi eliminare la categoria. Devi mantenere almeno le categorie predefinite.');
+                        return;
+                    }
+                    if (confirm(`Sei sicuro di voler eliminare la categoria modificatori "${category}" e tutti i suoi elementi?`)) {
+                        delete this.modifiers[category];
+                        this.activeSettingsModCat = Object.keys(this.modifiers).find(c => !this.isDefaultModifierCategory(c)) || 'Più';
+                        this.saveData();
+                        alert('Categoria modificatori eliminata.');
+                    }
+                },
+                isDefaultModifierCategory(category) {
+                    return ['Più', 'Senza', 'Poco', 'Abbondante'].includes(category);
+                },
+
+                // Zone di Consegna
+                addZone() {
+                    if (this.newZoneName) {
+                        const existing = this.deliveryZones.find(z => z.name.toLowerCase() === this.newZoneName.toLowerCase());
+                        if (existing) {
+                            alert('Zona già esistente.');
+                            return;
+                        }
+                        this.deliveryZones.push({
+                            name: this.newZoneName,
+                            price: parseFloat(this.newZonePrice || 0)
+                        });
+                        this.newZoneName = '';
+                        this.newZonePrice = 0;
+                        this.saveData();
+                        alert('Zona di consegna aggiunta.');
+                    }
+                },
+                deleteZone(index) {
+                    if (confirm(`Sei sicuro di voler eliminare la zona di consegna "${this.deliveryZones[index].name}"?`)) {
+                        this.deliveryZones.splice(index, 1);
+                        this.saveData();
+                        alert('Zona di consegna eliminata.');
+                    }
+                },
+
+                // Fattorini
+                addDriver() {
+                    if (this.newDriverName && !this.drivers.includes(this.newDriverName)) {
+                        this.drivers.push(this.newDriverName);
+                        this.newDriverName = '';
+                        this.saveData();
+                        alert('Fattorino aggiunto.');
+                    } else if (this.newDriverName) {
+                        alert('Fattorino già presente.');
+                    }
+                },
+                deleteDriver(index) {
+                    if (confirm(`Sei sicuro di voler eliminare il fattorino "${this.drivers[index]}"?`)) {
+                        this.drivers.splice(index, 1);
+                        this.saveData();
+                        alert('Fattorino eliminato.');
+                    }
+                },
+
+                // Import/Export
+                exportData() {
+                    const data = localStorage.getItem('pizzeriaSmartData');
+                    if (!data) {
+                        alert('Nessun dato da esportare.');
+                        return;
+                    }
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `pizzeria_smart_data_${new Date().toISOString().slice(0, 10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    alert('Dati esportati con successo!');
+                },
+                importData() {
+                    if (!confirm('ATTENZIONE: L\'importazione sovrascriverà tutti i dati correnti (Menu, Ordini, Storico, PIN). Continuare?')) {
+                        return;
+                    }
+
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'application/json';
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const importedData = JSON.parse(event.target.result);
+                                
+                                Object.assign(this.$data, this.$options.data.call(this)); 
+                                
+                                Object.assign(this, importedData);
+                                
+                                this.archiveDateFilter = new Date().toISOString().slice(0, 10);
+                                this.ensureItemStatus(); 
+                                this.isAccessGranted = false; 
+                                this.userRole = '';
+
+                                localStorage.setItem('pizzeriaSmartData', event.target.result);
+                                alert('Dati importati e sovrascritti con successo! Effettua nuovamente l\'accesso.');
+                            } catch (error) {
+                                console.error('Errore durante l\'importazione del file:', error);
+                                alert('Errore: Il file non è un JSON valido o non è compatibile.');
+                            }
+                        };
+                        reader.readAsText(file);
+                    };
+                    input.click();
+                },
+                clearCache() {
+                    if (confirm('Sei sicuro di voler eliminare tutti gli Ordini Attivi e lo Storico? Menu, Clienti e PIN saranno conservati.')) {
+                        this.activeOrders = [];
+                        this.archive = [];
+                        this.lastOrderId = this.activeOrders.length + this.archive.length; 
+                        this.saveData();
+                        alert('Cache ordini e storico pulita.');
+                    }
+                },
 
                 // --- Utilità ---
                 formatDate(dateString) {
@@ -1659,13 +2427,10 @@
                 this.loadData();
                 this.updateCapacityWarning(); 
                 
-                // Inizializza Debounce per la ricerca clienti
+                // Inizializza Debounce per la ricerca clienti e gusti
                 this.debouncedFilterCustomers = this.debounce(this.filterCustomers, 300);
-                
-                // Inizializza Debounce per la ricerca gusti
                 this.debouncedGustoSearch = this.debounce((e) => { this.gustoSearchTerm = e.target.value; }, 300);
 
-                // Aggiorna la capacità ogni 60 secondi per gli ordini in tempo reale e gli avvisi
                 setInterval(() => {
                     if (this.view === 'ordini' || this.showModal) {
                         this.updateCapacityWarning(); 
