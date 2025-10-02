@@ -123,7 +123,7 @@
         .btn-print-order { background-color: #2196f3; color: white; }
         .btn-share { background-color: #4caf50; color: white; }
         .order-status { padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
-        .status-Preparazione { background-color: #ffeb3b; color: #333; }
+        .status-InPreparazione { background-color: #ffeb3b; color: #333; }
         .status-InCottura { background-color: #ff9800; color: white; }
         .status-ProntoInConsegna { background-color: #4caf50; color: white; }
         
@@ -869,67 +869,85 @@
                     isAccessGranted: false,
                     userRole: null, // 'Operatore', 'Admin', 'Titolare'
                     view: 'inserimento', // 'inserimento', 'ordini', 'storico', 'impostazioni'
-
-                    // --- Dati Menu e Modificatori ---
+                    
+                    // SEGUE LA SECONDA PARTE
+                    // SEGUE LA SECONDA PARTE
+                    // --- Dati Dinamici e Configurazioni ---
                     menu: {
                         'Pizze Classiche': [
-                            { nome: 'Margherita', prezzo: 6.00, isFinished: false },
-                            { nome: 'Marinara', prezzo: 5.00, isFinished: false },
+                            { nome: 'Margherita', prezzo: 6.50, isFinished: false },
+                            { nome: 'Marinara', prezzo: 6.00, isFinished: false },
                             { nome: 'Diavola', prezzo: 7.50, isFinished: false },
+                            { nome: 'Capricciosa', prezzo: 8.50, isFinished: false },
+                            { nome: 'Vegetariana', prezzo: 8.00, isFinished: false },
                         ],
                         'Pizze Speciali': [
-                            { nome: 'Capricciosa', prezzo: 8.50, isFinished: false },
-                            { nome: 'Quattro Stagioni', prezzo: 8.50, isFinished: false },
-                            { nome: 'Bufalina', prezzo: 10.00, isFinished: false },
-                        ],
-                        'Composizioni': [
-                            // Pizza a Metà (Sempre dimensione media, prezzo è la media dei due gusti)
-                            { nome: 'Pizza a Metà', prezzo: 0.00, isFinished: false, isHalfPizza: true, baseSize: 'Media' },
-                            // Schiacciata Grande (Può avere 1, 2 o 3 gusti)
-                            { nome: 'Schiacciata Grande', prezzo: 12.00, isFinished: false, isMeter: true },
-                            // Mezzo Metro (Può avere 1, 2, 3 o 4 gusti)
-                            { nome: 'Mezzo Metro', prezzo: 18.00, isFinished: false, isMeter: true },
+                            { nome: 'Gourmet', prezzo: 12.00, isFinished: false },
+                            { nome: 'Boscaiola', prezzo: 9.50, isFinished: false },
                         ],
                         'Bevande': [
-                            { nome: 'Acqua Nat. 1L', prezzo: 2.00, isFinished: false },
+                            { nome: 'Acqua Nat./Gas. 1L', prezzo: 2.00, isFinished: false },
                             { nome: 'Coca Cola 1.5L', prezzo: 3.50, isFinished: false },
-                            { nome: 'Birra 66cl', prezzo: 3.00, isFinished: false },
+                            { nome: 'Birra Artigianale', prezzo: 5.00, isFinished: false },
                         ],
+                        'Fritti': [
+                            { nome: 'Patatine Fritte', prezzo: 3.50, isFinished: false },
+                            { nome: 'Crocchette', prezzo: 4.00, isFinished: false },
+                        ],
+                        'Composizioni': [
+                            { nome: 'Mezzo Metro', prezzo: 18.00, isMeter: true, isFinished: false },
+                            { nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, isFinished: false },
+                            { nome: 'Pizza a Metà', prezzo: 0.00, isHalfPizza: true, isFinished: false }, // Prezzo calcolato
+                        ]
                     },
                     modifiers: {
                         'Aggiunte': [
-                            { nome: 'Mozzarella di Bufala', prezzo: 2.00, isFinished: false },
-                            { nome: 'Prosciutto Cotto', prezzo: 1.50, isFinished: false },
-                            { nome: 'Patatine Fritte', prezzo: 2.50, isFinished: false },
+                            { nome: 'Wurstel', prezzo: 1.00, isFinished: false },
+                            { nome: 'Funghi', prezzo: 0.50, isFinished: false },
+                            { nome: 'Mozzarella Bufala', prezzo: 2.50, isFinished: false },
+                            { nome: 'Salsiccia', prezzo: 1.50, isFinished: false },
+                        ],
+                        'Rimozioni': [
+                            { nome: 'Senza Mozzarella', prezzo: 0.00, isFinished: false },
+                            { nome: 'Senza Aglio', prezzo: 0.00, isFinished: false },
                         ],
                         'Impasto': [
                             { nome: 'Impasto Integrale', prezzo: 1.00, isFinished: false },
-                            { nome: 'Senza Glutine', prezzo: 3.00, isFinished: false },
-                        ],
-                        'Rimozioni': [
-                            { nome: 'Senza Pomodoro', prezzo: 0.00, isFinished: false },
-                            { nome: 'Senza Mozzarella', prezzo: 0.00, isFinished: false },
+                            { nome: 'Impasto Senza Glutine', prezzo: 3.00, isFinished: false },
                         ],
                     },
-                    
-                    // --- Stato Modificatori e Ricerca ---
-                    activeCat: 'Pizze Classiche',
-                    activeModCat: 'Aggiunte',
-                    searchTerm: '',
-                    modifierSearchTerm: '',
-                    lastSelectedItem: null,
+                    deliveryZones: [
+                        { name: 'Zona A', price: 2.00 },
+                        { name: 'Zona B', price: 3.50 },
+                        { name: 'Centro Storico', price: 5.00 },
+                    ],
+                    drivers: ['Mario', 'Luigi', 'Yoshi'], // Tutti i fattorini registrati
+                    availableDrivers: ['Non Assegnato', 'Mario', 'Luigi', 'Yoshi'], // Fattorini disponibili per ordini attivi
+                    capacitySettings: {
+                        maxPizzas: 40,
+                        intervalMinutes: 30,
+                    },
 
-                    // --- Dati Ordine Corrente ---
-                    order: [],
-                    selectedItemIndex: null,
+                    // --- Stato Interfaccia ---
+                    activeCat: 'Pizze Classiche',
+                    searchTerm: '',
+                    
+                    activeModCat: 'Aggiunte',
+                    modifierSearchTerm: '',
+                    
+                    selectedItemIndex: null, // Indice dell'articolo selezionato nel carrello
+                    lastSelectedItem: null, // Riferimento all'ultima Card cliccata nel menu
+                    
+                    // --- Carrello Ordine ---
+                    order: [], // Array di articoli nel carrello
                     
                     // --- Modale Finalizzazione Ordine ---
                     showModal: false,
-                    editingOrderId: null, // ID dell'ordine che stiamo modificando (se != null)
+                    editingOrderId: null, // ID dell'ordine in modifica (se != null)
                     modes: [
-                        { id: 'banco', label: 'Banco', icon: 'fa-solid fa-store' },
+                        { id: 'banco', label: 'Al Banco', icon: 'fa-solid fa-store' },
                         { id: 'asporto', label: 'Asporto', icon: 'fa-solid fa-bag-shopping' },
-                        { id: 'consegna', label: 'Consegna', icon: 'fa-solid fa-truck' },
+                        { id: 'consegna', label: 'Consegna', icon: 'fa-solid fa-motorcycle' },
                     ],
                     mode: 'banco',
                     customer: '',
@@ -938,86 +956,58 @@
                     zoneName: '',
                     tableNumber: '',
                     date: new Date().toISOString().split('T')[0],
-                    hour: this.getCurrentHourPlus15Min(),
+                    hour: '', // Popolato in mounted
                     notes: '',
                     accontoRicevuto: 0.00,
                     deliveryCost: 0.00,
+                    customerHistory: [
+                        { customer: 'Mario Rossi', address: 'Via Roma, 10', zone: 'Zona A', streetNumber: '10' },
+                        { customer: 'Laura Bianchi', address: 'Via Milano, 55', zone: 'Centro Storico', streetNumber: '55' },
+                    ],
+                    isCapacityWarning: false,
+                    orderCapacity: { interval: null, total: 0 },
                     
-                    // --- Composizioni Complesse Modali ---
+                    // --- Modali Composizioni ---
                     showMeterModal: false,
-                    tempMeterItem: {
-                        nome: '',
-                        prezzoBase: 0,
-                        isMeter: false,
-                        sections: [], // { name: 'Section 1', gusto: 'Margherita', modifiers: [], activeSection: true }
-                        selectedGustiCount: 0, // Aggiunto per gestire il primo step del modale
-                    },
+                    tempMeterItem: {}, // Dati temporanei per Mezzo Metro/Schiacciata
                     showHalfPizzaModal: false,
-                    tempHalfPizzaItem: {
-                        nome: 'Pizza a Metà',
-                        prezzoBase: 0,
-                        isHalfPizza: true,
-                        gusto1: null,
-                        gusto2: null,
-                        modifiers1: [],
-                        modifiers2: [],
-                        activeHalf: 1,
-                        size: 'Media',
-                        editingGusto: false,
-                    },
+                    tempHalfPizzaItem: {}, // Dati temporanei per Pizza a Metà
                     gustoSearchTerm: '',
-                    tempModCat: 'Aggiunte', // categoria modificatori nel modale composizioni
+                    tempModCat: 'Aggiunte', // Categoria modificatori temporanea nei modali composizioni
                     
                     // --- Modale Prezzo Man. ---
                     showPriceEditModal: false,
                     tempPriceEditIndex: null,
                     newPriceValue: 0,
                     
-                    // --- Ordini Attivi/Storico ---
+                    // --- Modale Condivisione ---
+                    showShareModal: false,
+                    selectedOrderForShare: null,
+
+                    // --- Ordini Attivi e Storico ---
                     activeOrders: [
-                         { id: 1, timestamp: new Date().toISOString(), mode: 'consegna', customer: 'Mario Rossi', address: 'Via Roma 10, 55', zone: 'Centro', date: new Date().toISOString().split('T')[0], hour: '20:00', items: [{ nome: 'Margherita', prezzo: 6.00, basePrice: 6.00, modifiers: [] }], total: 8.00, deliveryCost: 2.00, notes: 'Citofonare rosso', status: 'In Preparazione', driver: 'Mario Rossi' },
-                         { id: 2, timestamp: new Date().toISOString(), mode: 'banco', customer: 'Tavolo 5', address: '', zone: '', tableNumber: '5', date: new Date().toISOString().split('T')[0], hour: '19:45', items: [{ nome: 'Diavola', prezzo: 7.50, basePrice: 7.50, modifiers: [] }], total: 7.50, deliveryCost: 0, notes: '', status: 'In Cottura', driver: '' },
+                        { id: 101, timestamp: new Date().toISOString(), mode: 'asporto', customer: 'Andrea Verdi', address: '', tableNumber: 'Ritiro', date: new Date().toISOString().split('T')[0], hour: '19:30', items: [{ nome: 'Margherita', prezzo: 6.50 }, { nome: 'Coca Cola 1.5L', prezzo: 3.50 }], total: 10.00, deliveryCost: 0, notes: 'Portare resto di 20', status: 'In Preparazione', driver: 'Non Assegnato', accontoRicevuto: 0 },
+                        { id: 102, timestamp: new Date().toISOString(), mode: 'consegna', customer: 'Luca Neri', address: 'Via Milano, 22', streetNumber: '22', zone: 'Centro Storico', tableNumber: '', date: new Date().toISOString().split('T')[0], hour: '20:15', items: [{ nome: 'Diavola', prezzo: 7.50, modifiers: [{ nome: 'Wurstel', prezzo: 1.00 }] }], total: 11.50, deliveryCost: 3.00, notes: 'Citofono rotto', status: 'In Cottura', driver: 'Mario', accontoRicevuto: 0 },
                     ],
-                    archiveOrders: [],
-                    availableDrivers: ['Non Assegnato', 'Mario Rossi', 'Giulia Bianchi'],
-                    activeOrderSearchTerm: '',
                     activeDateFilter: 'today', // 'today', 'tomorrow', 'future'
+                    activeOrderSearchTerm: '',
+                    
+                    archiveOrders: [
+                        { id: 99, timestamp: '2025-10-01T20:00:00.000Z', mode: 'consegna', customer: 'Giorgio Gialli', address: 'Via Fiori, 5', streetNumber: '5', zone: 'Zona A', tableNumber: '', date: '2025-10-01', hour: '20:30', items: [{ nome: 'Capricciosa', prezzo: 8.50 }], total: 10.50, deliveryCost: 2.00, notes: '', status: 'Archiviato', driver: 'Luigi', accontoRicevuto: 0 },
+                    ],
                     archiveDateFilter: new Date().toISOString().split('T')[0],
                     selectedDriver: '',
+                    driverStats: { totalOrders: 0, totalCash: 0, totalDelivery: 0 },
                     
                     // --- Impostazioni ---
                     settingsView: 'menu',
                     newCategoryName: '',
+                    newModifierCategoryName: '',
                     newModifierName: '',
                     newModifierPrice: 0.00,
-                    newModifierCategoryName: '',
                     newZoneName: '',
                     newZonePrice: 0.00,
                     newDriverName: '',
-                    customerHistory: [
-                        { customer: 'Mario Rossi', phone: '3331234567', address: 'Via Roma 10, 55', zone: 'Centro', streetNumber: '55' },
-                        { customer: 'Giulia Verdi', phone: '3459876543', address: 'Via Milano 55', zone: 'Periferia Ovest', streetNumber: '55' },
-                    ],
-                    deliveryZones: [
-                        { name: 'Centro', price: 2.00 },
-                        { name: 'Periferia Est', price: 3.50 },
-                        { name: 'Periferia Ovest', price: 3.50 },
-                        { name: 'Fuori Zona', price: 5.00 },
-                    ],
-                    drivers: ['Mario Rossi', 'Giulia Bianchi', 'Luca Neri'], // Lista completa dei fattorini
-                    capacitySettings: {
-                        maxPizzas: 50,
-                        intervalMinutes: 15,
-                    },
-                    isCapacityWarning: false,
-                    orderCapacity: { interval: null, total: 0 },
-                    driverStats: { totalOrders: 0, totalCash: 0, totalDelivery: 0 },
-                    
-                    // --- Condivisione WhatsApp ---
-                    showShareModal: false,
-                    selectedOrderForShare: null,
-                }
-            },
 
                     // ... (Chiusura del data() object)
                 }
@@ -1098,14 +1088,14 @@
                 
                 // Mezzo Metro / Schiacciata Grande
                 activeSectionIndex() {
-                    const index = this.tempMeterItem.sections.findIndex(s => s.activeSection);
+                    const index = this.tempMeterItem.sections?.findIndex(s => s.activeSection);
                     return index !== -1 ? index : null;
                 },
                 calculateTempMeterTotal() {
-                    let basePrice = this.tempMeterItem.prezzoBase;
+                    let basePrice = this.tempMeterItem.prezzoBase || 0;
                     let modifiersTotal = 0;
     
-                    this.tempMeterItem.sections.forEach(section => {
+                    this.tempMeterItem.sections?.forEach(section => {
                         // Calcolo costo modificatori
                         section.modifiers.forEach(mod => {
                             modifiersTotal += mod.prezzo;
@@ -1116,7 +1106,7 @@
                     return basePrice + modifiersTotal; 
                 },
                 isMeterValid() {
-                    return this.tempMeterItem.sections.every(s => s.gusto !== null);
+                    return this.tempMeterItem.sections && this.tempMeterItem.sections.every(s => s.gusto !== null);
                 },
                 
                 // Pizza a Metà
@@ -1141,8 +1131,8 @@
                     }
                     
                     // Modificatori
-                    this.tempHalfPizzaItem.modifiers1.forEach(m => modPrice += m.prezzo);
-                    this.tempHalfPizzaItem.modifiers2.forEach(m => modPrice += m.prezzo);
+                    this.tempHalfPizzaItem.modifiers1?.forEach(m => modPrice += m.prezzo);
+                    this.tempHalfPizzaItem.modifiers2?.forEach(m => modPrice += m.prezzo);
                     
                     return total + modPrice;
                 },
@@ -1268,6 +1258,12 @@
                         modifiers: [],
                         manualPrice: null,
                     };
+                    // Per le composizioni, assicurati che i modificatori siano array vuoti se mancano
+                    if(newItem.isMeter) newItem.sections = newItem.sections || [];
+                    if(newItem.isHalfPizza) {
+                        newItem.modifiers1 = newItem.modifiers1 || [];
+                        newItem.modifiers2 = newItem.modifiers2 || [];
+                    }
                     this.order.push(newItem);
                     this.selectItem(this.order.length - 1); // Seleziona il nuovo elemento
                 },
@@ -1314,19 +1310,19 @@
                         return item.manualPrice;
                     }
                     
-                    let total = item.basePrice || item.prezzo; 
+                    let total = item.basePrice || item.prezzo || 0; 
     
                     // Composizione Mezzo Metro/Schiacciata
                     if (item.isMeter) {
                         let modifiersTotal = 0;
                         
-                        item.sections.forEach(section => {
+                        item.sections?.forEach(section => {
                              // Calcolo costo modificatori
-                             section.modifiers.forEach(mod => {
+                             section.modifiers?.forEach(mod => {
                                  modifiersTotal += mod.prezzo;
                              });
                         });
-                        return (item.basePrice || item.prezzo) + modifiersTotal; // Usa il prezzo base fisso
+                        return (item.basePrice || item.prezzo || 0) + modifiersTotal; // Usa il prezzo base fisso
                     }
                     
                     // Composizione Pizza a Metà
@@ -1350,8 +1346,8 @@
                             total = 0;
                         }
                         
-                        item.modifiers1.forEach(m => modPrice += m.prezzo);
-                        item.modifiers2.forEach(m => modPrice += m.prezzo);
+                        item.modifiers1?.forEach(m => modPrice += m.prezzo);
+                        item.modifiers2?.forEach(m => modPrice += m.prezzo);
                         
                         return total + modPrice;
                     }
@@ -1367,24 +1363,32 @@
                 // --- Modale Composizione Mezzo Metro / Schiacciata ---
                 openMeterCompositionModal(item, initialGustiCount) {
                     this.gustoSearchTerm = '';
-                    this.tempMeterItem = {
-                        nome: item.nome,
-                        prezzoBase: item.prezzo,
-                        isMeter: true,
-                        sections: [],
-                        selectedGustiCount: initialGustiCount || 0, // Inizializza a 0 se chiamato dal click generale
-                    };
+                    const existingItem = this.order[this.selectedItemIndex];
+
+                    this.tempMeterItem = existingItem && existingItem.isMeter 
+                        ? JSON.parse(JSON.stringify(existingItem)) 
+                        : {
+                            nome: item.nome,
+                            prezzoBase: item.prezzo,
+                            isMeter: true,
+                            sections: [],
+                            selectedGustiCount: initialGustiCount || 0,
+                        };
                     
-                    if (initialGustiCount) {
+                    if (initialGustiCount && initialGustiCount !== this.tempMeterItem.selectedGustiCount) {
                         this.setMeterGustiCount(initialGustiCount);
+                    } else if (this.tempMeterItem.selectedGustiCount === 0 && initialGustiCount === null) {
+                        // Forziamo la visualizzazione della selezione count se è la prima volta
+                        this.tempMeterItem.selectedGustiCount = 0;
                     }
                     
                     this.showMeterModal = true;
                 },
                 setMeterGustiCount(count) {
                     this.tempMeterItem.selectedGustiCount = count;
+                    // Se le sezioni cambiano, resetta i gusti per evitare errori
                     this.tempMeterItem.sections = Array.from({ length: count }, (_, i) => ({
-                        name: `Gusto ${i + 1}`,
+                        name: `Sezione ${i + 1}`,
                         gusto: null,
                         modifiers: [],
                         activeSection: i === 0,
@@ -1431,9 +1435,14 @@
                     newItem.sections.forEach(s => delete s.activeSection); // Pulisci la prop temporanea
                     delete newItem.selectedGustiCount;
                     
-                    this.order.push(newItem);
+                    if (this.selectedItemIndex !== null && this.order[this.selectedItemIndex]?.isMeter) {
+                        this.order[this.selectedItemIndex] = newItem; // Modifica esistente
+                    } else {
+                        this.order.push(newItem); // Aggiungi nuovo
+                        this.selectItem(this.order.length - 1);
+                    }
+                    
                     this.showMeterModal = false;
-                    this.selectItem(this.order.length - 1);
                 },
                 cancelMeterComposition() {
                     this.showMeterModal = false;
@@ -1443,18 +1452,22 @@
                 // --- Modale Composizione Pizza a Metà ---
                 openHalfPizzaCompositionModal(item) {
                     this.gustoSearchTerm = '';
-                    this.tempHalfPizzaItem = {
-                        nome: item.nome,
-                        prezzoBase: item.prezzo,
-                        isHalfPizza: true,
-                        gusto1: null,
-                        gusto2: null,
-                        modifiers1: [],
-                        modifiers2: [],
-                        activeHalf: 1,
-                        size: 'Media',
-                        editingGusto: false, // Aggiunto per il modale
-                    };
+                    const existingItem = this.order[this.selectedItemIndex];
+                    
+                    this.tempHalfPizzaItem = existingItem && existingItem.isHalfPizza
+                        ? JSON.parse(JSON.stringify(existingItem)) 
+                        : {
+                            nome: item.nome,
+                            prezzoBase: item.prezzo,
+                            isHalfPizza: true,
+                            gusto1: null,
+                            gusto2: null,
+                            modifiers1: [],
+                            modifiers2: [],
+                            activeHalf: 1,
+                            size: 'Media',
+                            editingGusto: false, 
+                        };
                     this.showHalfPizzaModal = true;
                 },
                 selectHalfPizzaGusto(half, gustoName) {
@@ -1462,11 +1475,13 @@
                         this.tempHalfPizzaItem.gusto1 = gustoName;
                         if (!this.tempHalfPizzaItem.gusto2) {
                             this.tempHalfPizzaItem.activeHalf = 2; // Passa automaticamente all'altra metà se vuota
+                        } else {
+                            this.tempHalfPizzaItem.editingGusto = false;
                         }
                     } else {
                         this.tempHalfPizzaItem.gusto2 = gustoName;
+                        this.tempHalfPizzaItem.editingGusto = false;
                     }
-                    this.tempHalfPizzaItem.editingGusto = false;
                 },
                 isHalfModifierSelected(half, modName) {
                     const modifiers = half === 1 ? this.tempHalfPizzaItem.modifiers1 : this.tempHalfPizzaItem.modifiers2;
@@ -1497,9 +1512,14 @@
                     delete newItem.activeHalf; // Pulisci la prop temporanea
                     delete newItem.editingGusto;
                     
-                    this.order.push(newItem);
+                    if (this.selectedItemIndex !== null && this.order[this.selectedItemIndex]?.isHalfPizza) {
+                        this.order[this.selectedItemIndex] = newItem; // Modifica esistente
+                    } else {
+                        this.order.push(newItem); // Aggiungi nuovo
+                        this.selectItem(this.order.length - 1);
+                    }
+                    
                     this.showHalfPizzaModal = false;
-                    this.selectItem(this.order.length - 1);
                 },
                 cancelHalfPizzaComposition() {
                     this.showHalfPizzaModal = false;
@@ -1682,8 +1702,7 @@
                     this.editingOrderId = null;
                 },
                 cancelEdit() {
-                    // Se stiamo modificando, l'ordine modificato rimane nel carrello se l'utente non ha cliccato conferma.
-                    // Però, se clicca annulla, resetta il carrello.
+                    // Resetta il carrello e chiudi il modale
                     this.order = []; 
                     this.showModal = false;
                     this.editingOrderId = null;
@@ -1786,6 +1805,8 @@
                     if (!order) return;
                     
                     const contentDiv = document.getElementById(`print-content-${type}`);
+                    if (!contentDiv) return;
+
                     contentDiv.innerHTML = this.generatePrintContent(order, type);
                     
                     // Logica di stampa effettiva (simulata)
@@ -1824,7 +1845,7 @@
                                 html += `<div class="item-mod">Metà 2: ${item.gusto2 || '?'} ${item.modifiers2.map(m => `(+${m.nome})`).join(' ')}</div>`;
                             } else if (item.isMeter) {
                                 item.sections.forEach((section, index) => {
-                                    html += `<div class="item-mod">${section.name}: ${section.gusto || '?'} ${section.modifiers.map(m => `(+${m.nome})`).join(' ')}</div>`;
+                                    html += `<div class="item-mod">Sezione ${index + 1}: ${section.gusto || '?'} ${section.modifiers.map(m => `(+${m.nome})`).join(' ')}</div>`;
                                 });
                             } else if (item.modifiers && item.modifiers.length > 0) {
                                 item.modifiers.forEach(mod => {
@@ -1841,13 +1862,13 @@
                             html += `<div class="item-line"><span>1x ${item.nome}</span><span>€${itemTotal.toFixed(2)}</span></div>`;
                             if (item.isHalfPizza) {
                                 html += `<div class="item-mod">(${item.gusto1}/${item.gusto2})</div>`;
-                                item.modifiers1.concat(item.modifiers2).forEach(mod => {
+                                item.modifiers1?.concat(item.modifiers2)?.forEach(mod => {
                                     if(mod.prezzo > 0) html += `<div class="item-mod">Extra: ${mod.nome} (+€${mod.prezzo.toFixed(2)})</div>`;
                                 });
                             } else if (item.isMeter) {
-                                item.sections.forEach((section) => {
+                                item.sections?.forEach((section) => {
                                     html += `<div class="item-mod">Gusto: ${section.gusto || '?'}</div>`;
-                                    section.modifiers.forEach(mod => {
+                                    section.modifiers?.forEach(mod => {
                                         if(mod.prezzo > 0) html += `<div class="item-mod">Extra: ${mod.nome} (+€${mod.prezzo.toFixed(2)})</div>`;
                                     });
                                 });
