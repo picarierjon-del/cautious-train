@@ -818,7 +818,7 @@
                     newAdminPin: '',
                     newOwnerPin: '',
 
-                    // Dati Menu (Aggiornati per le nuove categorie)
+                    // Dati Menu (Corretti: Schiacciata e Mezzo Metro separati)
                     menu: {
                         'Pizza Classica': [
                             { nome: 'Margherita', prezzo: 6.00, isFinished: false },
@@ -834,9 +834,11 @@
                         'Pizza a Metà': [
                             { nome: 'Pizza a Metà', prezzo: 0.00, isHalfPizza: true, isFinished: false }
                         ],
-                        'Mezzo Metro/Schiac.': [
-                            { nome: 'Mezzo Metro', prezzo: 16.00, isMeter: true, isFinished: false },
-                            { nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, isFinished: false }
+                        'Mezzo Metro': [
+                            { nome: 'Mezzo Metro', prezzo: 16.00, isMeter: true, totalSections: 4, isFinished: false }
+                        ],
+                        'Schiacciata Grande': [
+                            { nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, totalSections: 2, isFinished: false }
                         ],
                         'Bevande': [
                             { nome: 'Acqua Nat', prezzo: 2.00, isFinished: false },
@@ -847,7 +849,7 @@
                         ],
                     },
                     
-                    // Dati Modificatori
+                    // Dati Modificatori (Invariati)
                     modifiers: {
                         'Più': [
                             { nome: 'Mozzarella', prezzo: 0.50, isFinished: false },
@@ -866,7 +868,7 @@
                         ],
                     },
 
-                    // Dati Ordine Corrente
+                    // Dati Ordine Corrente (Invariati)
                     order: [],
                     selectedItemIndex: null,
                     lastSelectedItem: null, 
@@ -875,7 +877,7 @@
                     activeCat: 'Pizza Classica',
                     activeModCat: 'Più',
                     
-                    // Modalità di Finalizzazione Ordine
+                    // Modalità di Finalizzazione Ordine (Invariati)
                     modes: [
                         { id: 'banco', label: 'Tavolo/Banco', icon: 'fa-solid fa-utensils' },
                         { id: 'asporto', label: 'Asporto', icon: 'fa-solid fa-bag-shopping' },
@@ -883,7 +885,7 @@
                     ],
                     showModal: false,
                     
-                    // Dati Modale
+                    // Dati Modale (Invariati)
                     editingOrderId: null, 
                     mode: 'banco',
                     customer: '',
@@ -899,7 +901,7 @@
                     deliveryCost: 0.00,
                     accontoRicevuto: 0.00,
                     
-                    // Dati di Sistema
+                    // Dati di Sistema (Invariati)
                     lastOrderId: 0,
                     activeOrders: [],
                     archive: [],
@@ -909,35 +911,35 @@
                     ],
                     drivers: ['Mario', 'Luigi', 'Yoshi'],
                     
-                    // Storico e Statistiche
+                    // Storico e Statistiche (Invariati)
                     archiveDateFilter: new Date().toISOString().slice(0, 10),
                     selectedDriver: '',
                     driverStats: { totalOrders: 0, totalRevenue: 0 },
                     
-                    // Filtri Ordini Attivi
+                    // Filtri Ordini Attivi (Invariati)
                     activeOrderSearchTerm: '',
                     activeDateFilter: 'today', 
 
-                    // Impostazioni/Menu
+                    // Impostazioni/Menu (Invariati)
                     activeSettingsCatName: 'Pizza Classica',
                     newItemName: '',
                     newItemPrice: 0.00,
                     newCategoryName: '',
 
-                    // Impostazioni Modificatori
+                    // Impostazioni Modificatori (Invariati)
                     activeSettingsModCatName: 'Più',
                     newModifierName: '',
                     newModifierPrice: 0.00,
                     newModifierCategoryName: '',
 
-                    // Impostazioni Zone
+                    // Impostazioni Zone (Invariati)
                     newZoneName: '',
                     newZonePrice: 0.00,
                     
-                    // Impostazioni Fattorini
+                    // Impostazioni Fattorini (Invariati)
                     newDriverName: '',
 
-                    // Capacità Oraria
+                    // Capacità Oraria (Invariati)
                     capacitySettings: {
                         maxPizzas: 20,
                         intervalMinutes: 30
@@ -957,16 +959,16 @@
                     showHalfPizzaModal: false,
                     tempHalfPizzaItem: null,
 
-                    // Modifica Prezzo
+                    // Modifica Prezzo (Invariati)
                     showPriceEditModal: false,
                     tempPriceEditIndex: null,
                     newPriceValue: 0.00,
 
-                    // Condivisione
+                    // Condivisione (Invariati)
                     showShareModal: false,
                     selectedOrderForShare: null,
                     
-                    // Suggerimenti Cliente
+                    // Suggerimenti Cliente (Invariati)
                     customerHistory: [],
                     filteredCustomerSuggestions: []
                 };
@@ -992,14 +994,13 @@
                     return Math.max(0, this.accontoRicevuto - totalToPay);
                 },
 
-                // Controlla se l'ordine è finalizzabile
                 isOrderFinalizable() {
                     if (this.order.length === 0 || !this.customer) return false;
                     if (this.mode === 'consegna' && (!this.address || !this.zoneName)) return false;
                     return true;
                 },
 
-                // --- Filtri e Disponibilità ---
+                // --- Filtri e Disponibilità (Invariati) ---
                 filteredAvailableItems() {
                     const items = this.menu[this.activeCat] || [];
                     const term = this.searchTerm.toLowerCase();
@@ -1015,7 +1016,7 @@
                     );
                 },
 
-                // --- Capacità Oraria Computed ---
+                // --- Capacità Oraria Computed (Invariati) ---
                 isCapacityWarning() {
                     return this.orderCapacity.warning;
                 },
@@ -1028,6 +1029,7 @@
 
                 // --- Composizioni Computed ---
                 allPizzaGusti() {
+                    // Prende i gusti solo dalle pizze classiche e speciali
                     return (this.menu['Pizza Classica'] || []).concat(this.menu['Pizze Speciali'] || []).filter(item => !item.isFinished);
                 },
                 filteredPizzaGusti() {
@@ -1057,9 +1059,10 @@
                 },
                 isMeterValid() {
                     if (!this.tempMeterItem || this.tempMeterItem.gustiCount === 0) return false;
-                    // Verifica che tutti i gustiCount selezionati abbiano un gusto assegnato
+                    
+                    // NUOVA LOGICA: Verifica che solo il numero di sezioni richiesto (gustiCount) abbia un gusto
                     return this.tempMeterItem.sections
-                        .slice(0, this.tempMeterItem.gustiCount) // Controlla solo le sezioni attive
+                        .slice(0, this.tempMeterItem.gustiCount)
                         .every(section => section.gusto !== null);
                 },
                 calculateTempHalfPizzaTotal() {
@@ -1071,9 +1074,9 @@
                     
                     if (!item.gusto1 || !item.gusto2) return 0; 
 
-                    // NUOVA LOGICA: Media e arrotondamento per eccesso
+                    // Media e arrotondamento per eccesso
                     const avgBasePrice = (price1 + price2) / 2;
-                    const roundedPrice = Math.ceil(avgBasePrice * 10) / 10; // Arrotonda al decimo superiore
+                    const roundedPrice = Math.ceil(avgBasePrice * 10) / 10; 
 
                     let modTotal = 0;
                     modTotal += item.modifiers1.reduce((sum, mod) => sum + mod.prezzo, 0);
@@ -1145,7 +1148,7 @@
                     return date.toLocaleDateString('it-IT', { year: 'numeric', month: '2-digit', day: '2-digit' });
                 },
 
-                // --- Impostazioni ---
+                // --- Impostazioni (Logica invariata, categorie aggiornate) ---
                 activeSettingsCat: {
                     get() {
                         if (!this.menu[this.activeSettingsCatName]) {
@@ -1254,7 +1257,7 @@
                     }
                 },
                 
-                // --- Persistenza Dati (LocalStorage) ---
+                // --- Persistenza Dati (Invariata) ---
                 loadData() {
                     try {
                         const data = localStorage.getItem('pizzeriaSmartData');
@@ -1307,12 +1310,10 @@
                     localStorage.setItem('pizzeriaSmartData', JSON.stringify(dataToSave));
                 },
                 ensureItemStatus() {
-                    // Assicura che le categorie di composizione esistano
+                    // Assicura che le categorie di composizione esistano (nuova logica per Schiacciata e Mezzo Metro separati)
                     if (!this.menu['Pizza a Metà']) this.menu['Pizza a Metà'] = [{ nome: 'Pizza a Metà', prezzo: 0.00, isHalfPizza: true, isFinished: false }];
-                    if (!this.menu['Mezzo Metro/Schiac.']) this.menu['Mezzo Metro/Schiac.'] = [
-                         { nome: 'Mezzo Metro', prezzo: 16.00, isMeter: true, isFinished: false },
-                         { nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, isFinished: false }
-                    ];
+                    if (!this.menu['Mezzo Metro']) this.menu['Mezzo Metro'] = [{ nome: 'Mezzo Metro', prezzo: 16.00, isMeter: true, totalSections: 4, isFinished: false }];
+                    if (!this.menu['Schiacciata Grande']) this.menu['Schiacciata Grande'] = [{ nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, totalSections: 2, isFinished: false }];
 
                     for (const cat in this.menu) {
                         this.menu[cat].forEach(item => {
@@ -1345,7 +1346,6 @@
                         modTotal += item.modifiers2.reduce((sum, mod) => sum + mod.prezzo, 0);
 
                     } else if (item.isMeter) {
-                        // Per le composizioni a prezzo fisso, il prezzo di base è fisso
                         basePrice = item.prezzo; 
                         item.sections.forEach(section => {
                             modTotal += section.modifiers.reduce((sum, mod) => sum + mod.prezzo, 0);
@@ -1365,7 +1365,6 @@
                     this.selectedItemIndex = null; 
                     this.lastSelectedItem = item; 
 
-                    // Copia profonda dell'articolo per evitare riferimenti al menu
                     const newItemBase = deepClone(item); 
                     
                     if (item.isMeter) {
@@ -1379,7 +1378,6 @@
                 addItem(item) {
                     if (item.isFinished) return;
                     
-                    // Assicura che modifiers sia sempre presente
                     item.modifiers = item.modifiers || []; 
                     this.order.push(item);
                     this.selectedItemIndex = this.order.length - 1; 
@@ -1391,13 +1389,13 @@
                     } else if (this.selectedItemIndex > index) {
                         this.selectedItemIndex--;
                     }
-                    this.order = [...this.order]; // Forzo reattività
+                    this.order = [...this.order]; 
                 },
                 selectItem(index) {
                     this.selectedItemIndex = index;
                 },
                 
-                // --- Gestione Modificatori Articolo Standard ---
+                // --- Gestione Modificatori Articolo Standard (Invariata) ---
                 addExtra(mod) {
                     if (mod.isFinished || this.selectedItemIndex === null || !this.order[this.selectedItemIndex] || this.order[this.selectedItemIndex].isMeter || this.order[this.selectedItemIndex].isHalfPizza) {
                         alert("Seleziona prima un articolo standard nel carrello.");
@@ -1442,32 +1440,35 @@
                 // --- Composizioni (Mezzo Metro/Schiacciata) ---
                 openMeterCompositionModal(item) {
                     this.tempMeterItem = deepClone(item);
-                    this.tempMeterItem.gustiCount = 0; // Inizializza conteggio gusti
-                    this.tempMeterItem.sections = []; // Inizializza sezioni
+                    this.tempMeterItem.gustiCount = 0; 
+                    this.tempMeterItem.sections = []; 
                     this.showMeterModal = true;
                     this.gustoSearchTerm = '';
                     this.modifierSearchTerm = '';
+                    
+                    // Inizializza le sezioni in base al numero massimo
+                    this.setMeterGustiCount(1);
                 },
                 setMeterGustiCount(count) {
                     this.tempMeterItem.gustiCount = count;
                     this.tempMeterItem.sections = [];
-                    const totalSections = this.tempMeterItem.nome === 'Mezzo Metro' ? 4 : 2;
+                    const totalSections = this.tempMeterItem.totalSections; // 4 per Mezzo Metro, 2 per Schiacciata
                     
                     for (let i = 0; i < totalSections; i++) {
-                        // Assegna il nome della sezione al gusto, con un contatore
+                        // Calcola quale "Gusto N" questa sezione rappresenta
                         const gustoIndex = Math.min(i, count - 1); 
                         const sectionName = `Gusto ${gustoIndex + 1}`;
                         
+                        // Determina se la sezione è attiva
+                        const isActive = i === 0; // Attiva solo la prima sezione per default
+
                         this.tempMeterItem.sections.push({
                             name: `Sezione ${i + 1} (${sectionName})`,
                             gusto: null,
                             modifiers: [],
-                            activeSection: false 
+                            activeSection: isActive, 
+                            assignedGustoIndex: gustoIndex
                         });
-                    }
-                    // Apre la prima sezione per la selezione
-                    if (this.tempMeterItem.sections.length > 0) {
-                        this.tempMeterItem.sections[0].activeSection = true;
                     }
                 },
                 cancelMeterComposition() {
@@ -1477,14 +1478,27 @@
                     this.modifierSearchTerm = '';
                 },
                 selectMeterGusto(sectionIndex, gustoName) {
-                    this.tempMeterItem.sections[sectionIndex].gusto = gustoName;
-                    this.tempMeterItem.sections[sectionIndex].activeSection = false;
+                    const section = this.tempMeterItem.sections[sectionIndex];
+                    section.gusto = gustoName;
+                    section.activeSection = false;
                     
-                    // Passa alla sezione successiva solo se entro il limite di sezioni totali
-                    if (sectionIndex < this.tempMeterItem.sections.length - 1) {
-                         this.tempMeterItem.sections[sectionIndex + 1].activeSection = true;
-                    }
+                    // Se siamo nell'ultima sezione, chiudiamo tutto
+                    if (sectionIndex === this.tempMeterItem.totalSections - 1) {
+                         this.tempMeterItem.sections.forEach(s => s.activeSection = false);
+                    } else {
+                        // Passa alla prossima sezione che ha un gusto diverso
+                        const nextSection = this.tempMeterItem.sections.find((s, idx) => {
+                            // Cerca la prossima sezione che NON è ancora stata completata (gusto null)
+                            return idx > sectionIndex && s.assignedGustoIndex < this.tempMeterItem.gustiCount && s.gusto === null;
+                        });
 
+                        if (nextSection) {
+                            nextSection.activeSection = true;
+                        } else {
+                            // Se tutti i gusti richiesti sono stati selezionati, chiudi tutte le modali di sezione
+                            this.tempMeterItem.sections.forEach(s => s.activeSection = false);
+                        }
+                    }
                     this.gustoSearchTerm = '';
                 },
                 addMeterModifier(sectionIndex, mod) {
@@ -1507,13 +1521,14 @@
                 },
                 addMeterToOrder() {
                     if (!this.isMeterValid) {
-                        alert('Devi selezionare un gusto per tutte le sezioni definite.');
+                        alert('Devi selezionare un gusto per tutti i gusti richiesti.');
                         return;
                     }
                     
                     const finalItem = deepClone(this.tempMeterItem);
                     finalItem.prezzo = this.calculateTempMeterTotal; 
                     
+                    // Rimuovi proprietà temporanee
                     finalItem.sections.forEach(s => delete s.activeSection);
                     delete finalItem.activeSection; 
                     delete finalItem.gustiCount;
@@ -1548,10 +1563,10 @@
                 selectHalfPizzaGusto(halfNumber, gustoName) {
                     if (halfNumber === 1) {
                         this.tempHalfPizzaItem.gusto1 = gustoName;
-                        this.tempHalfPizzaItem.activeHalf = 2; // Passa alla metà successiva
+                        this.tempHalfPizzaItem.activeHalf = 2; 
                     } else if (halfNumber === 2) {
                         this.tempHalfPizzaItem.gusto2 = gustoName;
-                        this.tempHalfPizzaItem.activeHalf = 0; // Chiude la selezione gusto
+                        this.tempHalfPizzaItem.activeHalf = 0; 
                     }
                     this.gustoSearchTerm = '';
                 },
@@ -1886,7 +1901,7 @@
                         const itemBase = this.findMenuItemBase(item.nome);
                         const category = itemBase ? itemBase.category : '';
 
-                        if (category.includes('Pizza') && !item.isHalfPizza) {
+                        if (category.includes('Pizza') && !item.isHalfPizza && !item.isMeter) {
                             itemPizzaCount += 1;
                         } else if (item.isHalfPizza) {
                             itemPizzaCount += 1; 
@@ -1907,12 +1922,14 @@
                             item.sections.forEach(s => modCount += s.modifiers.filter(m => m.prezzo > 0).length);
                         }
 
+                        // Ponderazione Smart: 0.25 unità di carico per ogni modificatore a pagamento
                         totalPizzas += itemPizzaCount + (modCount * 0.25);
                     });
                     return totalPizzas;
                 },
                 
                 findMenuItemBase(itemName) {
+                    // Controlla tutte le categorie, compresi i nuovi 'Mezzo Metro' e 'Schiacciata Grande'
                     for (const cat in this.menu) {
                         const item = this.menu[cat].find(menuItem => menuItem.nome === itemName);
                         if (item) return { ...item, category: cat };
@@ -2192,7 +2209,7 @@
                     }
                 },
 
-                // --- Funzioni Impostazioni/Gestione Dati (Invariate) ---
+                // --- Funzioni Impostazioni/Gestione Dati (Invariate, ma con nuovi controlli categorie) ---
                 addItemToCategory() {
                     if (this.newItemName && this.activeSettingsCat) {
                         const newItem = {
@@ -2200,9 +2217,16 @@
                             prezzo: parseFloat(this.newItemPrice || 0),
                             isFinished: false
                         };
-                        // Gestione speciale per le categorie composizioni
-                        if (this.activeSettingsCat === 'Pizza a Metà') newItem.isHalfPizza = true;
-                        if (this.activeSettingsCat === 'Mezzo Metro/Schiac.') newItem.isMeter = true;
+                        // Gestione delle proprietà specifiche per le composizioni
+                        if (this.activeSettingsCat === 'Pizza a Metà') {
+                             newItem.isHalfPizza = true;
+                        } else if (this.activeSettingsCat === 'Mezzo Metro') {
+                             newItem.isMeter = true;
+                             newItem.totalSections = 4;
+                        } else if (this.activeSettingsCat === 'Schiacciata Grande') {
+                            newItem.isMeter = true;
+                            newItem.totalSections = 2;
+                        }
                         
                         this.menu[this.activeSettingsCat].push(newItem);
                         this.newItemName = '';
@@ -2236,6 +2260,11 @@
                     }
                 },
                 deleteCategory(category) {
+                    const defaultCategories = ['Pizza Classica', 'Pizze Speciali', 'Pizza a Metà', 'Mezzo Metro', 'Schiacciata Grande', 'Bevande', 'Dolci'];
+                    if (defaultCategories.includes(category)) {
+                        alert(`Non puoi eliminare la categoria predefinita: ${category}.`);
+                        return;
+                    }
                     if (Object.keys(this.menu).length <= 1) {
                         alert('Non puoi eliminare l\'unica categoria rimasta.');
                         return;
@@ -2248,7 +2277,7 @@
                     }
                 },
                 
-                // Modificatori
+                // Modificatori (Invariati)
                 addModifierToCategory() {
                     if (this.newModifierName && this.activeSettingsModCat) {
                         const newMod = {
@@ -2307,7 +2336,7 @@
                     return ['Più', 'Senza', 'Poco', 'Abbondante'].includes(category);
                 },
 
-                // Zone di Consegna
+                // Zone di Consegna (Invariate)
                 addZone() {
                     if (this.newZoneName) {
                         const existing = this.deliveryZones.find(z => z.name.toLowerCase() === this.newZoneName.toLowerCase());
@@ -2333,7 +2362,7 @@
                     }
                 },
 
-                // Fattorini
+                // Fattorini (Invariati)
                 addDriver() {
                     if (this.newDriverName && !this.drivers.includes(this.newDriverName)) {
                         this.drivers.push(this.newDriverName);
@@ -2352,7 +2381,7 @@
                     }
                 },
 
-                // Import/Export
+                // Import/Export (Invariati)
                 exportData() {
                     const data = localStorage.getItem('pizzeriaSmartData');
                     if (!data) {
