@@ -793,6 +793,17 @@
         </div>
 
     </div>
+Mi scuso moltissimo! Hai ragione, la logica di validazione e il flusso utente nel modale delle composizioni erano ancora troppo rigidi e complessi. Gestire gli indici e le condizioni di validazione in Vue.js può essere complicato.
+Ho semplificato drasticamente la logica del Mezzo Metro e della Schiacciata Grande eliminando completamente la necessità di navigare tra le "Sezioni 1/2/3/4" per la selezione dei gusti.
+Ora, il flusso è:
+ * Selezioni "1 Gusto" / "2 Gusti" / "3 Gusti".
+ * L'app ti mostra solo il numero di campi di input necessari per selezionare quel numero di gusti, ignorando la suddivisione interna a sezioni (che resta solo per la comanda finale).
+ * La validazione controlla solo che i gusti selezionati siano esattamente pari al numero di gusti richiesti.
+Ho eliminato la visualizzazione e la logica di "Sezione 1 (Gusto 1): Margherita" per semplificare l'interfaccia, come richiesto.
+Ecco la Quarta Parte (Nuova Correzione Vue.js/JavaScript), che sostituisce completamente la parte JavaScript precedente.
+4. Quarta Parte: Nuova Correzione e Logica Semplificata (Sostituzione Completa)
+Istruzioni: Devi sostituire tutto il codice che inizia con <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script> fino alla fine del file (</html>) con il blocco qui sotto.
+Codice JavaScript/Vue.js Corretto e Semplificato
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script>
         // Funzione per clonare oggetti in profondità in modo sicuro
@@ -1060,10 +1071,12 @@
                 isMeterValid() {
                     if (!this.tempMeterItem || this.tempMeterItem.gustiCount === 0) return false;
                     
-                    // NUOVA LOGICA: Verifica che solo il numero di sezioni richiesto (gustiCount) abbia un gusto
-                    return this.tempMeterItem.sections
-                        .slice(0, this.tempMeterItem.gustiCount)
-                        .every(section => section.gusto !== null);
+                    // NUOVA LOGICA: Verifica che SOLO i primi `gustiCount` abbiano un gusto assegnato
+                    const sectionsWithGusto = this.tempMeterItem.sections
+                        .filter(s => s.gusto !== null)
+                        .length;
+                    
+                    return sectionsWithGusto === this.tempMeterItem.gustiCount;
                 },
                 calculateTempHalfPizzaTotal() {
                     if (!this.tempHalfPizzaItem) return 0;
@@ -1148,7 +1161,7 @@
                     return date.toLocaleDateString('it-IT', { year: 'numeric', month: '2-digit', day: '2-digit' });
                 },
 
-                // --- Impostazioni (Logica invariata, categorie aggiornate) ---
+                // --- Impostazioni (Logica invariata) ---
                 activeSettingsCat: {
                     get() {
                         if (!this.menu[this.activeSettingsCatName]) {
@@ -1310,7 +1323,7 @@
                     localStorage.setItem('pizzeriaSmartData', JSON.stringify(dataToSave));
                 },
                 ensureItemStatus() {
-                    // Assicura che le categorie di composizione esistano (nuova logica per Schiacciata e Mezzo Metro separati)
+                    // Assicura che le categorie di composizione esistano
                     if (!this.menu['Pizza a Metà']) this.menu['Pizza a Metà'] = [{ nome: 'Pizza a Metà', prezzo: 0.00, isHalfPizza: true, isFinished: false }];
                     if (!this.menu['Mezzo Metro']) this.menu['Mezzo Metro'] = [{ nome: 'Mezzo Metro', prezzo: 16.00, isMeter: true, totalSections: 4, isFinished: false }];
                     if (!this.menu['Schiacciata Grande']) this.menu['Schiacciata Grande'] = [{ nome: 'Schiacciata Grande', prezzo: 12.00, isMeter: true, totalSections: 2, isFinished: false }];
@@ -1340,7 +1353,7 @@
                         const price1 = this.allPizzaGusti.find(g => g.nome === item.gusto1)?.prezzo || 0;
                         const price2 = this.allPizzaGusti.find(g => g.nome === item.gusto2)?.prezzo || 0;
                         const avgBasePrice = (price1 + price2) / 2;
-                        basePrice = Math.ceil(avgBasePrice * 10) / 10; // Arrotonda per eccesso al decimo
+                        basePrice = Math.ceil(avgBasePrice * 10) / 10; 
 
                         modTotal += item.modifiers1.reduce((sum, mod) => sum + mod.prezzo, 0);
                         modTotal += item.modifiers2.reduce((sum, mod) => sum + mod.prezzo, 0);
@@ -1440,36 +1453,30 @@
                 // --- Composizioni (Mezzo Metro/Schiacciata) ---
                 openMeterCompositionModal(item) {
                     this.tempMeterItem = deepClone(item);
-                    this.tempMeterItem.gustiCount = 0; 
-                    this.tempMeterItem.sections = []; 
+                    this.tempMeterItem.gustiCount = 1; // Default a 1 gusto
+                    this.setMeterGustiCount(1);
                     this.showMeterModal = true;
                     this.gustoSearchTerm = '';
                     this.modifierSearchTerm = '';
-                    
-                    // Inizializza le sezioni in base al numero massimo
-                    this.setMeterGustiCount(1);
                 },
                 setMeterGustiCount(count) {
                     this.tempMeterItem.gustiCount = count;
                     this.tempMeterItem.sections = [];
-                    const totalSections = this.tempMeterItem.totalSections; // 4 per Mezzo Metro, 2 per Schiacciata
+                    const totalSections = this.tempMeterItem.totalSections; 
                     
-                    for (let i = 0; i < totalSections; i++) {
-                        // Calcola quale "Gusto N" questa sezione rappresenta
-                        const gustoIndex = Math.min(i, count - 1); 
-                        const sectionName = `Gusto ${gustoIndex + 1}`;
-                        
-                        // Determina se la sezione è attiva
-                        const isActive = i === 0; // Attiva solo la prima sezione per default
-
+                    // Crea una sezione per ogni gusto unico richiesto (Gusto 1, Gusto 2, ...)
+                    for (let i = 0; i < count; i++) {
                         this.tempMeterItem.sections.push({
-                            name: `Sezione ${i + 1} (${sectionName})`,
+                            name: `Gusto ${i + 1}`,
                             gusto: null,
                             modifiers: [],
-                            activeSection: isActive, 
-                            assignedGustoIndex: gustoIndex
+                            activeSection: i === 0, // Attiva solo il primo gusto
+                            assignedGustoIndex: i
                         });
                     }
+                    
+                    // Aggiunge le sezioni vuote rimanenti per la visualizzazione uniforme (se necessario, ma è meglio evitarle per la UX)
+                    // Decido di non aggiungerle, mostriamo solo i gusti selezionati per chiarezza.
                 },
                 cancelMeterComposition() {
                     this.showMeterModal = false;
@@ -1482,23 +1489,15 @@
                     section.gusto = gustoName;
                     section.activeSection = false;
                     
-                    // Se siamo nell'ultima sezione, chiudiamo tutto
-                    if (sectionIndex === this.tempMeterItem.totalSections - 1) {
-                         this.tempMeterItem.sections.forEach(s => s.activeSection = false);
-                    } else {
-                        // Passa alla prossima sezione che ha un gusto diverso
-                        const nextSection = this.tempMeterItem.sections.find((s, idx) => {
-                            // Cerca la prossima sezione che NON è ancora stata completata (gusto null)
-                            return idx > sectionIndex && s.assignedGustoIndex < this.tempMeterItem.gustiCount && s.gusto === null;
-                        });
+                    // Passa al prossimo gusto richiesto che è ancora da selezionare
+                    const nextSection = this.tempMeterItem.sections.find((s, idx) => {
+                        return idx > sectionIndex && s.gusto === null;
+                    });
 
-                        if (nextSection) {
-                            nextSection.activeSection = true;
-                        } else {
-                            // Se tutti i gusti richiesti sono stati selezionati, chiudi tutte le modali di sezione
-                            this.tempMeterItem.sections.forEach(s => s.activeSection = false);
-                        }
-                    }
+                    if (nextSection) {
+                        nextSection.activeSection = true;
+                    } 
+                    
                     this.gustoSearchTerm = '';
                 },
                 addMeterModifier(sectionIndex, mod) {
@@ -1528,7 +1527,7 @@
                     const finalItem = deepClone(this.tempMeterItem);
                     finalItem.prezzo = this.calculateTempMeterTotal; 
                     
-                    // Rimuovi proprietà temporanee
+                    // Pulisci per l'ordine
                     finalItem.sections.forEach(s => delete s.activeSection);
                     delete finalItem.activeSection; 
                     delete finalItem.gustiCount;
@@ -2012,9 +2011,13 @@
                                 </ul>
                             `;
                         } else if (item.isMeter) {
+                            // Aggiornato per mostrare i gusti unici selezionati
+                            const gustiUnici = [...new Set(item.sections.map(s => s.gusto))].join(', ');
+
                             modsHtml = `
                                 <ul class="mod-list">
-                                    ${item.sections.map(s => `<li>${s.name}: ${s.gusto} - ${s.modifiers.map(m => m.nome).join(', ')}</li>`).join('')}
+                                    <li>Gusti Selezionati: ${gustiUnici}</li>
+                                    ${item.sections.filter(s => s.modifiers.length > 0).map(s => `<li>${s.name}: ${s.modifiers.map(m => m.nome).join(', ')}</li>`).join('')}
                                 </ul>
                             `;
                         } else if (item.modifiers && item.modifiers.length > 0) {
@@ -2209,7 +2212,7 @@
                     }
                 },
 
-                // --- Funzioni Impostazioni/Gestione Dati (Invariate, ma con nuovi controlli categorie) ---
+                // --- Funzioni Impostazioni/Gestione Dati (Invariate) ---
                 addItemToCategory() {
                     if (this.newItemName && this.activeSettingsCat) {
                         const newItem = {
@@ -2446,7 +2449,7 @@
                     }
                 },
 
-                // --- Utilità ---
+                // --- Utilità (Invariate) ---
                 formatDate(dateString) {
                     const date = new Date(dateString);
                     return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -2476,3 +2479,4 @@
     </script>
 </body>
 </html>
+
