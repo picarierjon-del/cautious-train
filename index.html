@@ -146,10 +146,11 @@
         expenses:[], 
         reminders:[], 
         contacts:[], 
+        birthdays: [], // NUOVO: Aggiunta lista compleanni
         lastId:0, 
         categories: DEFAULT_CATEGORIES.slice(), 
         pin: '1234',
-        currencySymbol: '€' // NUOVO: Simbolo Valuta
+        currencySymbol: '€'
     };
     let currentPage = 'activity';
 
@@ -189,6 +190,8 @@
           // Ensure arrays exist
           appData.invoices ||= []; appData.expenses ||= [];
           appData.reminders ||= []; appData.contacts ||= [];
+          appData.birthdays ||= []; // Ensure birthdays array exists
+          
           // Ensure categories/lastId/pin/currency exist
           appData.categories ||= DEFAULT_CATEGORIES.slice();
           appData.lastId ||= 0;
@@ -604,7 +607,7 @@
       }
     }
 
-    // --- Reminders ---
+    // --- Reminders CRUD ---
     function saveReminder(data){
       appData.reminders ||= [];
       if (data.id){ const i=appData.reminders.findIndex(r=>r.id===data.id); if(i>-1){ appData.reminders[i]={...appData.reminders[i],...data}; } }
@@ -630,6 +633,43 @@
       }
       else showToast('Compila tutti i campi validi.','red');
     }
+    
+    // --- Compleanni CRUD ---
+    function saveBirthday(data){
+      appData.birthdays ||= [];
+      if (data.id){ const i=appData.birthdays.findIndex(r=>r.id===data.id); if(i>-1){ appData.birthdays[i]={...appData.birthdays[i],...data}; } }
+      else { appData.birthdays.push({ id:getNextId(), ...data }); }
+      saveData(); showToast('Compleanno salvato!'); renderPage('reminders');
+    }
+    function deleteBirthday(id){
+      const i=(appData.birthdays||[]).findIndex(r=>r.id===id);
+      if (i>-1){
+        showModal('Eliminare compleanno?','Operazione irreversibile.',true,()=>{
+          appData.birthdays.splice(i,1); saveData(); showToast('Compleanno eliminato.','red'); renderPage('reminders');
+        });
+      }
+    }
+    function handleBirthdaySubmit(){
+        const f=document.getElementById('birthday-form'); const d=new FormData(f);
+        const dateStr = d.get('date');
+        
+        // Estrai solo mese e giorno per la ricorrenza
+        const recurringDate = dateStr.slice(5); 
+
+        const payload={ 
+            name: d.get('name').trim(), 
+            date: dateStr, // Mantiene l'anno per il calcolo dell'età
+            recurringDate: recurringDate 
+        };
+        
+        if (payload.name && payload.date){ 
+            saveBirthday(payload); 
+            f.reset(); 
+            document.getElementById('birthday-date').value = new Date().toISOString().slice(0,10); 
+        }
+        else showToast('Compila tutti i campi validi.','red');
+    }
+
 
     // --- Import/Export ---
     function exportDataJSON(){
@@ -653,17 +693,22 @@
         (t.tags||[]).join('|'), t.vatRate, t.net, t.vatAmount, t.gross, t.isIncome, t.incomeType||''
       ].map(esc).join(','));
       const csvTx = [summaryRow, headerTx, ...rowsTx].join('\n');
-
+      
       // Reminders CSV
       const headerRm = ['ID','Tipo','Descrizione','Data','Importo','Pagato?'].join(',');
       const rowsRm = (appData.reminders||[]).map(r => [r.id,r.type,r.description,r.date,r.amount,r.paid].map(esc).join(','));
       const csvRm = [headerRm, ...rowsRm].join('\n');
+      
+      // Birthdays CSV
+      const headerBd = ['ID','Nome','DataNascita'].join(',');
+      const rowsBd = (appData.birthdays||[]).map(r => [r.id,r.name,r.date].map(esc).join(','));
+      const csvBd = [headerBd, ...rowsBd].join('\n');
 
-      const zipContent = `### Transazioni\n${csvTx}\n\n### Promemoria\n${csvRm}\n`;
+      const zipContent = `### Transazioni\n${csvTx}\n\n### Promemoria\n${csvRm}\n\n### Compleanni\n${csvBd}\n`;
       const blob = new Blob([zipContent], {type:'text/plain;charset=utf-8'});
       const url = URL.createObjectURL(blob);
       const a=document.createElement('a'); a.href=url; a.download=`finanza_export_${new Date().toISOString().slice(0,10)}.txt`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      showToast('Export CSV pronto (testo con 2 sezioni).');
+      showToast('Export CSV pronto (testo con 3 sezioni).');
     }
 
     function importDataFile(ev){
@@ -674,12 +719,13 @@
           const imported = JSON.parse(e.target.result);
           if (imported.invoices && imported.expenses && imported.reminders){
             showModal('Conferma Importazione', 'Sovrascrivere i dati attuali? (Consigliato backup prima)', true, ()=>{
-              const all = [...imported.invoices, ...imported.expenses, ...imported.reminders, ...(imported.contacts||[])];
+              const all = [...imported.invoices, ...imported.expenses, ...imported.reminders, ...(imported.contacts||[]), ...(imported.birthdays||[])];
               const maxId = all.length>0 ? Math.max(...all.map(x=>x.id||0)) : 0;
               appData = { ...appData, ...imported, lastId: Math.max(maxId, appData.lastId) };
               appData.categories ||= DEFAULT_CATEGORIES.slice();
               appData.pin ||= '1234'; 
               appData.currencySymbol ||= '€'; 
+              appData.birthdays ||= []; // Ensure array exists
               saveData(); showToast('Dati importati!'); renderPage(currentPage);
             });
           } else { showToast('Backup JSON non valido.','red'); }
@@ -693,9 +739,11 @@
       showModal('Conferma Pulizia Dati', `Eliminare TUTTO prima del 1 Gennaio ${target}?`, true, ()=>{
         const before = (it)=> new Date(it.date).getFullYear() < target;
         const i0=appData.invoices.length, e0=appData.expenses.length, r0=appData.reminders.length;
+        
         appData.invoices = appData.invoices.filter(x=>!before(x));
         appData.expenses = appData.expenses.filter(x=>!before(x));
         appData.reminders = appData.reminders.filter(x=>!before(x));
+        // NOTA: I compleanni NON vengono eliminati perché la ricorrenza è infinita.
         
         // MIGLIORAMENTO: Reset lastId se non ci sono più movimenti/promemoria
         if (appData.invoices.length === 0 && appData.expenses.length === 0 && appData.reminders.length === 0) {
@@ -1306,15 +1354,51 @@
     function renderRemindersPage(){
       const symbol = getCurrencySymbol();
       const list = appData.reminders||[];
+      const birthdays = appData.birthdays||[];
       const today = new Date(); today.setHours(0,0,0,0);
-      const sorted = list.slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
-      const upcoming = sorted.filter(r=> !r.paid && new Date(r.date)>=today);
-      const paid = sorted.filter(r=> r.paid);
-      const overdue = sorted.filter(r=> {
+      
+      // Ordina i promemoria (scadenze finanziarie) per data
+      const sortedReminders = list.slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
+      const upcomingReminders = sortedReminders.filter(r=> !r.paid && new Date(r.date)>=today);
+      const paidReminders = sortedReminders.filter(r=> r.paid);
+      const overdueReminders = sortedReminders.filter(r=> {
         const rDate = new Date(r.date); rDate.setHours(0,0,0,0);
         return !r.paid && rDate < today;
       });
+      
       const types = ['IVA','IMU','TARI','Tasse/Acconto','Assicurazione','Bollo Auto','Affitto','Altri Costi Personali','Altri Costi Attività'];
+      
+      // Funzione per calcolare l'età e la scadenza annuale dei compleanni
+      const getBirthdayInfo = (bd) => {
+        const bdDate = new Date(bd.date);
+        const currentYear = new Date().getFullYear();
+        
+        // Data di ricorrenza nel *prossimo* anno per l'ordinamento
+        let recurrence = new Date(`${currentYear}-${bd.recurringDate}`);
+        if (recurrence < today) {
+            recurrence = new Date(`${currentYear + 1}-${bd.recurringDate}`);
+        }
+        
+        let age = currentYear - bdDate.getFullYear();
+        if (new Date(bd.recurringDate).setFullYear(currentYear) > today) {
+            age -= 1; // Se il compleanno non è ancora passato quest'anno
+        }
+        
+        const diffDays = Math.ceil((recurrence - today) / (1000 * 60 * 60 * 24));
+        const status = diffDays === 0 ? 'Oggi!' : (diffDays > 0 && diffDays <= 7 ? `In ${diffDays} giorni` : `Mancano ${diffDays} giorni`);
+
+        return {
+            ...bd,
+            recurrenceDate: recurrence,
+            displayDate: new Date(`${currentYear}-${bd.recurringDate}`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }),
+            age: age >= 0 ? age : 'N/A',
+            status: status
+        };
+      };
+
+      // Ordina compleanni per data di ricorrenza più vicina
+      const sortedBirthdays = birthdays.map(getBirthdayInfo).sort((a, b) => a.recurrenceDate - b.recurrenceDate);
+      
       const pill = (r)=>{
         if (r.paid) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300';
         const rDate = new Date(r.date); rDate.setHours(0,0,0,0);
@@ -1323,29 +1407,54 @@
         if (diff<=30) return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
         return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
       };
-      const section = (list,title)=>`
+      
+      const reminderSection = (list,title, type='payment')=>`
         <h3 class="text-xl font-medium mb-3 border-b pb-1 text-gray-700 dark:text-gray-300 mt-6">${title} (${list.length})</h3>
         <div class="space-y-3">
           ${list.length? list.map(r=>`
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card flex justify-between items-center">
               <div class="flex-grow">
-                <span class="text-xs font-semibold px-2 py-1 rounded-full ${pill(r)}">${r.paid?'PAGATO':r.type}</span>
-                <p class="font-bold mt-1 ${r.paid?'line-through text-gray-500':'text-gray-800 dark:text-gray-200'}">${r.description}</p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Scadenza: ${new Date(r.date).toLocaleDateString('it-IT')} | Importo: ${r.amount.toFixed(2)} ${symbol}</p>
+                ${type === 'payment' ? `<span class="text-xs font-semibold px-2 py-1 rounded-full ${pill(r)}">${r.paid?'PAGATO':r.type}</span>` : ''}
+                
+                <p class="font-bold mt-1 ${r.paid?'line-through text-gray-500':'text-gray-800 dark:text-gray-200'}">${type === 'payment' ? r.description : r.name}</p>
+                
+                ${type === 'payment' ? 
+                    `<p class="text-sm text-gray-600 dark:text-gray-400">Scadenza: ${new Date(r.date).toLocaleDateString('it-IT')} | Importo: ${r.amount.toFixed(2)} ${symbol}</p>` :
+                    `<p class="text-sm text-gray-600 dark:text-gray-400">Data: ${r.displayDate} | Età: ${r.age} | ${r.status}</p>`}
               </div>
               <div class="flex space-x-2">
-                <button onclick="toggleReminderPaid(${r.id})" class="text-sm px-3 py-1 rounded-lg ${r.paid?'bg-orange-500 hover:bg-orange-600':'bg-emerald-500 hover:bg-emerald-600'} text-white">${r.paid?'Annulla Pag.':'Paga'}</button>
-                <button onclick="deleteReminder(${r.id})" class="text-red-400 hover:text-red-600">🗑️</button>
+                ${type === 'payment' ? 
+                    `<button onclick="toggleReminderPaid(${r.id})" class="text-sm px-3 py-1 rounded-lg ${r.paid?'bg-orange-500 hover:bg-orange-600':'bg-emerald-500 hover:bg-emerald-600'} text-white">${r.paid?'Annulla Pag.':'Paga'}</button>` : ''}
+                <button onclick="${type === 'payment' ? `deleteReminder(${r.id})` : `deleteBirthday(${r.id})`}" class="text-red-400 hover:text-red-600">🗑️</button>
               </div>
             </div>
           `).join(''):'<p class="text-gray-500">Nessun promemoria in questa categoria.</p>'}
         </div>
       `;
+      
       return `
         <div class="space-y-6">
-          <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700 dark:text-gray-300">Promemoria Scadenze</h2>
+          <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700 dark:text-gray-300">Promemoria Scadenze & Eventi</h2>
+          
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card mt-6">
-            <h3 class="text-xl font-medium mb-4 text-gray-700 dark:text-gray-300">Aggiungi Nuovo Promemoria</h3>
+            <h3 class="text-xl font-medium mb-4 text-pink-600">Aggiungi Compleanno 🎂</h3>
+            <form id="birthday-form" onsubmit="event.preventDefault(); handleBirthdaySubmit();" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome</label>
+                <input id="birthday-name" name="name" required placeholder="Es. Mario Rossi" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data di Nascita (Anno opzionale)</label>
+                <input type="date" id="birthday-date" name="date" value="${new Date().toISOString().slice(0,10)}" required class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+              </div>
+              <button type="submit" class="cta-button w-full bg-pink-500 text-white p-3 rounded-lg font-bold hover:bg-pink-600">Aggiungi Compleanno</button>
+            </form>
+          </div>
+
+          ${reminderSection(sortedBirthdays, 'Compleanni in Arrivo', 'birthday')}
+
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card mt-6">
+            <h3 class="text-xl font-medium mb-4 text-emerald-600">Aggiungi Nuovo Promemoria (Pagamento)</h3>
             <form id="reminder-form" onsubmit="event.preventDefault(); handleReminderSubmit();" class="space-y-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo Scadenza</label>
@@ -1370,9 +1479,10 @@
               <button type="submit" class="cta-button w-full bg-emerald-500 text-white p-3 rounded-lg font-bold hover:bg-emerald-600">Aggiungi Promemoria</button>
             </form>
           </div>
-          ${section(overdue,'Scaduti (Urgenti)')}
-          ${section(upcoming,'In Arrivo')}
-          ${section(paid,'Pagati')}
+
+          ${reminderSection(overdueReminders,'Scaduti (Urgenti)', 'payment')}
+          ${reminderSection(upcomingReminders,'In Arrivo', 'payment')}
+          ${reminderSection(paidReminders,'Pagati', 'payment')}
         </div>
       `;
     }
@@ -1511,6 +1621,42 @@
         renderPage('settings');
       });
     }
+    
+    // --- Notifications (every hour) ---
+    function checkReminders(){
+      const today=new Date();
+      
+      // 1. Check Payments
+      (appData.reminders||[]).forEach(r=>{
+        const diff=(new Date(r.date)-today)/(1000*60*60*24);
+        if (!r.paid && diff>=0 && diff<=3){
+          if (Notification.permission==='granted'){
+            new Notification(`🔔 Scadenza: ${r.type}`, { body:`${r.description} - Scade il ${new Date(r.date).toLocaleDateString('it-IT')}` });
+          }
+        }
+      });
+      
+      // 2. Check Birthdays
+      const currentMonthDay = today.toISOString().slice(5, 10);
+      (appData.birthdays||[]).forEach(bd => {
+        const bdMonthDay = bd.recurringDate; // MM-DD
+        const bdDate = new Date(bd.date);
+        
+        // Calcola la data di ricorrenza nell'anno corrente
+        let recurrence = new Date(`${today.getFullYear()}-${bdMonthDay}`);
+        
+        // Considera solo i compleanni passati o futuri entro 7 giorni
+        const diffDays = Math.ceil((recurrence - today) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays >= 0 && diffDays <= 7) {
+            const age = today.getFullYear() - bdDate.getFullYear();
+            if (Notification.permission === 'granted') {
+                new Notification(`🎂 Compleanno di ${bd.name}`, { body: diffDays === 0 ? `Compie ${age} anni oggi!` : `Compie ${age} anni in ${diffDays} giorni.` });
+            }
+        }
+      });
+    }
+
 
     // --- Page router ---
     function renderPage(pageId){
@@ -1673,11 +1819,22 @@
           }
       });
       
-      // 3. Hotkeys (I=Income, E=Expense)
+      // 3. Hotkeys (I=Income, E=Expense, ENTER=Submit)
       document.addEventListener('keydown', (e) => {
           if (document.getElementById('pin-lock-modal').style.display !== 'none') return;
           
           if (currentPage === 'activity' || currentPage === 'personal') {
+              // Submit form with ENTER
+              if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                  const form = document.getElementById('transaction-form');
+                  // Submit if the focus is on a button or the form has data
+                  if (e.target.tagName === 'BUTTON' || (form && form.querySelector('#net-amount')?.value > 0)) {
+                      e.preventDefault();
+                      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                      return;
+                  }
+              }
+
               // Ignore if focus is in an input field (to allow normal typing)
               if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
                   return;
