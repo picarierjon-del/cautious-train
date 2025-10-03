@@ -1,641 +1,1380 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Finanza Smart Definitiva 7.0</title>
-  <!-- UI & Charts -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-    body { font-family:'Inter',sans-serif; background:#f7f9fc; color:#1e293b; }
-    .card { box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.06); }
-    .tab-active { border-bottom:3px solid #10b981; color:#10b981; }
-    .cta-button { transition:all .2s; box-shadow:0 2px 4px rgba(16,185,129,.4); }
-    .bar-container { height:20px; border-radius:9999px; overflow:hidden; display:flex; }
-    .bar-income{background:#10b981}.bar-expense{background:#ef4444}
-    .bar-addebito{background:#fb923c}.bar-credito{background:#3b82f6}
-    #quick-actions{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(to top,#fff,#fff8);padding:10px;box-shadow:0 -2px 10px rgba(0,0,0,.1);z-index:40;}
-    /* Dark mode */
-    body.dark { background:#0f172a; color:#f1f5f9; }
-    body.dark .card { background:#111827; color:#e5e7eb; }
-    body.dark input, body.dark select, body.dark textarea { background:#111827; color:#e5e7eb; border-color:#374151; }
-    body.dark .bg-white { background:#111827 !important; }
-    body.dark .text-gray-700 { color:#e5e7eb !important; }
-    body.dark .text-gray-800 { color:#f9fafb !important; }
-    body.dark .text-gray-500 { color:#9ca3af !important; }
-  </style>
-  <!-- Manifest PWA creato al volo -->
-  <link id="dynamic-manifest" rel="manifest">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Finanziaria Unificata Smart </title>
+    <!-- Caricamento di Tailwind CSS per uno stile moderno e responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Stile personalizzato per migliorare l'estetica e la leggibilità su mobile */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fc;
+            color: #1e293b;
+        }
+        .card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+        }
+        .tab-active {
+            border-bottom: 3px solid #10b981;
+            color: #10b981;
+        }
+        .cta-button {
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4);
+        }
+        /* Stile per i grafici a barre */
+        .bar-container {
+            height: 20px;
+            border-radius: 9999px;
+            overflow: hidden;
+            display: flex;
+        }
+        .bar-income { background-color: #10b981; }
+        .bar-expense { background-color: #ef4444; }
+        .bar-addebito { background-color: #fb923c; }
+        .bar-credito { background-color: #3b82f6; }
+
+        /* Stile per i pulsanti rapidi in basso */
+        #quick-actions {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.8));
+            padding: 10px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 40;
+        }
+    </style>
 </head>
 <body class="min-h-screen">
-  <div id="app" class="max-w-4xl mx-auto p-4 md:p-6">
-    <!-- Header -->
-    <header class="mb-6 flex items-center justify-between">
-      <div class="flex-1 text-center">
-        <h1 class="text-3xl font-bold text-gray-800">Finanza Smart 7.0 🚀</h1>
-        <p class="text-center text-sm text-gray-500">Attività & Personale</p>
-      </div>
-      <!-- Dark mode toggle -->
-      <button id="theme-toggle"
-        class="ml-4 px-3 py-2 rounded-lg border text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
-        🌙 Dark
-      </button>
-    </header>
 
-    <!-- Nav -->
-    <nav id="navbar" class="flex justify-around bg-white p-2 rounded-xl shadow-lg card"></nav>
+    <div id="app" class="max-w-4xl mx-auto p-4 md:p-6">
+        <!-- Intestazione e Navigazione a Schede -->
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-center text-gray-800">Finanza Smart 4.1 (Definitiva) 🚀</h1>
+            <p class="text-center text-sm text-gray-500 mb-4">Attività & Personale</p>
+            <nav id="navbar" class="flex justify-around bg-white p-2 rounded-xl shadow-lg">
+                <!-- I pulsanti vengono gestiti da JS -->
+            </nav>
+        </header>
 
-    <!-- Content -->
-    <div id="content-area" class="mt-4"></div>
-
-    <!-- Quick actions -->
-    <div id="quick-actions" class="hidden md:hidden">
-      <div class="flex space-x-3 max-w-lg mx-auto">
-        <button onclick="quickRegister('true')"
-          class="flex-1 bg-emerald-500 text-white p-3 rounded-xl font-bold hover:bg-emerald-600 shadow-xl transition transform hover:scale-[1.02] text-lg">
-          💰 Registra Entrata
-        </button>
-        <button onclick="quickRegister('false')"
-          class="flex-1 bg-red-500 text-white p-3 rounded-xl font-bold hover:bg-red-600 shadow-xl transition transform hover:scale-[1.02] text-lg">
-          💸 Registra Uscita
-        </button>
-      </div>
-    </div>
-
-    <!-- Modal -->
-    <div id="modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex justify-center items-center p-4">
-      <div class="bg-white p-6 rounded-xl w-full max-w-sm card">
-        <h3 id="modal-title" class="text-xl font-bold mb-3 text-red-600">Attenzione</h3>
-        <p id="modal-message" class="text-gray-700 mb-4">Messaggio di esempio.</p>
-        <div class="flex justify-end space-x-3">
-          <button id="modal-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Annulla</button>
-          <button id="modal-confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 cta-button">Conferma</button>
+        <!-- Contenuto Dinamico (Le sezioni vengono mostrate/nascoste dal JS) -->
+        <div id="content-area">
+            <!-- La pagina attiva verrà iniettata qui -->
         </div>
-      </div>
+
+        <!-- Pulsanti di Azione Rapida Fissi (visibili solo nelle pagine di registrazione) -->
+        <div id="quick-actions" class="hidden md:hidden">
+            <div class="flex space-x-3 max-w-lg mx-auto">
+                <button id="btn-quick-income" onclick="quickRegister('true')"
+                        class="flex-1 bg-emerald-500 text-white p-3 rounded-xl font-bold hover:bg-emerald-600 shadow-xl transition transform hover:scale-[1.02] text-lg">
+                    💰 Registra Entrata
+                </button>
+                <button id="btn-quick-expense" onclick="quickRegister('false')"
+                        class="flex-1 bg-red-500 text-white p-3 rounded-xl font-bold hover:bg-red-600 shadow-xl transition transform hover:scale-[1.02] text-lg">
+                    💸 Registra Uscita
+                </button>
+            </div>
+        </div>
+
+
+        <!-- Modal per messaggi e alert (NO alert() nativi) -->
+        <div id="modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex justify-center items-center p-4">
+            <div class="bg-white p-6 rounded-xl w-full max-w-sm card">
+                <h3 id="modal-title" class="text-xl font-bold mb-3 text-red-600">Attenzione</h3>
+                <p id="modal-message" class="text-gray-700 mb-4">Messaggio di esempio.</p>
+                <div class="flex justify-end space-x-3">
+                    <button id="modal-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Annulla</button>
+                    <button id="modal-confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 cta-button">Conferma</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Toast per azioni rapide -->
+        <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 p-3 bg-green-500 text-white rounded-xl shadow-lg transition-opacity duration-300 opacity-0" role="alert">
+            Azione completata con successo!
+        </div>
+
     </div>
 
-    <!-- Toast -->
-    <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 p-3 bg-green-500 text-white rounded-xl shadow-lg transition-opacity duration-300 opacity-0" role="alert">
-      Azione completata con successo!
-    </div>
-  </div>
+    <!-- Logica JavaScript Super Mega Smart -->
+    <script>
+        // --- VARIABILI GLOBALI E CONFIGURAZIONE ---
+        const LOCAL_STORAGE_KEY = 'smartFinApp_v4'; 
+        const IVA_RATES = [0, 4, 5, 10, 22]; 
+        const MAX_RECENT_TRANSACTIONS = 10; 
+        let appData = {
+            invoices: [],
+            expenses: [],
+            reminders: [],
+            contacts: [],
+            lastId: 0
+        };
+        let currentPage = 'activity'; 
 
-  <script>
-  /* =========================
-     CONFIG & GLOBAL STATE
-  ========================== */
-  const LOCAL_STORAGE_KEY = 'smartFinApp_v70';
-  const IVA_RATES = [0,4,5,10,22];
-  const MAX_RECENT_TRANSACTIONS = 10;
-  const DEFAULT_CATEGORIES = ['Affitto','Bollette','Spesa','Marketing','Servizi','Stipendi','Carburante','Ristoranti','Abbonamenti','Altro'];
+        // --- FUNZIONI DI BASE (LOAD, SAVE, ID) ---
 
-  let appData = {
-    invoices: [],
-    expenses: [],
-    reminders: [],
-    contacts: [],
-    categories: DEFAULT_CATEGORIES.slice(),
-    lastId: 0
-  };
-  let currentPage = 'report';
-
-  /* =========================
-     THEME (DARK MODE)
-  ========================== */
-  function applySavedTheme(){
-    const saved = localStorage.getItem('theme') || 'light';
-    document.body.classList.toggle('dark', saved === 'dark');
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = saved === 'dark' ? '☀️ Light' : '🌙 Dark';
-  }
-  function toggleTheme(){
-    const isDark = document.body.classList.toggle('dark');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    applySavedTheme();
-  }
-
-  /* =========================
-     STORAGE
-  ========================== */
-  function loadData(){
-    try{
-      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (raw){
-        const parsed = JSON.parse(raw);
-        appData = { ...appData, ...parsed };
-        appData.invoices ||= [];
-        appData.expenses ||= [];
-        appData.reminders ||= [];
-        appData.contacts ||= [];
-        appData.categories ||= DEFAULT_CATEGORIES.slice();
-        appData.lastId ||= 0;
-      }
-    }catch(e){ console.error(e); showToast('Errore nel caricamento dati','red'); }
-  }
-  function saveData(){
-    try{ localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData)); }
-    catch(e){ console.error(e); showToast('Errore salvataggio dati','red'); }
-  }
-  function getNextId(){ appData.lastId++; saveData(); return appData.lastId; }
-
-  /* =========================
-     UI HELPERS
-  ========================== */
-  function showModal(title,message,isConfirmation,onConfirm,onCancel=null){
-    const modal = document.getElementById('modal');
-    const t = document.getElementById('modal-title'); const m = document.getElementById('modal-message');
-    const ok = document.getElementById('modal-confirm-btn'); const cancel = document.getElementById('modal-cancel-btn');
-    t.textContent = title; m.textContent = message;
-    if (isConfirmation){
-      ok.textContent = 'Conferma';
-      ok.classList.remove('bg-gray-500','hover:bg-gray-600');
-      ok.classList.add('bg-red-600','hover:bg-red-700');
-      ok.onclick = ()=>{ modal.classList.add('hidden'); onConfirm&&onConfirm(); };
-      cancel.classList.remove('hidden'); cancel.onclick = ()=>{ modal.classList.add('hidden'); onCancel&&onCancel(); };
-    } else {
-      ok.textContent='OK';
-      ok.classList.remove('bg-red-600','hover:bg-red-700');
-      ok.classList.add('bg-gray-500','hover:bg-gray-600');
-      ok.onclick = ()=> modal.classList.add('hidden');
-      cancel.classList.add('hidden');
-    }
-    modal.classList.remove('hidden');
-  }
-  function showToast(message,type='green'){
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = `fixed bottom-5 left-1/2 transform -translate-x-1/2 p-3 text-white rounded-xl shadow-lg transition-opacity duration-300 opacity-100 ${type==='red'?'bg-red-500':'bg-green-500'}`;
-    setTimeout(()=>toast.classList.add('opacity-0'), 2500);
-  }
-
-  /* =========================
-     QUICK REGISTER
-  ========================== */
-  function quickRegister(isIncomeString){
-    const isIncome = isIncomeString === 'true';
-    document.getElementById('transaction-form-anchor')?.scrollIntoView({behavior:'smooth'});
-    const isIncomeSelect = document.getElementById('isIncome');
-    if (isIncomeSelect){
-      isIncomeSelect.value = isIncomeString;
-      isIncomeSelect.dispatchEvent(new Event('change'));
-    }
-    const form = document.getElementById('transaction-form');
-    if (form){
-      form.removeAttribute('data-transaction-id'); form.reset();
-      const submitBtn = form.querySelector('button[type="submit"]');
-      if (submitBtn){
-        submitBtn.textContent='Registra Movimento';
-        submitBtn.classList.remove('bg-blue-500','hover:bg-blue-600');
-        submitBtn.classList.add('bg-emerald-500','hover:bg-emerald-600');
-      }
-    }
-    const incomeTypeSelect = document.getElementById('incomeType');
-    if (incomeTypeSelect && isIncome){ incomeTypeSelect.value='Fattura (Cliente)'; incomeTypeSelect.dispatchEvent(new Event('change')); }
-    showToast(isIncome?'Modulo pronto per Entrata!':'Modulo pronto per Uscita!');
-  }
-
-  /* =========================
-     PERIOD FILTERS & SUMMARY
-  ========================== */
-  function filterByPeriod(itemDateStr, filterType, filterValue){
-    if (filterType==='all'||!filterValue||filterValue==='all') return true;
-    const itemDate = new Date(itemDateStr); if (isNaN(itemDate)) return false;
-    const y=itemDate.getFullYear(), m=itemDate.getMonth();
-    if (filterType==='year'){ return y===parseInt(filterValue); }
-    if (filterType==='month'){ const [fy,fm]=filterValue.split('-').map(Number); return y===fy && m===(fm-1); }
-    if (filterType==='quarter'){ const [fy,fm]=filterValue.split('-').map(Number); return y===fy && Math.ceil((m+1)/3)===Math.ceil(fm/3); }
-    if (filterType==='day'){ return itemDateStr===filterValue; }
-    if (filterType==='week'){
-      const d=new Date(filterValue);
-      const w=d.getDay();
-      const start=new Date(d); start.setDate(d.getDate()-(w===0?6:w-1)); start.setHours(0,0,0,0);
-      const end=new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59,999);
-      return itemDate>=start && itemDate<=end;
-    }
-    return false;
-  }
-
-  function calculateFinancialSummary(type, filterType, filterDateStr){
-    let totalIncomes=0,totalExpenses=0, ivaAddebito=0, ivaCredito=0;
-    const types = type==='global' ? ['activity','personal'] : [type];
-    const all = [
-      ...appData.invoices.map(t=>({...t,isIncome:true,key:'inv'})),
-      ...appData.expenses.map(t=>({...t,isIncome:false,key:'exp'}))
-    ];
-    const filtered = all.filter(i=>types.includes(i.type)).filter(i=>filterByPeriod(i.date,filterType,filterDateStr));
-    filtered.forEach(i=>{
-      if (i.isIncome){ totalIncomes+=i.gross; if (i.type==='activity') ivaAddebito+=i.vatAmount; }
-      else { totalExpenses+=i.gross; if (i.type==='activity') ivaCredito+=i.vatAmount; }
-    });
-    const netBalance=totalIncomes-totalExpenses;
-    const ivaBalance=ivaAddebito-ivaCredito;
-    return { totalIncomes,totalExpenses,netBalance,ivaAddebito,ivaCredito,ivaBalance, transactions: filtered.sort((a,b)=> new Date(b.date)-new Date(a.date)) };
-  }
-
-  /* =========================
-     CONTACTS & CATEGORIES
-  ========================== */
-  function addContact(name, scope, relation){
-    const clean=(name||'').trim(); if(!clean) return;
-    const exists=appData.contacts.find(c=> c.name.toLowerCase()===clean.toLowerCase() && c.scope===scope );
-    if(!exists){ appData.contacts.push({id:getNextId(), name:clean, scope, relation}); saveData(); }
-  }
-  function deleteContact(id){
-    const i=appData.contacts.findIndex(c=>c.id===id);
-    if (i>-1){
-      showModal('Eliminare contatto?','Le transazioni restano ma senza suggerimenti autocomplete.',true,()=>{
-        appData.contacts.splice(i,1); saveData(); showToast('Contatto eliminato.','red'); renderPage('settings');
-      });
-    }
-  }
-  function ensureCategory(cat){
-    const c=(cat||'').trim(); if(!c) return;
-    if (!appData.categories.includes(c)){ appData.categories.push(c); appData.categories.sort((a,b)=>a.localeCompare(b)); saveData(); }
-  }
-
-  /* =========================
-     TRANSACTIONS CRUD
-  ========================== */
-  function saveTransaction(isIncome, data){
-    const list = isIncome ? appData.invoices : appData.expenses;
-    const vatRate = parseFloat(data.vatRate)||0;
-    const net = parseFloat(data.net)||0;
-    const vatAmount = (net*vatRate/100);
-    const gross = net+vatAmount;
-    const tags = (data.tags||'').split(',').map(s=>s.trim()).filter(Boolean);
-
-    const updatedItem = {
-      id: data.id || getNextId(),
-      type: data.dataType, // 'activity' | 'personal'
-      date: data.date,
-      description: data.description || '',
-      category: (data.category||'Altro').trim(),
-      tags,
-      net:+net.toFixed(2),
-      vatRate:+vatRate,
-      vatAmount:+vatAmount.toFixed(2),
-      gross:+gross.toFixed(2),
-      incomeType: data.incomeType || (isIncome && data.dataType==='activity' ? 'Fattura (Cliente)' : null)
-    };
-
-    const isFatturaOrPersonal = (isIncome && data.dataType==='activity' && data.incomeType==='Fattura (Cliente)') || data.dataType==='personal';
-    if (isFatturaOrPersonal && updatedItem.description?.trim()){
-      if (!data.id || (list.find(it=>it.id===data.id)?.description !== data.description)){
-        addContact(updatedItem.description, data.dataType, isIncome?'client':'supplier');
-      }
-    }
-    ensureCategory(updatedItem.category);
-
-    if (isIncome && data.dataType==='activity' && data.incomeType==='Incasso/Corrispettivo'){
-      updatedItem.description = updatedItem.description || 'Corrispettivi/Incasso Giornaliero';
-    }
-
-    if (data.id){
-      const idx=list.findIndex(i=>i.id===data.id);
-      if (idx>-1){ list[idx]=updatedItem; showToast(`Transazione #${data.id} aggiornata!`); }
-    } else { list.push(updatedItem); showToast(`"${updatedItem.description}" registrato!`); }
-
-    saveData(); renderPage(currentPage);
-  }
-
-  function handleTransactionSubmit(type){
-    const form = document.getElementById('transaction-form');
-    const data = new FormData(form);
-    const isIncome = data.get('isIncome')==='true';
-    const transactionId = form.getAttribute('data-transaction-id');
-
-    const payload = {
-      id: transactionId ? parseInt(transactionId) : null,
-      dataType: type,
-      isIncome,
-      date: data.get('date'),
-      description: data.get('description'),
-      net: data.get('net'),
-      vatRate: data.get('vatRate'),
-      incomeType: data.get('incomeType'),
-      category: data.get('category') || 'Altro',
-      tags: data.get('tags') || ''
-    };
-
-    const isCorrisp = type==='activity' && isIncome && payload.incomeType==='Incasso/Corrispettivo';
-    if (payload.net && payload.date && (isCorrisp || (payload.description && payload.description.trim()))){
-      saveTransaction(isIncome, payload);
-      form.reset();
-      form.removeAttribute('data-transaction-id');
-      document.getElementById('description-div')?.classList.remove('hidden');
-    } else {
-      showToast('Compila tutti i campi richiesti.','red');
-    }
-  }
-
-  function editTransaction(isIncome,id,scope){
-    const list = isIncome ? appData.invoices : appData.expenses;
-    const item = list.find(t=>t.id===id);
-    if (!item) return showToast('Transazione non trovata.','red');
-    renderPage(scope);
-    const form = document.getElementById('transaction-form'); if(!form) return;
-    form.setAttribute('data-transaction-id', item.id);
-    document.getElementById('isIncome').value = isIncome ? 'true':'false';
-    document.getElementById('date').value = item.date;
-    document.getElementById('description').value = item.description || '';
-    document.getElementById('net-amount').value = item.net.toFixed(2);
-    document.getElementById('vat-rate').value = item.vatRate;
-    document.getElementById('category').value = item.category || 'Altro';
-    document.getElementById('tags').value = (item.tags||[]).join(', ');
-    if (scope==='activity' && isIncome){ document.getElementById('incomeType').value = item.incomeType || 'Fattura (Cliente)'; }
-    setupActivityIncomeTypeListeners(scope);
-    setupContactAutocomplete(scope);
-    setupCategoryAutocomplete();
-    calculateGross();
-    const submitBtn = form.querySelector('button[type="submit"]');
-    submitBtn.textContent = `Salva Modifiche (ID ${item.id})`;
-    submitBtn.classList.remove('bg-emerald-500','hover:bg-emerald-600');
-    submitBtn.classList.add('bg-blue-500','hover:bg-blue-600');
-    showToast(`Modulo in modifica per ID ${item.id}.`);
-  }
-
-  function deleteTransaction(isIncome,id){
-    const listName = isIncome ? 'invoices':'expenses';
-    const idx = appData[listName].findIndex(i=>i.id===id);
-    if (idx>-1){
-      showModal('Eliminare la transazione?','Operazione irreversibile.',true,()=>{
-        appData[listName].splice(idx,1); saveData(); showToast('Transazione eliminata.','red'); renderPage(currentPage);
-      });
-    }
-  }
-
-  /* =========================
-     REMINDERS
-  ========================== */
-  function saveReminder(data){
-    appData.reminders ||= [];
-    if (data.id){
-      const i=appData.reminders.findIndex(r=>r.id===data.id);
-      if(i>-1) appData.reminders[i]={...appData.reminders[i],...data};
-    } else {
-      appData.reminders.push({ id:getNextId(), ...data, paid:false });
-    }
-    saveData(); showToast('Promemoria salvato!'); renderPage('reminders');
-  }
-  function handleReminderSubmit(){
-    const f=document.getElementById('reminder-form'); const d=new FormData(f);
-    const payload={ type:d.get('type'), description:d.get('description'), date:d.get('date'), amount: parseFloat(d.get('amount'))||0 };
-    if (payload.description && payload.date && payload.amount>0){ saveReminder(payload); f.reset(); document.getElementById('reminder-date').value = new Date().toISOString().slice(0,10); }
-    else showToast('Compila tutti i campi validi.','red');
-  }
-  function toggleReminderPaid(id){
-    const r=(appData.reminders||[]).find(x=>x.id===id);
-    if (r){ r.paid=!r.paid; saveData(); showToast(r.paid?'Pagamento registrato!':'Pagamento annullato.'); renderPage('reminders'); }
-  }
-  function deleteReminder(id){
-    const i=(appData.reminders||[]).findIndex(r=>r.id===id);
-    if (i>-1){
-      showModal('Eliminare promemoria?','Operazione irreversibile.',true,()=>{
-        appData.reminders.splice(i,1); saveData(); showToast('Promemoria eliminato.','red'); renderPage('reminders');
-      });
-    }
-  }
-
-  /* =========================
-     FORM LOGIC (autocomplete)
-  ========================== */
-  function setupActivityIncomeTypeListeners(scope){
-    if (scope!=='activity') return;
-    const incomeTypeSelect = document.getElementById('incomeType');
-    const isIncomeSelect = document.getElementById('isIncome');
-    const descriptionDiv = document.getElementById('description-div');
-
-    const updateVisibility = ()=>{
-      const isIncome = isIncomeSelect.value==='true';
-      const incomeType = incomeTypeSelect?.value || 'Fattura (Cliente)';
-      if (isIncome && incomeType==='Incasso/Corrispettivo'){
-        descriptionDiv.classList.add('hidden');
-        const desc = document.getElementById('description');
-        desc.removeAttribute('required'); desc.value='Corrispettivi/Incasso Giornaliero';
-        document.getElementById('description-label').textContent='Descrizione Incasso (Opzionale)';
-      } else {
-        descriptionDiv.classList.remove('hidden');
-        const desc = document.getElementById('description');
-        desc.setAttribute('required','required');
-        if (document.getElementById('transaction-form').getAttribute('data-transaction-id')===null){ desc.value=''; }
-        document.getElementById('description-label').textContent = isIncome ? 'Cliente / Descrizione' : 'Fornitore / Descrizione';
-        setupContactAutocomplete(scope);
-      }
-    };
-
-    incomeTypeSelect?.addEventListener('change', updateVisibility);
-    isIncomeSelect.addEventListener('change', ()=>{
-      const isIncome=isIncomeSelect.value==='true';
-      const ctl=document.getElementById('income-type-control');
-      if (scope==='activity' && ctl){ ctl.classList.toggle('hidden', !isIncome); }
-      updateVisibility();
-    });
-    updateVisibility();
-  }
-
-  function setupContactAutocomplete(scope){
-    const isIncome = document.getElementById('isIncome').value==='true';
-    const incomeType = document.getElementById('incomeType')?.value;
-    const input = document.getElementById('description');
-    const datalist = document.getElementById('contact-list');
-    if (!input || !datalist) return;
-
-    if (scope==='activity' && isIncome && incomeType==='Incasso/Corrispettivo'){ datalist.innerHTML=''; return; }
-    const relation = isIncome ? 'client':'supplier';
-    const contacts = appData.contacts
-      .filter(c=> c.scope===scope && (c.relation===relation || c.relation==='both'))
-      .sort((a,b)=> a.name.localeCompare(b.name));
-    datalist.innerHTML = contacts.map(c=> `<option value="${c.name}"></option>`).join('');
-    input.setAttribute('list','contact-list');
-  }
-
-  function setupCategoryAutocomplete(){
-    const dl = document.getElementById('category-list');
-    if (!dl) return;
-    const all = (appData.categories||DEFAULT_CATEGORIES).slice().sort((a,b)=>a.localeCompare(b));
-    dl.innerHTML = all.map(c=> `<option value="${c}"></option>`).join('');
-  }
-
-  function calculateGross(){
-    const netInput=document.getElementById('net-amount');
-    const vatSelect=document.getElementById('vat-rate');
-    const vatAmountDisplay=document.getElementById('vat-amount-display');
-    const grossAmountDisplay=document.getElementById('gross-amount-display');
-    const net=parseFloat(netInput.value)||0; const rate=parseFloat(vatSelect.value)||0;
-    const vatAmt=net*rate/100; const gross=net+vatAmt;
-    vatAmountDisplay.textContent = vatAmt.toFixed(2)+' €';
-    grossAmountDisplay.textContent = gross.toFixed(2)+' €';
-  }
-        /* =========================
-     EXPORT / IMPORT
-  ========================== */
-  function exportDataJSON(){
-    const blob=new Blob([JSON.stringify(appData,null,2)],{type:'application/json'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup.json';a.click();
-  }
-  function exportCSV(){
-    const all=[...appData.invoices.map(t=>({...t,isIncome:true})),...appData.expenses.map(t=>({...t,isIncome:false}))];
-    const rows=all.map(t=>[t.id,t.date,t.description,t.category,t.net,t.vatRate,t.vatAmount,t.gross,t.isIncome]);
-    const csv='ID,Data,Descrizione,Categoria,Netto,IVA%,IVA,Lordo,Entrata\n'+rows.map(r=>r.join(',')).join('\n');
-    const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);a.download='export.csv';a.click();
-  }
-  function importCSV(file){
-    const reader=new FileReader();
-    reader.onload=e=>{
-      const lines=e.target.result.split('\n').slice(1);
-      lines.forEach(l=>{
-        const [id,date,desc,cat,net,vatRate,vatAmount,gross,isIncome]=l.split(',');
-        if(date){
-          const obj={id:getNextId(),date,description:desc,category:cat,net:parseFloat(net),vatRate:parseFloat(vatRate),vatAmount:parseFloat(vatAmount),gross:parseFloat(gross),isIncome:isIncome==='true'};
-          if(obj.isIncome) appData.invoices.push(obj); else appData.expenses.push(obj);
+        function loadData() {
+            try {
+                const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (storedData) {
+                    const parsedData = JSON.parse(storedData);
+                    appData = { ...appData, ...parsedData };
+                    // Assicurazione che gli array esistano (stabilità)
+                    appData.invoices = appData.invoices || [];
+                    appData.expenses = appData.expenses || [];
+                    appData.reminders = appData.reminders || [];
+                    appData.contacts = appData.contacts || []; 
+                    appData.lastId = appData.lastId || 0;
+                }
+            } catch (error) {
+                console.error("Errore durante il caricamento dei dati:", error);
+                showToast("Errore nel caricamento dei dati! Verifica la console.", 'red');
+            }
         }
-      });
-      saveData();showToast('Import CSV completato');renderPage('report');
-    };
-    reader.readAsText(file);
-  }
 
-  /* =========================
-     REMINDER NOTIFICATIONS
-  ========================== */
-  function checkReminders(){
-    const today=new Date();
-    (appData.reminders||[]).forEach(r=>{
-      const diff=(new Date(r.date)-today)/(1000*60*60*24);
-      if(!r.paid && diff>=0 && diff<=3){
-        if(Notification.permission==='granted'){
-          new Notification(`🔔 ${r.type}`,{body:`${r.description} - scade il ${new Date(r.date).toLocaleDateString('it-IT')}`});
+        function saveData() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData));
+            } catch (error) {
+                console.error("Errore durante il salvataggio dei dati:", error);
+                showToast("Errore nel salvataggio dei dati! Lo spazio è pieno?", 'red');
+            }
         }
-      }
-    });
-  }
 
-  /* =========================
-     DASHBOARD KPI + CHART
-  ========================== */
-  function calcSummary(){
-    const inc=[...appData.invoices].reduce((a,t)=>a+t.gross,0);
-    const exp=[...appData.expenses].reduce((a,t)=>a+t.gross,0);
-    const saving=inc>0?((inc-exp)/inc*100):0;
-    return{inc,exp,saving};
-  }
-  function renderTrendChart(){
-    const ctx=document.getElementById('trend');if(!ctx)return;
-    const grouped={};
-    [...appData.invoices.map(t=>({...t,isIncome:true})),...appData.expenses.map(t=>({...t,isIncome:false}))]
-    .forEach(t=>{
-      const ym=t.date.slice(0,7);
-      if(!grouped[ym])grouped[ym]={inc:0,exp:0};
-      if(t.isIncome)grouped[ym].inc+=t.gross;else grouped[ym].exp+=t.gross;
-    });
-    const labels=Object.keys(grouped).sort();
-    const dataInc=labels.map(l=>grouped[l].inc);
-    const dataExp=labels.map(l=>grouped[l].exp);
-    new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Entrate',data:dataInc,borderColor:'green'},{label:'Uscite',data:dataExp,borderColor:'red'}]}});
-  }
+        function getNextId() {
+            appData.lastId++;
+            saveData();
+            return appData.lastId;
+        }
 
-  /* =========================
-     NAVBAR & PAGES
-  ========================== */
-  function renderNavbar(){
-    const nav=[{id:'activity',label:'Attività',icon:'💼'},{id:'personal',label:'Personale',icon:'🏠'},{id:'report',label:'Riepilogo',icon:'📊'},{id:'reminders',label:'Scadenze',icon:'🔔'},{id:'settings',label:'Dati',icon:'⚙️'}];
-    document.getElementById('navbar').innerHTML=nav.map(n=>`<button onclick="renderPage('${n.id}')" class="${currentPage===n.id?'tab-active':''}">${n.icon} ${n.label}</button>`).join('');
-  }
+        // --- FUNZIONI DI UTILITY UI (showModal, showToast) ---
+        
+        /** Mostra un messaggio di conferma/errore personalizzato (Modal) */
+        function showModal(title, message, isConfirmation, onConfirm, onCancel = null) {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            const cancelBtn = document.getElementById('modal-cancel-btn');
 
-  function renderPage(p){
-    currentPage=p;renderNavbar();
-    if(p==='report'){
-      const s=calcSummary();
-      document.getElementById('content-area').innerHTML=`
-        <div class="card p-4">
-          <h2 class="text-xl font-bold">📊 Dashboard</h2>
-          <p>Entrate: ${s.inc.toFixed(2)} €</p>
-          <p>Uscite: ${s.exp.toFixed(2)} €</p>
-          <p>Risparmio: ${s.saving.toFixed(1)}%</p>
-          <input id="search" placeholder="🔍 Cerca" class="border p-1 mt-2 w-full"/>
-          <div id="results"></div>
-          <canvas id="trend" class="mt-4"></canvas>
-          <div class="mt-4 flex space-x-2">
-            <button onclick="exportDataJSON()" class="bg-blue-500 text-white px-3 py-2 rounded">Export JSON</button>
-            <button onclick="exportCSV()" class="bg-green-500 text-white px-3 py-2 rounded">Export CSV</button>
-            <input type="file" onchange="importCSV(this.files[0])" class="border"/>
-          </div>
-        </div>`;
-      renderTrendChart();
-      document.getElementById('search').addEventListener('input',e=>{
-        const q=e.target.value.toLowerCase();
-        const all=[...appData.invoices.map(t=>({...t,isIncome:true})),...appData.expenses.map(t=>({...t,isIncome:false}))];
-        const f=all.filter(t=>(t.description||'').toLowerCase().includes(q)||t.category.toLowerCase().includes(q)||t.gross.toString().includes(q));
-        document.getElementById('results').innerHTML=f.map(t=>`<div class="border-b">${t.date} ${t.description} ${t.gross}€</div>`).join('');
-      });
-    }
-    if(p==='settings'){
-      document.getElementById('content-area').innerHTML=`
-        <div class="card p-4">
-          <h2 class="text-xl font-bold">⚙️ Impostazioni</h2>
-          <button onclick="localStorage.clear();location.reload()" class="mt-2 bg-red-500 text-white px-3 py-2 rounded">Reset Dati</button>
-        </div>`;
-    }
-    if(p==='reminders'){
-      document.getElementById('content-area').innerHTML=`
-        <div class="card p-4">
-          <h2>🔔 Promemoria</h2>
-          ${(appData.reminders||[]).map(r=>`<div>${r.description} ${r.date}</div>`).join('')}
-        </div>`;
-    }
-    if(p==='activity'||p==='personal'){
-      document.getElementById('content-area').innerHTML=`
-        <div class="card p-4">
-          <h2>${p==='activity'?'💼 Attività':'🏠 Personale'}</h2>
-          <form onsubmit="event.preventDefault();addTx('${p}')">
-            <input id="desc" placeholder="Descrizione" class="border p-2"/>
-            <input id="val" type="number" step="0.01" placeholder="Netto" class="border p-2"/>
-            <select id="cat">${appData.categories.map(c=>`<option>${c}</option>`).join('')}</select>
-            <button class="bg-emerald-500 text-white px-3 py-2">Aggiungi</button>
-          </form>
-        </div>`;
-    }
-  }
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
 
-  function addTx(scope){
-    const d=document.getElementById('desc').value;
-    const v=parseFloat(document.getElementById('val').value)||0;
-    const cat=document.getElementById('cat').value;
-    const obj={id:getNextId(),type:scope,date:new Date().toISOString().slice(0,10),description:d,category:cat,net:v,vatRate:22,vatAmount:v*0.22,gross:v*1.22};
-    if(scope==='activity')appData.invoices.push(obj);else appData.expenses.push(obj);
-    saveData();showToast('Transazione aggiunta!');renderPage(scope);
-  }
+            if (isConfirmation) {
+                confirmBtn.textContent = 'Conferma';
+                confirmBtn.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                confirmBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                confirmBtn.onclick = () => {
+                    modal.classList.add('hidden');
+                    if (onConfirm) onConfirm();
+                };
+                cancelBtn.classList.remove('hidden');
+                cancelBtn.onclick = () => {
+                    modal.classList.add('hidden');
+                    if (onCancel) onCancel();
+                };
+            } else { 
+                confirmBtn.textContent = 'OK';
+                confirmBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                confirmBtn.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                confirmBtn.onclick = () => modal.classList.add('hidden');
+                cancelBtn.classList.add('hidden');
+            }
 
-  /* =========================
-     PWA
-  ========================== */
-  function installManifest(){
-    const manifest={name:"Finanza Smart",short_name:"Finanza",start_url:".",display:"standalone",theme_color:"#10b981"};
-    const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
-    document.getElementById('dynamic-manifest').href=URL.createObjectURL(blob);
-  }
-  async function installServiceWorker(){
-    if(!('serviceWorker'in navigator))return;
-    const sw=`self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})`;
-    const blob=new Blob([sw],{type:'text/javascript'});
-    navigator.serviceWorker.register(URL.createObjectURL(blob));
-  }
+            modal.classList.remove('hidden');
+        }
 
-  /* =========================
-     INIT
-  ========================== */
-  window.onload=()=>{
-    applySavedTheme();
-    document.getElementById('theme-toggle').onclick=toggleTheme;
-    loadData();
-    renderPage('report');
-    if(Notification.permission!=='granted')Notification.requestPermission();
-    setInterval(checkReminders,3600000);
-    installManifest();installServiceWorker();
-  }
-  </script>
+        /** Mostra un messaggio toast temporaneo */
+        function showToast(message, type = 'green') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `fixed bottom-5 left-1/2 transform -translate-x-1/2 p-3 text-white rounded-xl shadow-lg transition-opacity duration-300 opacity-100`;
+            
+            toast.classList.add(type === 'red' ? 'bg-red-500' : 'bg-green-500');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 3000);
+            
+            setTimeout(() => {
+                toast.classList.remove('bg-red-500', 'bg-green-500');
+            }, 3300);
+        }
+
+        // --- FUNZIONI DI AZIONE RAPIDA ---
+
+        function quickRegister(isIncomeString) {
+            const isIncome = isIncomeString === 'true';
+            
+            // 1. Scrolla al modulo
+            document.getElementById('transaction-form-anchor').scrollIntoView({ behavior: 'smooth' });
+
+            // 2. Preseleziona il tipo
+            const isIncomeSelect = document.getElementById('isIncome');
+            if (isIncomeSelect) {
+                isIncomeSelect.value = isIncomeString;
+                
+                // Attiva l'event listener per aggiornare l'UI (Incasso/Corrispettivo vs Fattura)
+                const event = new Event('change');
+                isIncomeSelect.dispatchEvent(event);
+            }
+
+            // 3. Pulisci la modalità modifica se attiva
+            const form = document.getElementById('transaction-form');
+            if (form) {
+                form.removeAttribute('data-transaction-id');
+                form.reset();
+                // Assicura che i pulsanti tornino a "Registra Movimento"
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if(submitBtn) {
+                    submitBtn.textContent = 'Registra Movimento';
+                    submitBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                    submitBtn.classList.add('bg-emerald-500', 'hover:bg-emerald-600');
+                }
+            }
+
+            // 4. Se è Attività, assicura che il tipo di incasso sia corretto
+            const incomeTypeSelect = document.getElementById('incomeType');
+            if (incomeTypeSelect && isIncome) {
+                 // Per default, selezioniamo Fattura (Cliente)
+                 incomeTypeSelect.value = 'Fattura (Cliente)';
+                 const event = new Event('change');
+                 incomeTypeSelect.dispatchEvent(event);
+            }
+
+            showToast(isIncome ? 'Modulo pronto per Entrata!' : 'Modulo pronto per Uscita!', 'green');
+        }
+
+        // --- FUNZIONI DI CALCOLO E REPORTISTICA ---
+
+        /** * Controlla se una data (stringa) rientra nel periodo specificato. */
+        function filterByPeriod(itemDateStr, filterType, filterValue) {
+            if (filterType === 'all' || !filterValue || filterValue === 'all') return true;
+
+            const itemDate = new Date(itemDateStr);
+            if (isNaN(itemDate)) return false;
+
+            const itemYear = itemDate.getFullYear();
+            const itemMonth = itemDate.getMonth(); // 0-11
+            
+            if (filterType === 'year') {
+                const filterYear = parseInt(filterValue);
+                return itemYear === filterYear;
+            }
+
+            if (filterType === 'month') {
+                // filterValue è nel formato YYYY-MM
+                const [filterYear, filterMonth] = filterValue.split('-').map(Number);
+                // Mese di JS è 0-based, mese di input è 1-based, quindi -1
+                return itemYear === filterYear && itemMonth === (filterMonth - 1);
+            }
+
+            if (filterType === 'quarter') {
+                // filterValue è nel formato YYYY-MM (ma consideriamo il mese come riferimento del trimestre)
+                const [filterYear, filterMonth] = filterValue.split('-').map(Number);
+                const filterQuarter = Math.ceil(filterMonth / 3);
+                const itemQuarter = Math.ceil((itemMonth + 1) / 3);
+
+                return itemYear === filterYear && itemQuarter === filterQuarter;
+            }
+
+            if (filterType === 'day') {
+                // filterValue è nel formato YYYY-MM-DD
+                return itemDateStr === filterValue;
+            }
+            
+            if (filterType === 'week') {
+                 const filterDate = new Date(filterValue);
+                 // Usa il giorno della settimana (0=Dom, 1=Lun...) per trovare l'inizio della settimana (Lunedì)
+                 const dayOfWeek = filterDate.getDay(); 
+                 const startOfWeek = new Date(filterDate);
+                 // Sposta all'inizio della settimana (Lunedì)
+                 startOfWeek.setDate(filterDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+                 startOfWeek.setHours(0, 0, 0, 0);
+
+                 const endOfWeek = new Date(startOfWeek);
+                 endOfWeek.setDate(startOfWeek.getDate() + 6); // Fine Domenica
+                 endOfWeek.setHours(23, 59, 59, 999);
+                 
+                 return itemDate >= startOfWeek && itemDate <= endOfWeek;
+            }
+
+            return false;
+        }
+
+
+        function calculateFinancialSummary(type, filterType, filterDateStr) {
+            let totalIncomes = 0;
+            let totalExpenses = 0;
+            let ivaAddebito = 0; 
+            let ivaCredito = 0; 
+
+            const typesToFilter = type === 'global' ? ['activity', 'personal'] : [type];
+            
+            const allTransactions = [
+                ...appData.invoices.map(t => ({...t, isIncome: true, key: 'inv'})), 
+                ...appData.expenses.map(t => ({...t, isIncome: false, key: 'exp'}))
+            ];
+            
+            const filteredTransactions = allTransactions
+                .filter(item => typesToFilter.includes(item.type))
+                .filter(item => filterByPeriod(item.date, filterType, filterDateStr));
+
+            filteredTransactions.forEach(item => {
+                if (item.isIncome) {
+                    totalIncomes += item.gross;
+                    if(item.type === 'activity') ivaAddebito += item.vatAmount;
+                } else {
+                    totalExpenses += item.gross;
+                    if(item.type === 'activity') ivaCredito += item.vatAmount;
+                }
+            });
+
+            const netBalance = totalIncomes - totalExpenses;
+            const ivaBalance = ivaAddebito - ivaCredito;
+
+            return {
+                totalIncomes,
+                totalExpenses,
+                netBalance,
+                ivaAddebito,
+                ivaCredito,
+                ivaBalance,
+                transactions: filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date)),
+            };
+        }
+
+
+        // --- FUNZIONI DI GESTIONE DATI (Transazioni, Promemoria, Contatti) ---
+
+        /** Aggiunge o modifica una transazione (Fattura o Spesa) */
+        function saveTransaction(isIncome, data) {
+            const list = isIncome ? appData.invoices : appData.expenses;
+            const vatRate = parseFloat(data.vatRate);
+            const net = parseFloat(data.net);
+            const vatAmount = (net * vatRate / 100);
+            const gross = net + vatAmount;
+
+            const updatedItem = {
+                id: data.id || getNextId(),
+                type: data.dataType, 
+                date: data.date,
+                description: data.description, 
+                net: net,
+                vatRate: vatRate,
+                vatAmount: parseFloat(vatAmount.toFixed(2)),
+                gross: parseFloat(gross.toFixed(2)),
+                incomeType: data.incomeType || (isIncome && data.dataType === 'activity' ? 'Fattura (Cliente)' : null)
+            };
+
+            const isFatturaOrPersonal = (isIncome && data.dataType === 'activity' && data.incomeType === 'Fattura (Cliente)') || data.dataType === 'personal';
+
+            if (isFatturaOrPersonal && updatedItem.description && updatedItem.description.trim()) {
+                if (!data.id || (list.find(item => item.id === data.id)?.description !== data.description)) {
+                     addContact(data.description, data.dataType, isIncome ? 'client' : 'supplier');
+                }
+            }
+            
+            if (isIncome && data.dataType === 'activity' && data.incomeType === 'Incasso/Corrispettivo') {
+                updatedItem.description = updatedItem.description || "Corrispettivi/Incasso Giornaliero";
+            }
+
+
+            if (data.id) {
+                const index = list.findIndex(item => item.id === data.id);
+                if (index > -1) {
+                    list[index] = updatedItem;
+                    showToast(`Transazione ID ${data.id} modificata con successo!`);
+                }
+            } else {
+                list.push(updatedItem);
+                showToast(`"${updatedItem.description}" registrato con successo!`);
+            }
+            
+            saveData();
+            renderPage(currentPage); 
+        }
+
+        /** Gestisce il submit del form di transazione (Modifica per includere ID) */
+        function handleTransactionSubmit(type) {
+            const form = document.getElementById('transaction-form');
+            const data = new FormData(form);
+            const isIncome = data.get('isIncome') === 'true';
+            const transactionId = form.getAttribute('data-transaction-id');
+            
+            const transactionData = {
+                id: transactionId ? parseInt(transactionId) : null, 
+                dataType: type,
+                isIncome: isIncome,
+                date: data.get('date'),
+                description: data.get('description'),
+                net: data.get('net'),
+                vatRate: data.get('vatRate'),
+                incomeType: data.get('incomeType')
+            };
+
+            if (transactionData.net && transactionData.date) {
+                const isCorrispettivo = type === 'activity' && isIncome && transactionData.incomeType === 'Incasso/Corrispettivo';
+                
+                if (isCorrispettivo || (transactionData.description && transactionData.description.trim())) {
+                    saveTransaction(isIncome, transactionData);
+                    form.reset();
+                    form.removeAttribute('data-transaction-id');
+                } else {
+                    showToast('Compila la Descrizione/Cliente richiesto.', 'red');
+                }
+            } else {
+                showToast('Compila tutti i campi richiesti.', 'red');
+            }
+        }
+
+        /** Prepara il modulo per la modifica */
+        function editTransaction(isIncome, id, scope) {
+            const list = isIncome ? appData.invoices : appData.expenses;
+            const item = list.find(t => t.id === id);
+
+            if (!item) return showToast('Transazione non trovata.', 'red');
+
+            renderPage(scope); 
+            
+            const form = document.getElementById('transaction-form');
+            if (!form) return; 
+
+            form.setAttribute('data-transaction-id', item.id);
+            document.getElementById('isIncome').value = isIncome ? 'true' : 'false';
+            document.getElementById('date').value = item.date;
+            document.getElementById('description').value = item.description;
+            document.getElementById('net-amount').value = item.net.toFixed(2);
+            document.getElementById('vat-rate').value = item.vatRate;
+            
+            if (scope === 'activity' && isIncome) {
+                 document.getElementById('incomeType').value = item.incomeType || 'Fattura (Cliente)';
+            }
+            
+            setupActivityIncomeTypeListeners(scope);
+            setupContactAutocomplete(scope);
+            calculateGross();
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.textContent = `Salva Modifiche (ID ${item.id})`;
+            submitBtn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
+            submitBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            
+            showToast(`Modulo caricato per modificare la transazione ID ${item.id}.`, 'blue');
+        }
+
+        function deleteTransaction(isIncome, id) {
+             const listName = isIncome ? 'invoices' : 'expenses';
+             const index = appData[listName].findIndex(item => item.id === id);
+
+             if (index > -1) {
+                 showModal(
+                     'Conferma Eliminazione',
+                     `Sei sicuro di voler eliminare definitivamente questa transazione?`,
+                     true,
+                     () => {
+                         appData[listName].splice(index, 1);
+                         saveData();
+                         showToast('Transazione eliminata.', 'red');
+                         renderPage(currentPage);
+                     }
+                 );
+             }
+        }
+        
+        function addContact(name, scope, relation) {
+            const cleanName = name.trim();
+            if (!cleanName) return;
+
+            const existing = appData.contacts.find(c => 
+                c.name.toLowerCase() === cleanName.toLowerCase() && c.scope === scope
+            );
+
+            if (!existing) {
+                appData.contacts.push({ 
+                    id: getNextId(), 
+                    name: cleanName, 
+                    scope: scope, 
+                    relation: relation 
+                });
+                saveData();
+            }
+        }
+        
+        function deleteContact(id) {
+             const index = appData.contacts.findIndex(c => c.id === id);
+             if (index > -1) {
+                 showModal(
+                     'Conferma Eliminazione Contatto',
+                     `Sei sicuro di voler eliminare definitivamente il contatto? Le transazioni esistenti rimarranno, ma potresti doverle correggere.`,
+                     true,
+                     () => {
+                         appData.contacts.splice(index, 1);
+                         saveData();
+                         showToast('Contatto eliminato.', 'red');
+                         renderPage('settings');
+                     }
+                 );
+             }
+        }
+
+        // --- FUNZIONI DI GESTIONE DATI ESTERNI (IMPORT/EXPORT/CLEAN) ---
+        
+        function exportData() {
+            const dataStr = JSON.stringify(appData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toISOString().slice(0, 10);
+            a.download = `finanza_backup_${date}.json`;
+            a.href = url;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('Dati esportati con successo!');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (importedData.invoices && importedData.expenses && importedData.reminders) {
+                        showModal(
+                            'Conferma Importazione',
+                            'Sei sicuro? L\'importazione SOVRASCRIVERÀ i dati attuali! Assicurati di aver fatto un backup.',
+                            true,
+                            () => {
+                                const allItems = [...importedData.invoices, ...importedData.expenses, ...importedData.reminders, ...(importedData.contacts || [])];
+                                const maxIdImported = allItems.length > 0 ? Math.max(...allItems.map(item => item.id || 0)) : 0;
+                                
+                                appData = { ...appData, ...importedData, lastId: maxIdImported + 1 };
+                                saveData();
+                                showToast('Dati importati e salvati!', 'green');
+                                renderPage(currentPage);
+                            }
+                        );
+                    } else {
+                        showToast('File JSON non valido o mancante di campi chiave.', 'red');
+                    }
+                } catch (error) {
+                    showToast('Errore durante la lettura del file: JSON non valido.', 'red');
+                    console.error('Import Error:', error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function cleanDataByYear(year) {
+            const targetYear = parseInt(year);
+            if (isNaN(targetYear) || targetYear === 0) {
+                showToast('Seleziona un anno valido per la pulizia.', 'red');
+                return;
+            }
+            
+            showModal(
+                'Conferma Pulizia Dati',
+                `Sei sicuro di voler eliminare TUTTE le transazioni (fatture e spese) e i promemoria con data ANTERIORE al 1 Gennaio ${targetYear}? Questa operazione è irreversibile!`,
+                true,
+                () => {
+                    const isBeforeYear = (item) => new Date(item.date).getFullYear() < targetYear;
+
+                    const initialInvoiceCount = appData.invoices.length;
+                    const initialExpenseCount = appData.expenses.length;
+                    const initialReminderCount = appData.reminders.length;
+
+                    appData.invoices = appData.invoices.filter(item => !isBeforeYear(item));
+                    appData.expenses = appData.expenses.filter(item => !isBeforeYear(item));
+                    appData.reminders = appData.reminders.filter(item => !isBeforeYear(item));
+
+                    const deletedInvoices = initialInvoiceCount - appData.invoices.length;
+                    const deletedExpenses = initialExpenseCount - appData.expenses.length;
+                    const deletedReminders = initialReminderCount - appData.reminders.length;
+
+                    saveData();
+                    showToast(`Pulizia completata! Eliminati ${deletedInvoices + deletedExpenses} transazioni e ${deletedReminders} promemoria. L'app è più veloce!`, 'green');
+                    renderPage('settings');
+                }
+            );
+        }
+        
+        // --- FUNZIONI DI RENDERING UI E LOGICHE DI PAGINA ---
+        
+        /** Logica per nascondere/mostrare l'autocomplete in base al tipo di incasso */
+        function setupActivityIncomeTypeListeners(scope) {
+            if (scope !== 'activity') return;
+
+            const incomeTypeSelect = document.getElementById('incomeType');
+            const isIncomeSelect = document.getElementById('isIncome');
+            const descriptionDiv = document.getElementById('description-div');
+            
+            const updateVisibility = () => {
+                const isIncome = isIncomeSelect.value === 'true';
+                const incomeType = incomeTypeSelect?.value || 'Fattura (Cliente)';
+
+                if (isIncome && incomeType === 'Incasso/Corrispettivo') {
+                    // Nascondi l'autocomplete per i corrispettivi
+                    descriptionDiv.classList.add('hidden');
+                    document.getElementById('description').removeAttribute('required');
+                    document.getElementById('description').value = 'Corrispettivi/Incasso Giornaliero';
+                    document.getElementById('description-label').textContent = 'Descrizione Incasso (Opzionale)';
+                } else {
+                    // Mostra l'autocomplete per Fatture e Spese
+                    descriptionDiv.classList.remove('hidden');
+                    document.getElementById('description').setAttribute('required', 'required');
+                    // Ri-popola il campo description se non è in modalità modifica e non è un corrispettivo
+                    if (document.getElementById('transaction-form').getAttribute('data-transaction-id') === null) {
+                         document.getElementById('description').value = '';
+                    }
+                    document.getElementById('description-label').textContent = isIncome ? 'Cliente / Descrizione' : 'Fornitore / Descrizione';
+
+                    // Resetta autocomplete
+                    setupContactAutocomplete(scope); 
+                }
+            };
+
+            // Listener per il cambio tipo di incasso
+            incomeTypeSelect?.addEventListener('change', updateVisibility);
+            
+            // Listener per il cambio tra Entrata/Uscita
+            isIncomeSelect.addEventListener('change', () => {
+                const isIncome = isIncomeSelect.value === 'true';
+                const incomeTypeControl = document.getElementById('income-type-control');
+                
+                if (scope === 'activity' && incomeTypeControl) {
+                    // Mostra il selettore Incasso/Fattura solo se è un'Entrata di Attività
+                    incomeTypeControl.classList.toggle('hidden', !isIncome);
+                }
+
+                // Esegui l'aggiornamento della visibilità dopo aver aggiornato i controlli
+                updateVisibility();
+            });
+
+            // Stato iniziale
+            updateVisibility();
+        }
+        
+        function setupContactAutocomplete(scope) {
+            const isIncome = document.getElementById('isIncome').value === 'true';
+            const incomeType = document.getElementById('incomeType')?.value; 
+            const input = document.getElementById('description');
+            const datalist = document.getElementById('contact-list');
+            
+            // Se è un corrispettivo, non caricare i contatti
+            if (scope === 'activity' && isIncome && incomeType === 'Incasso/Corrispettivo') {
+                datalist.innerHTML = '';
+                return;
+            }
+
+            const relation = isIncome ? 'client' : 'supplier';
+            const contacts = appData.contacts
+                .filter(c => c.scope === scope && (c.relation === relation || c.relation === 'both'))
+                .sort((a, b) => a.name.localeCompare(b.name));
+            
+            datalist.innerHTML = contacts.map(c => `<option value="${c.name}"></option>`).join('');
+            input.setAttribute('list', 'contact-list');
+        }
+
+        function calculateGross() {
+            const netInput = document.getElementById('net-amount');
+            const vatSelect = document.getElementById('vat-rate');
+            const vatAmountDisplay = document.getElementById('vat-amount-display');
+            const grossAmountDisplay = document.getElementById('gross-amount-display');
+
+            const net = parseFloat(netInput.value) || 0;
+            const vatRate = parseFloat(vatSelect.value) || 0;
+
+            const vatAmount = (net * vatRate / 100);
+            const gross = net + vatAmount;
+
+            vatAmountDisplay.textContent = vatAmount.toFixed(2) + ' €';
+            grossAmountDisplay.textContent = gross.toFixed(2) + ' €';
+        }
+
+        function renderActivityOrPersonalPage(type) {
+            const isActivity = type === 'activity';
+            const title = isActivity ? 'Gestione Attività (Partita IVA)' : 'Gestione Personale (Casa)';
+            const listTitle = isActivity ? `Ultime ${MAX_RECENT_TRANSACTIONS} Transazioni Attività` : `Ultime ${MAX_RECENT_TRANSACTIONS} Transazioni Personali`;
+            
+            const currentYear = new Date().getFullYear();
+            // Nelle pagine di registrazione, usiamo sempre il filtro 'year' sull'anno corrente per il riepilogo
+            const summary = calculateFinancialSummary(type, 'year', currentYear.toString());
+            
+            // LIMITAZIONE A 10 MOVIMENTI
+            const transactions = summary.transactions
+                .filter(t => t.type === type) 
+                .slice(0, MAX_RECENT_TRANSACTIONS); 
+                
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700">${title}</h2>
+                    
+                    ${renderSummaryCard(summary, currentYear)}
+
+                    <!-- ANCHOR per il bottone rapido -->
+                    <div id="transaction-form-anchor" class="pt-4"></div>
+
+                    <!-- Sezione di Registrazione/Modifica -->
+                    <div class="bg-white p-5 rounded-xl card">
+                        <h3 class="text-xl font-medium mb-4 text-emerald-600">Registra Nuovo Movimento</h3>
+                        <form id="transaction-form" onsubmit="event.preventDefault(); handleTransactionSubmit('${type}');" class="space-y-4">
+                            <input type="hidden" name="dataType" value="${type}">
+
+                            <div class="grid grid-cols-1 ${isActivity ? 'md:grid-cols-2' : ''} gap-4">
+                                <!-- Tipo Entrata/Uscita -->
+                                <div>
+                                    <label for="isIncome" class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                                    <select id="isIncome" name="isIncome" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500">
+                                        <option value="true">${isActivity ? 'Entrata' : 'Entrata'}</option>
+                                        <option value="false">${isActivity ? 'Spesa (Uscita)' : 'Uscita/Costo'}</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Sottotipo Entrata (solo per Attività) -->
+                                ${isActivity ? `
+                                <div id="income-type-control">
+                                    <label for="incomeType" class="block text-sm font-medium text-gray-700 mb-1">Sottotipo Entrata</label>
+                                    <select id="incomeType" name="incomeType" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500">
+                                        <option value="Fattura (Cliente)">Fattura (Cliente)</option>
+                                        <option value="Incasso/Corrispettivo">Incasso/Corrispettivo (Bancomat/POS/Contanti)</option>
+                                    </select>
+                                </div>
+                                ` : ''}
+                            </div>
+                            
+                            <div>
+                                <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                                <input type="date" id="date" name="date" value="${new Date().toISOString().substring(0, 10)}" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500">
+                            </div>
+
+                            <!-- Div per nascondere la descrizione se è Corrispettivo -->
+                            <div id="description-div">
+                                <label id="description-label" for="description" class="block text-sm font-medium text-gray-700 mb-1">Cliente / Descrizione</label>
+                                <input type="text" id="description" name="description" required placeholder="Seleziona o digita (Es. Cliente Rossi)" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500">
+                                <datalist id="contact-list"></datalist>
+                                <p class="text-xs text-gray-500 mt-1">Suggerimento: i nomi digitati vengono salvati in Gestione Dati.</p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="net-amount" class="block text-sm font-medium text-gray-700 mb-1">Importo Netto (€)</label>
+                                    <input type="number" id="net-amount" name="net" step="0.01" min="0" required placeholder="100.00" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500">
+                                </div>
+                                <div>
+                                    <label for="vat-rate" class="block text-sm font-medium text-gray-700 mb-1">Aliquota IVA (%)</label>
+                                    <select id="vat-rate" name="vatRate" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500">
+                                        ${IVA_RATES.map(rate => `<option value="${rate}">${rate}%</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-50 p-3 rounded-lg text-sm">
+                                <p class="flex justify-between"><span>IVA Calcolata:</span> <span id="vat-amount-display" class="font-bold text-blue-600">0.00 €</span></p>
+                                <p class="flex justify-between border-t mt-1 pt-1 font-bold"><span>Importo Lordo Totale:</span> <span id="gross-amount-display" class="text-lg text-emerald-600">0.00 €</span></p>
+                            </div>
+
+                            <button type="submit" class="cta-button w-full bg-emerald-500 text-white p-3 rounded-lg font-bold hover:bg-emerald-600">
+                                Registra Movimento
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Lista Transazioni Recenti -->
+                    <div class="bg-white p-5 rounded-xl card mb-20">
+                        <h3 class="text-xl font-medium mb-4">${listTitle} (${currentYear})</h3>
+                        <div id="transactions-list" class="space-y-3">
+                            ${transactions.length > 0 ? transactions.map(t => {
+                                const isIncomeTx = appData.invoices.some(i => i.id === t.id);
+                                const colorClass = isIncomeTx ? 'bg-emerald-50' : 'bg-red-50';
+                                
+                                // Aggiunge il tipo di incasso nella visualizzazione
+                                const incomeTag = isActivity && isIncomeTx && t.incomeType === 'Incasso/Corrispettivo' 
+                                                  ? '<span class="text-xs text-orange-600 font-semibold">(Corrispettivo)</span>' : '';
+
+                                return `
+                                <div class="flex justify-between items-center p-3 border-b border-gray-100 last:border-b-0 ${colorClass} rounded-lg">
+                                    <div class="flex-grow">
+                                        <p class="font-semibold text-sm">${t.description} ${incomeTag}</p>
+                                        <p class="text-xs text-gray-500">${new Date(t.date).toLocaleDateString('it-IT')} | IVA ${t.vatRate}%</p>
+                                    </div>
+                                    <div class="text-right ml-4 flex items-center space-x-3">
+                                        <div>
+                                            <p class="font-bold ${isIncomeTx ? 'text-emerald-700' : 'text-red-700'}">${t.gross.toFixed(2)} €</p>
+                                            <p class="text-xs text-gray-600">Netto: ${t.net.toFixed(2)}</p>
+                                        </div>
+                                        
+                                        <!-- Pulsante Modifica -->
+                                        <button onclick="editTransaction(${isIncomeTx}, ${t.id}, '${type}')" class="text-blue-500 hover:text-blue-700 transition">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-5.464 5.464l-.707 3.536 3.536-.707 3.536-3.536-2.828-2.828-3.536 3.536zM15 11l-3 3H5v2h2v-2h5l3-3V5h2v6h-2z" /></svg>
+                                        </button>
+                                        <!-- Pulsante Elimina -->
+                                        <button onclick="deleteTransaction(${isIncomeTx}, ${t.id})" class="text-red-400 hover:text-red-600 transition">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 100 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 7a1 1 0 012 0v5a1 1 0 11-2 0V7zm6 0a1 1 0 10-2 0v5a1 1 0 102 0V7z" clip-rule="evenodd" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                            }).join('') : '<p class="text-gray-500 text-center">Nessuna transazione registrata per l\'anno corrente.</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Funzioni di navigazione e rendering generale
+        function renderNavbar() {
+            const navbar = document.getElementById('navbar');
+            const navItems = [
+                { id: 'activity', label: 'Attività', icon: '💼' },
+                { id: 'personal', label: 'Personale', icon: '🏠' },
+                { id: 'report', label: 'Riepilogo IVA/Cash', icon: '📊' },
+                { id: 'reminders', label: 'Scadenze', icon: '🔔' },
+                { id: 'settings', label: 'Gestione Dati', icon: '⚙️' }
+            ];
+
+            navbar.innerHTML = navItems.map(item => `
+                <button onclick="renderPage('${item.id}')"
+                        class="p-2 text-sm font-medium rounded-lg transition duration-150 ease-in-out hover:bg-gray-100 ${currentPage === item.id ? 'tab-active' : 'text-gray-500'}">
+                    ${item.icon} <span class="hidden sm:inline">${item.label}</span>
+                </button>
+            `).join('');
+        }
+
+        function renderPage(pageId) {
+            currentPage = pageId;
+            renderNavbar();
+            const contentArea = document.getElementById('content-area');
+            const quickActionsDiv = document.getElementById('quick-actions');
+
+
+            // 1. Gestione Pulsanti Rapidi
+            if (pageId === 'activity' || pageId === 'personal') {
+                quickActionsDiv.classList.remove('hidden');
+                quickActionsDiv.classList.add('flex', 'justify-center');
+            } else {
+                quickActionsDiv.classList.add('hidden');
+                quickActionsDiv.classList.remove('flex', 'justify-center');
+            }
+
+            // 2. Reset Modulo di Registrazione (dalla modalità modifica)
+            document.getElementById('transaction-form')?.removeAttribute('data-transaction-id');
+            const submitBtn = document.getElementById('transaction-form')?.querySelector('button[type="submit"]');
+            if(submitBtn) {
+                 submitBtn.textContent = 'Registra Movimento';
+                 submitBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                 submitBtn.classList.add('bg-emerald-500', 'hover:bg-emerald-600');
+            }
+
+
+            // 3. Render Pagina
+            switch (pageId) {
+                case 'activity':
+                case 'personal':
+                    contentArea.innerHTML = renderActivityOrPersonalPage(pageId);
+                    document.getElementById('net-amount')?.addEventListener('input', calculateGross);
+                    document.getElementById('vat-rate')?.addEventListener('change', calculateGross);
+                    
+                    if (pageId === 'activity') {
+                        setupActivityIncomeTypeListeners(pageId);
+                    } else {
+                        document.getElementById('isIncome')?.addEventListener('change', () => setupContactAutocomplete(pageId));
+                        setupContactAutocomplete(pageId);
+                    }
+                    
+                    break;
+                case 'report':
+                    contentArea.innerHTML = renderReportPage();
+                    // Assicurati che i listener siano sempre ri-associati
+                    // L'input della data deve essere gestito PRIMA che l'utente interagisca
+                    updateReportDateInput(); // Questo aggiorna l'input in base al filterType
+                    document.getElementById('report-type')?.addEventListener('change', () => renderPage('report'));
+                    document.getElementById('filter-type')?.addEventListener('change', updateReportDateInput);
+                    // Rilancia la renderizzazione al cambio della data
+                    document.getElementById('filter-date')?.addEventListener('input', () => renderPage('report'));
+                    break;
+                case 'reminders':
+                    contentArea.innerHTML = renderRemindersPage();
+                    break;
+                case 'settings':
+                    contentArea.innerHTML = renderSettingsPage();
+                    document.getElementById('export-btn').onclick = exportData;
+                    document.getElementById('import-file').addEventListener('change', importData);
+                    document.getElementById('clean-btn').onclick = () => {
+                        const year = document.getElementById('clean-year').value;
+                        cleanDataByYear(year);
+                    };
+                    break;
+            }
+        }
+        
+        // Funzioni per la pagina Report 
+
+        function renderSummaryCard(summary, label) {
+            const ivaStatus = summary.ivaBalance >= 0 ? 'IVA da Versare' : 'IVA a Credito';
+            const ivaColor = summary.ivaBalance >= 0 ? 'text-red-600' : 'text-blue-600';
+            const balanceColor = summary.netBalance >= 0 ? 'text-emerald-600' : 'text-red-600';
+
+            return `
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl card text-center">
+                        <p class="text-sm text-gray-500">Entrate Totali (${label})</p>
+                        <p class="text-xl font-bold text-emerald-600">${summary.totalIncomes.toFixed(2)} €</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl card text-center">
+                        <p class="text-sm text-gray-500">Uscite Totali (${label})</p>
+                        <p class="text-xl font-bold text-red-600">${summary.totalExpenses.toFixed(2)} €</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl card text-center col-span-2 md:col-span-1">
+                        <p class="text-sm text-gray-500">Saldo Netto (${label})</p>
+                        <p class="text-2xl font-extrabold ${balanceColor}">${summary.netBalance.toFixed(2)} €</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl card text-center col-span-2 md:col-span-1">
+                        <p class="text-sm text-gray-500">${ivaStatus} (Attività)</p>
+                        <p class="text-xl font-bold ${ivaColor}">${Math.abs(summary.ivaBalance).toFixed(2)} €</p>
+                        <p class="text-xs text-gray-400">Add: ${summary.ivaAddebito.toFixed(2)} | Cred: ${summary.ivaCredito.toFixed(2)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Funzione per aggiornare dinamicamente il tipo di input in base al filtro temporale selezionato
+        function updateReportDateInput() {
+             const filterType = document.getElementById('filter-type').value;
+             const filterDateInput = document.getElementById('filter-date');
+             
+             let inputType = 'date';
+             let defaultValue = new Date().toISOString().substring(0, 10);
+             let dateInputVisible = true;
+
+             // Aggiorniamo il tipo di input in base al filtro
+             switch (filterType) {
+                case 'year':
+                    inputType = 'number';
+                    filterDateInput.min = 2000;
+                    filterDateInput.max = new Date().getFullYear();
+                    defaultValue = new Date().getFullYear(); 
+                    break;
+                case 'month':
+                case 'quarter':
+                    inputType = 'month';
+                    defaultValue = new Date().toISOString().substring(0, 7);
+                    break;
+                case 'week':
+                case 'day':
+                    inputType = 'date';
+                    break;
+                default: // 'all'
+                    inputType = 'hidden';
+                    dateInputVisible = false;
+                    defaultValue = 'all';
+                    break;
+             }
+             
+             filterDateInput.type = inputType;
+             filterDateInput.value = defaultValue;
+             filterDateInput.classList.toggle('hidden', !dateInputVisible);
+
+             // Se non siamo in modalità 'all', assicuriamoci che il valore sia impostato prima di chiamare renderPage
+             if (filterType !== 'all' && !filterDateInput.value) {
+                filterDateInput.value = defaultValue;
+             }
+             
+             // Rilanciamo la renderizzazione per aggiornare il report con i nuovi filtri
+             renderPage('report');
+        }
+        
+        function renderReportPage() {
+            // Recupero dei filtri correnti o impostazione dei default
+            const currentType = document.getElementById('report-type')?.value || 'global';
+            const filterType = document.getElementById('filter-type')?.value || 'year';
+            
+            // Determina il valore di filtro corretto (usando 'year' e l'anno corrente come default per primo caricamento)
+            // Usiamo l'elemento DOM per ottenere il valore corrente dopo l'aggiornamento dinamico di updateReportDateInput
+            let filterDateStr = document.getElementById('filter-date')?.value;
+            
+            // Correzione: se l'input è nascosto (filtro 'all'), il valore deve essere 'all'
+            if (filterType === 'all') {
+                filterDateStr = 'all';
+            }
+
+            // --- Calcolo Etichetta Periodo ---
+            let periodLabel = 'Periodo Selezionato';
+            if (filterType === 'all') periodLabel = 'Tutti i Dati';
+            else if (filterType === 'year') periodLabel = filterDateStr;
+            else if (filterType === 'month') {
+                const [year, month] = filterDateStr.split('-').map(Number);
+                const date = new Date(year, month - 1, 1);
+                periodLabel = date.toLocaleDateString('it-IT', { year: 'numeric', month: 'long' });
+            }
+            else if (filterType === 'quarter') {
+                const [year, month] = filterDateStr.split('-').map(Number);
+                const quarter = Math.ceil(month / 3);
+                periodLabel = `Trimestre Q${quarter}/${year}`;
+            }
+            else if (filterType === 'week') periodLabel = `Settimana di ${new Date(filterDateStr).toLocaleDateString('it-IT')}`;
+            else if (filterType === 'day') periodLabel = new Date(filterDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+
+
+            // Calcolo del riepilogo
+            const summary = calculateFinancialSummary(currentType, filterType, filterDateStr);
+            const cashSummary = calculateFinancialSummary('global', filterType, filterDateStr);
+            const ivaSummary = calculateFinancialSummary('activity', filterType, filterDateStr);
+            
+            const transactionsList = summary.transactions;
+
+            const totalCash = cashSummary.totalIncomes + cashSummary.totalExpenses;
+            const cashIncomePercent = totalCash > 0 ? (cashSummary.totalIncomes / totalCash) * 100 : 50;
+            const cashExpensePercent = 100 - cashIncomePercent;
+            
+            const totalIva = ivaSummary.ivaAddebito + ivaSummary.ivaCredito;
+            const ivaAddebitoPercent = totalIva > 0 ? (ivaSummary.ivaAddebito / totalIva) * 100 : 50;
+            const ivaCreditoPercent = 100 - ivaAddebitoPercent;
+
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700">Riepilogo Finanziario Globale</h2>
+
+                    <!-- CONTROLLI DI FILTRO -->
+                    <div class="bg-white p-4 rounded-xl card grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="report-type" class="block text-sm font-medium text-gray-700 mb-1">Visualizza Tipo</label>
+                            <select id="report-type" class="w-full p-2 border border-gray-300 rounded-lg">
+                                <option value="global" ${currentType === 'global' ? 'selected' : ''}>Totale (Attività + Personale)</option>
+                                <option value="activity" ${currentType === 'activity' ? 'selected' : ''}>Solo Attività</option>
+                                <option value="personal" ${currentType === 'personal' ? 'selected' : ''}>Solo Personale</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filter-type" class="block text-sm font-medium text-gray-700 mb-1">Periodo di Riferimento</label>
+                            <select id="filter-type" class="w-full p-2 border border-gray-300 rounded-lg" value="${filterType}">
+                                <option value="day" ${filterType === 'day' ? 'selected' : ''}>Giorno</option>
+                                <option value="week" ${filterType === 'week' ? 'selected' : ''}>Settimana</option>
+                                <option value="month" ${filterType === 'month' ? 'selected' : ''}>Mese</option>
+                                <option value="quarter" ${filterType === 'quarter' ? 'selected' : ''}>Trimestre</option>
+                                <option value="year" ${filterType === 'year' ? 'selected' : ''}>Anno</option>
+                                <option value="all" ${filterType === 'all' ? 'selected' : ''}>Tutti i Dati</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filter-date" class="block text-sm font-medium text-gray-700 mb-1">Data/Anno Selezione</label>
+                            <!-- L'input type e value verranno impostati da updateReportDateInput() -->
+                            <input type="date" id="filter-date" value="${filterDateStr}" class="w-full p-2 border border-gray-300 rounded-lg">
+                            <p class="text-xs text-gray-500 mt-1">Modifica l'input per filtrare.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- SUMMARY CARD AGGIORNATO -->
+                    <div class="bg-white p-5 rounded-xl card">
+                        <h3 class="text-xl font-extrabold mb-3 text-gray-800">Totale Globale: ${periodLabel}</h3>
+                        <p class="text-sm text-gray-500 mb-4">I totali sono calcolati sul periodo selezionato.</p>
+
+                        ${renderSummaryCard(summary, periodLabel)}
+                    </div>
+                    
+                    <!-- GRAFICI CASH FLOW -->
+                    <div class="bg-white p-5 rounded-xl card">
+                        <h3 class="text-xl font-medium mb-3 text-gray-800">Analisi Cash Flow (${periodLabel})</h3>
+                        <div class="mt-5">
+                            <p class="text-sm text-gray-600 mb-2 font-semibold">Distribuzione Entrate vs Uscite</p>
+                            <div class="bar-container">
+                                <div class="bar-income h-full" style="width: ${cashIncomePercent.toFixed(1)}%;"></div>
+                                <div class="bar-expense h-full" style="width: ${cashExpensePercent.toFixed(1)}%;"></div>
+                            </div>
+                            <div class="flex justify-between text-xs mt-1">
+                                <span class="text-emerald-700">${cashIncomePercent.toFixed(1)}% Entrate</span>
+                                <span class="text-red-700">${cashExpensePercent.toFixed(1)}% Uscite</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${currentType !== 'personal' ? `
+                    <!-- GRAFICI IVA (Solo Attività) -->
+                    <div class="bg-white p-5 rounded-xl card">
+                        <h3 class="text-xl font-medium mb-3 text-gray-800">Analisi IVA (Solo Attività - ${periodLabel})</h3>
+                        <div class="mt-5">
+                            <p class="text-sm text-gray-600 mb-2 font-semibold">Distribuzione IVA Addebito vs Credito</p>
+                            <div class="bar-container">
+                                <div class="bar-addebito h-full" style="width: ${ivaAddebitoPercent.toFixed(1)}%;"></div>
+                                <div class="bar-credito h-full" style="width: ${ivaCreditoPercent.toFixed(1)}%;"></div>
+                            </div>
+                            <div class="flex justify-between text-xs mt-1">
+                                <span class="text-orange-700">${ivaAddebitoPercent.toFixed(1)}% Addebito</span>
+                                <span class="text-indigo-700">${ivaCreditoPercent.toFixed(1)}% Credito</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- DETTAGLIO MOVIMENTI -->
+                    <div class="bg-white p-5 rounded-xl card mb-20">
+                        <h3 class="text-xl font-medium mb-4 text-gray-800">Dettaglio Movimenti nel Periodo (${transactionsList.length})</h3>
+                        <div class="space-y-3">
+                            ${transactionsList.length > 0 ? transactionsList.map(t => {
+                                const isIncomeTx = t.isIncome;
+                                const colorClass = isIncomeTx ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300';
+                                const incomeTag = t.type === 'activity' && isIncomeTx && t.incomeType === 'Incasso/Corrispettivo' 
+                                                  ? '<span class="text-xs text-orange-600 font-semibold">(Corrispettivo)</span>' : '';
+
+                                return `
+                                <div class="flex justify-between items-center p-3 border-l-4 ${colorClass} rounded-lg shadow-sm">
+                                    <div class="flex-grow">
+                                        <p class="font-semibold text-sm">${new Date(t.date).toLocaleDateString('it-IT')}: ${t.description} ${incomeTag}</p>
+                                        <p class="text-xs text-gray-500">${t.type === 'activity' ? 'Attività' : 'Personale'} | IVA ${t.vatRate}%</p>
+                                    </div>
+                                    <div class="text-right ml-4">
+                                        <p class="font-bold ${isIncomeTx ? 'text-emerald-700' : 'text-red-700'}">${t.gross.toFixed(2)} €</p>
+                                    </div>
+                                </div>
+                            `;
+                            }).join('') : '<p class="text-gray-500 text-center">Nessuna transazione trovata nel periodo selezionato.</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRemindersPage() {
+            // Logica esistente per renderizzare i promemoria (invariata)
+            const remindersList = appData.reminders || [];
+            const today = new Date();
+            const sortedReminders = remindersList.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // FILTRI RISTABILITI
+            const upcomingReminders = sortedReminders.filter(r => !r.paid && new Date(r.date) >= today);
+            const paidReminders = sortedReminders.filter(r => r.paid);
+            const overdueReminders = sortedReminders.filter(r => !r.paid && new Date(r.date) < today);
+
+            const getPillColor = (r) => {
+                if (r.paid) return 'bg-emerald-100 text-emerald-700';
+                const daysDiff = (new Date(r.date) - today) / (1000 * 60 * 60 * 24);
+                if (daysDiff < 0) return 'bg-red-100 text-red-700 font-bold';
+                if (daysDiff <= 30) return 'bg-orange-100 text-orange-700';
+                return 'bg-blue-100 text-blue-700';
+            };
+            
+            const reminderTypeOptions = ['IVA', 'IMU', 'TARI', 'Tasse/Acconto', 'Assicurazione', 'Bollo Auto', 'Affitto', 'Altri Costi Personali', 'Altri Costi Attività'];
+
+            const renderReminderList = (list, title) => `
+                <h3 class="text-xl font-medium mb-3 border-b pb-1 text-gray-700 mt-6">${title} (${list.length})</h3>
+                <div class="space-y-3">
+                    ${list.length > 0 ? list.map(r => `
+                        <div class="bg-white p-4 rounded-xl card flex justify-between items-center transition duration-150 ease-in-out hover:shadow-lg">
+                            <div class="flex-grow">
+                                <span class="text-xs font-semibold px-2 py-1 rounded-full ${getPillColor(r)}">${r.paid ? 'PAGATO' : r.type}</span>
+                                <p class="font-bold mt-1 ${r.paid ? 'line-through text-gray-500' : 'text-gray-800'}">${r.description}</p>
+                                <p class="text-sm text-gray-600">
+                                    Scadenza: ${new Date(r.date).toLocaleDateString('it-IT')} | Importo: ${r.amount.toFixed(2)} €
+                                </p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="toggleReminderPaid(${r.id})" class="text-sm px-3 py-1 rounded-lg ${r.paid ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white transition">
+                                    ${r.paid ? 'Annulla Pag.' : 'Paga'}
+                                </button>
+                                <button onclick="deleteReminder(${r.id})" class="text-red-400 hover:text-red-600 transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 100 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 7a1 1 0 012 0v5a1 1 0 11-2 0V7zm6 0a1 1 0 10-2 0v5a1 1 0 102 0V7z" clip-rule="evenodd" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('') : '<p class="text-gray-500">Nessun promemoria in questa categoria.</p>'}
+                </div>
+            `;
+
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700">Promemoria Scadenze (IVA, IMU, etc.)</h2>
+                
+                <!-- Modulo di registrazione promemoria -->
+                <div class="bg-gray-100 p-5 rounded-xl card mt-6">
+                    <h3 class="text-xl font-medium mb-4 text-gray-700">Aggiungi Nuovo Promemoria</h3>
+                    <form id="reminder-form" onsubmit="event.preventDefault(); handleReminderSubmit();" class="space-y-4">
+                        <div>
+                            <label for="reminder-type" class="block text-sm font-medium text-gray-700 mb-1">Tipo Scadenza</label>
+                            <select id="reminder-type" name="type" required class="w-full p-2 border border-gray-300 rounded-lg">
+                                ${reminderTypeOptions.map(t => `<option value="${t}">${t}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="reminder-description" class="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
+                            <input type="text" id="reminder-description" name="description" required placeholder="Es. TARI 2° Rata" class="w-full p-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="reminder-date" class="block text-sm font-medium text-gray-700 mb-1">Data Scadenza</label>
+                                <input type="date" id="reminder-date" name="date" value="${new Date().toISOString().substring(0, 10)}" required class="w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label for="reminder-amount" class="block text-sm font-medium text-gray-700 mb-1">Importo (€)</label>
+                                <input type="number" id="reminder-amount" name="amount" step="0.01" min="0" required placeholder="500.00" class="w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                        </div>
+                        <button type="submit" class="cta-button w-full bg-emerald-500 text-white p-3 rounded-lg font-bold hover:bg-emerald-600">
+                            Aggiungi Promemoria
+                        </button>
+                    </form>
+                </div>
+                ${renderReminderList(overdueReminders, 'Scaduti (Urgentissimo!)')}
+                ${renderReminderList(upcomingReminders, 'In Arrivo')}
+                ${renderReminderList(paidReminders, 'Pagati')}
+            </div>
+            `;
+        }
+
+        function handleReminderSubmit() {
+            const form = document.getElementById('reminder-form');
+            const data = new FormData(form);
+            
+            const reminderData = {
+                type: data.get('type'),
+                description: data.get('description'),
+                date: data.get('date'),
+                amount: parseFloat(data.get('amount')) || 0
+            };
+
+            if (reminderData.description && reminderData.date && reminderData.amount > 0) {
+                saveReminder(reminderData);
+                form.reset();
+                document.getElementById('reminder-date').value = new Date().toISOString().substring(0, 10);
+            } else {
+                showToast('Compila tutti i campi validi.', 'red');
+            }
+        }
+        function saveReminder(data) {
+            // Assicura che appData.reminders sia un array
+            appData.reminders = appData.reminders || [];
+
+            if (data.id) {
+                const index = appData.reminders.findIndex(r => r.id === data.id);
+                if (index > -1) {
+                    appData.reminders[index] = { ...appData.reminders[index], ...data };
+                }
+            } else {
+                appData.reminders.push({ id: getNextId(), ...data, paid: false });
+            }
+            saveData();
+            showToast("Promemoria salvato!");
+            renderPage('reminders');
+        }
+
+        function toggleReminderPaid(id) {
+            const reminder = (appData.reminders || []).find(r => r.id === id);
+            if (reminder) {
+                reminder.paid = !reminder.paid;
+                saveData();
+                showToast(reminder.paid ? 'Pagamento registrato!' : 'Pagamento annullato.');
+                renderPage('reminders');
+            }
+        }
+        function deleteReminder(id) {
+             const index = (appData.reminders || []).findIndex(r => r.id === id);
+             if (index > -1) {
+                 showModal(
+                     'Conferma Eliminazione Promemoria',
+                     `Sei sicuro di voler eliminare definitivamente questo promemoria?`,
+                     true,
+                     () => {
+                         appData.reminders.splice(index, 1);
+                         saveData();
+                         showToast('Promemoria eliminato.', 'red');
+                         renderPage('reminders');
+                     }
+                 );
+             }
+        }
+        function renderSettingsPage() {
+            const currentYear = new Date().getFullYear();
+            const years = [...new Set([...appData.invoices, ...appData.expenses].map(t => new Date(t.date).getFullYear()))]
+                .sort((a, b) => b - a)
+                .filter(y => y < currentYear); 
+                
+            const allContacts = appData.contacts.sort((a, b) => a.name.localeCompare(b.name));
+
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700">Gestione e Manutenzione Dati</h2>
+
+                    <!-- Gestione Fornitori/Clienti -->
+                    <div class="bg-white p-5 rounded-xl card space-y-4">
+                        <h3 class="text-xl font-medium mb-3 text-emerald-600">Fornitori / Clienti Salvati (${allContacts.length})</h3>
+                        <p class="text-sm text-gray-700">Questi contatti vengono usati per l'autocomplete. Puoi eliminarli per pulizia.</p>
+
+                        <!-- Lista Contatti -->
+                        <div class="max-h-60 overflow-y-auto border p-3 rounded-lg bg-gray-50">
+                            ${allContacts.length > 0 ? allContacts.map(c => `
+                                <div class="flex justify-between items-center py-2 border-b last:border-b-0">
+                                    <div class="flex-grow">
+                                        <span class="font-semibold text-sm">${c.name}</span>
+                                        <span class="text-xs ml-2 px-2 py-0.5 rounded-full ${c.scope === 'activity' ? 'bg-indigo-100 text-indigo-700' : 'bg-pink-100 text-pink-700'}">
+                                            ${c.scope === 'activity' ? 'Attività' : 'Personale'}
+                                        </span>
+                                    </div>
+                                    <button onclick="deleteContact(${c.id})" class="text-red-400 hover:text-red-600 transition">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 100 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 7a1 1 0 012 0v5a1 1 0 11-2 0V7zm6 0a1 1 0 10-2 0v5a1 1 0 102 0V7z" clip-rule="evenodd" /></svg>
+                                    </button>
+                                </div>
+                            `).join('') : '<p class="text-gray-500 text-sm">Nessun fornitore/cliente ancora salvato.</p>'}
+                        </div>
+                    </div>
+
+                    <!-- Importa / Esporta Dati -->
+                    <div class="bg-white p-5 rounded-xl card space-y-4">
+                        <h3 class="text-xl font-medium mb-3 text-indigo-600">Importa / Esporta Dati</h3>
+                        
+                        <button id="export-btn" class="cta-button w-full bg-indigo-500 text-white p-3 rounded-lg font-bold hover:bg-indigo-600">
+                            Esporta Dati (Backup JSON)
+                        </button>
+                        
+                        <label for="import-file" class="block text-sm font-medium text-gray-700 mt-4">Importa File di Backup (.json)</label>
+                        <input type="file" id="import-file" accept=".json" class="w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-indigo-50 file:text-indigo-700
+                            hover:file:bg-indigo-100
+                        "/>
+                        <p class="text-xs text-red-500 mt-1">ATTENZIONE: L'importazione sovrascriverà tutti i dati attuali!</p>
+                    </div>
+
+                    <!-- Pulizia Dati per Anno -->
+                    <div class="bg-white p-5 rounded-xl card space-y-4">
+                        <h3 class="text-xl font-medium mb-3 text-red-600">Pulisci Dati Vecchi (Per Velocità)</h3>
+                        <p class="text-sm text-gray-700">Questa operazione rimuove tutte le transazioni e i promemoria con data anteriore all'anno selezionato.</p>
+
+                        <label for="clean-year" class="block text-sm font-medium text-gray-700">Elimina i dati precedenti al:</label>
+                        <select id="clean-year" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
+                            <option value="0">-- Seleziona Anno --</option>
+                            ${years.map(y => `<option value="${y + 1}">1 Gennaio ${y + 1} (Elimina ${y} e precedenti)</option>`).join('')}
+                        </select>
+                        
+                        <button id="clean-btn" class="cta-button w-full bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600">
+                            Conferma Pulizia
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+
+
+        // --- INIZIALIZZAZIONE ---
+        window.onload = function() {
+            loadData();
+            // Inizializza il filtro data/anno correttamente prima di renderizzare la pagina report
+            
+            // Correggi il bug critico di scope: chiamata diretta a renderPage
+            const initialPage = appData.invoices.length > 0 || appData.expenses.length > 0 ? 'report' : 'activity';
+            renderPage(initialPage);
+        };
+    </script>
+
 </body>
 </html>
+
