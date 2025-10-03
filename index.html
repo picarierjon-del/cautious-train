@@ -566,13 +566,13 @@
             <hr style="margin: 20px 0;">
 
             <h2>Manutenzione Dati</h2>
-            <p style="font-size: 0.9rem; color: #b91c1c;">ATTENZIONE: Queste operazioni sono definitive.</p>
+            <p style="font-size: 0.9rem; color: #b91c1c;">La pulizia elimina SOLO gli **Ordini Attivi** e lo **Storico Archiviato**.</p>
             <div class="modal-actions" style="justify-content: flex-start; gap: 10px;">
                 <button type="button" class="btn-cancel" style="background: #10b981;" @click="exportData"><i class="fa-solid fa-file-export"></i> Esporta Backup</button>
                 <button type="button" class="btn-confirm" style="background: #3b82f6;" @click="importData"><i class="fa-solid fa-file-import"></i> Importa Backup</button>
             </div>
             <div class="modal-actions" style="justify-content: flex-start; margin-top: 10px;">
-                <button type="button" class="final-btn cancel-edit-btn" style="background: #b91c1c;" @click="clearCache"><i class="fa-solid fa-broom"></i> Pulisci Gest. (Tranne Clienti)</button>
+                <button type="button" class="final-btn cancel-edit-btn" style="background: #b91c1c;" @click="clearCache"><i class="fa-solid fa-broom"></i> Pulisci Ordini e Storico</button>
             </div>
         </div>
     </section>
@@ -712,23 +712,24 @@
             
             <div class="form-row">
                 <label>Gusto Base *</label>
-                <input type="text" v-model="section.gusto" :placeholder="'Cerca per ' + section.name" @input="gustoSearchTerm=''">
+                <input type="text" 
+                       v-model="section.gusto" 
+                       :placeholder="'Seleziona gusto per ' + section.name" 
+                       @focus="tempMeterItem.sections[secIdx].activeSection=true; gustoSearchTerm = section.gusto" 
+                       @blur="tempMeterItem.sections[secIdx].activeSection=false; debouncedGustoSearch({target: {value: ''}})">
             </div>
             
-            <input type="search" v-model="gustoSearchTerm" placeholder="Cerca gusti base (Pizze)..." class="search-mod-input" @focus="tempMeterItem.sections[secIdx].activeSection=true" @blur="tempMeterItem.sections[secIdx].activeSection=false">
-
-            <div class="grid" v-if="filteredPizzaGusti.length > 0 && tempMeterItem.sections[secIdx].activeSection" style="margin-top: 10px;">
-                <div class="item" v-for="p in filteredPizzaGusti" :key="p.nome" @click="selectMeterGusto(secIdx, p.nome)" :class="{disabled: p.isFinished}">
+            <div class="grid" v-if="filteredPizzaGustiBySection(secIdx).length > 0 && tempMeterItem.sections[secIdx].activeSection" style="margin-top: 10px;">
+                <div class="item" v-for="p in filteredPizzaGustiBySection(secIdx)" :key="p.nome" @click="selectMeterGusto(secIdx, p.nome)" :class="{disabled: p.isFinished}">
                     {{p.nome}}
                 </div>
             </div>
-
             <div class="form-row">
                 <label style="margin-top: 10px;">Modifiche Aggiuntive per {{ section.name }}</label>
                 <div class="mod-row" style="margin-top: 5px;">
                     <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                             :class="[cat.toLowerCase().includes('più') ? 'green' : cat.toLowerCase().includes('senza') ? 'gray' : cat.toLowerCase().includes('poco') ? 'yellow' : cat.toLowerCase().includes('abbondante') ? 'blue' : '', {active: tempModCat===cat}]"
-                            @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
+                            @click="tempModCat=cat; modifierSearchTerm=''">{{cat.toUpperCase()}}</button>
                 </div>
                 
                 <input type="search" v-model="modifierSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
@@ -771,11 +772,12 @@
             <strong>Metà 1</strong>
             <div class="form-row">
                 <label>Gusto Base *</label>
-                <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." @input="gustoSearchTerm=''">
+                <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." 
+                       @focus="tempHalfPizzaItem.activeHalf=1; gustoSearchTerm=tempHalfPizzaItem.gusto1">
             </div>
             <input type="search" v-model="gustoSearchTerm" placeholder="Cerca gusti base (Pizze)..." class="search-mod-input" @focus="tempHalfPizzaItem.activeHalf=1" @blur="tempHalfPizzaItem.activeHalf=0">
-            <div class="grid" v-if="filteredPizzaGusti.length > 0 && tempHalfPizzaItem.activeHalf === 1" style="margin-top: 10px;">
-                <div class="item" v-for="p in filteredPizzaGusti" :key="p.nome" @click="selectHalfPizzaGusto(1, p.nome)" :class="{disabled: p.isFinished}">
+            <div class="grid" v-if="filteredPizzaGustiHalf(1).length > 0 && tempHalfPizzaItem.activeHalf === 1" style="margin-top: 10px;">
+                <div class="item" v-for="p in filteredPizzaGustiHalf(1)" :key="p.nome" @click="selectHalfPizzaGusto(1, p.nome)" :class="{disabled: p.isFinished}">
                     {{p.nome}} ({{p.prezzo.toFixed(2)}}€)
                 </div>
             </div>
@@ -784,7 +786,7 @@
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                             :class="[cat.toLowerCase().includes('più') ? 'green' : cat.toLowerCase().includes('senza') ? 'gray' : cat.toLowerCase().includes('poco') ? 'yellow' : cat.toLowerCase().includes('abbondante') ? 'blue' : '', {active: tempModCat===cat}]"
-                            @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
+                            @click="tempModCat=cat; modifierSearchTerm=''">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="modifierSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
             <div class="grid" v-if="filteredTempModifiers.length > 0" style="margin-top: 10px;">
@@ -810,11 +812,12 @@
             <strong>Metà 2</strong>
             <div class="form-row">
                 <label>Gusto Base *</label>
-                <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." @input="gustoSearchTerm=''">
+                <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." 
+                       @focus="tempHalfPizzaItem.activeHalf=2; gustoSearchTerm=tempHalfPizzaItem.gusto2">
             </div>
              <input type="search" v-model="gustoSearchTerm" placeholder="Cerca gusti base (Pizze)..." class="search-mod-input" @focus="tempHalfPizzaItem.activeHalf=2" @blur="tempHalfPizzaItem.activeHalf=0">
-            <div class="grid" v-if="filteredPizzaGusti.length > 0 && tempHalfPizzaItem.activeHalf === 2" style="margin-top: 10px;">
-                <div class="item" v-for="p in filteredPizzaGusti" :key="p.nome" @click="selectHalfPizzaGusto(2, p.nome)" :class="{disabled: p.isFinished}">
+            <div class="grid" v-if="filteredPizzaGustiHalf(2).length > 0 && tempHalfPizzaItem.activeHalf === 2" style="margin-top: 10px;">
+                <div class="item" v-for="p in filteredPizzaGustiHalf(2)" :key="p.nome" @click="selectHalfPizzaGusto(2, p.nome)" :class="{disabled: p.isFinished}">
                     {{p.nome}} ({{p.prezzo.toFixed(2)}}€)
                 </div>
             </div>
@@ -823,7 +826,7 @@
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                             :class="[cat.toLowerCase().includes('più') ? 'green' : cat.toLowerCase().includes('senza') ? 'gray' : cat.toLowerCase().includes('poco') ? 'yellow' : cat.toLowerCase().includes('abbondante') ? 'blue' : '', {active: tempModCat===cat}]"
-                            @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
+                            @click="tempModCat=cat; modifierSearchTerm=''">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="modifierSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
             <div class="grid" v-if="filteredTempModifiers.length > 0" style="margin-top: 10px;">
@@ -1050,7 +1053,6 @@
             const term = this.searchTerm.toLowerCase().trim();
 
             if (term) {
-                // Se c'è un termine di ricerca, cerca in tutte le categorie
                 items = this.allItems.filter(p => p.nome.toLowerCase().includes(term));
             }
             return items;
@@ -1064,7 +1066,6 @@
             return mods;
         },
         get filteredPizzaGusti() {
-            // Unisce pizze classiche e speciali per la selezione gusti
             const items = (this.menu['Pizza Classica'] || []).concat(this.menu['Pizze Speciali'] || []);
             const term = this.gustoSearchTerm.toLowerCase().trim();
             
@@ -1079,7 +1080,6 @@
              return (this.menu['Pizza Classica'] || []).concat(this.menu['Pizze Speciali'] || []).filter(item => !item.isFinished);
         },
         get canComposeMeter(){
-            // Controlla se esistono pizze base
             return (this.menu['Pizza Classica']?.length > 0 || this.menu['Pizze Speciali']?.length > 0);
         },
         get canComposeHalfPizza(){
@@ -1095,31 +1095,32 @@
         },
         get tempMeterGustiOptions() {
             if (!this.tempMeterItem) return [1, 2, 3];
-            // Schiacciata Grande (totalSections=2) ha max 2 gusti
             if (this.tempMeterItem.totalSections === 2) return [1, 2]; 
-            // Mezzo Metro (totalSections=4) ha max 3 gusti
             return [1, 2, 3];
         },
         get isMeterValid() {
             if (!this.tempMeterItem || this.tempMeterItem.gustiCount === 0) return false;
             
-            // Il numero di sezioni con gusto selezionato deve essere esattamente gustiCount
             const sectionsWithGusto = this.tempMeterItem.sections
                 .filter(s => s.gusto && s.gusto.trim().length > 0)
                 .length;
                 
-            // Controllo 1: Verifica che il numero di gusti selezionati sia corretto
             if (sectionsWithGusto !== this.tempMeterItem.gustiCount) return false;
 
-            // Controllo 2: Verifica che NON ci siano più gusti selezionati del dovuto
-            // (La struttura sections contiene solo i gustiCount elementi, quindi il controllo 1 è sufficiente)
-            
             return true;
         },
         get isHalfPizzaValid() {
             if (!this.tempHalfPizzaItem) return false;
             return this.tempHalfPizzaItem.gusto1 && this.tempHalfPizzaItem.gusto1.trim().length > 0 && 
                    this.tempHalfPizzaItem.gusto2 && this.tempHalfPizzaItem.gusto2.trim().length > 0;
+        },
+
+        // Logica Capacità
+        get isCapacityFull() {
+            return this.orderCapacity.remaining <= 0;
+        },
+        get isCapacityWarning() {
+            return this.orderCapacity.remaining <= (this.capacitySettings.maxPizzas * 0.2); 
         },
         // --- FINE LOGICA MENU ---
 
@@ -1221,7 +1222,6 @@
                     modifiersPrice += item.modifiers2.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
                 }
 
-                // Calcolo media arrotondata per eccesso sul totale base + gusti
                 let subTotal = (total + gustiPrice) / 2;
                 subTotal = roundUpToHalf(subTotal);
 
@@ -1242,10 +1242,9 @@
                     alert("Non puoi comporre un Mezzo Metro / Schiacciata se non hai pizze base nel Menu!");
                     return;
                 }
-                // Inizializza con la struttura corretta
                 this.tempMeterItem = deepClone(item);
-                this.tempMeterItem.gustiCount = 1; // Default a 1 gusto
-                this.setMeterGustiCount(1); // Crea le sezioni iniziali
+                this.tempMeterItem.gustiCount = 1; 
+                this.setMeterGustiCount(1); 
                 
                 this.tempModCat = Object.keys(this.modifiers)[0] || 'Più';
                 this.modifierSearchTerm = '';
@@ -1296,9 +1295,8 @@
             if (!item.modifiers) item.modifiers = [];
             
             item.modifiers.push(newMod);
-            // Rimuove l'eventuale prezzo manuale per ricalcolare il totale
             if (item.manualPrice !== undefined) delete item.manualPrice;
-            this.order = [...this.order]; // Forzo reattività
+            this.order = [...this.order]; 
         },
 
         removeItem(index) {
@@ -1445,18 +1443,26 @@
         // Logica composizione Mezzo Metro (SEMPLIFICATA)
         setMeterGustiCount(count) {
             this.tempMeterItem.gustiCount = count;
-            this.tempMeterItem.sections = []; // Rimuove vecchie sezioni
+            this.tempMeterItem.sections = []; 
             
-            // Crea una sezione PER OGNI GUSTO RICHIESTO
             for (let i = 0; i < count; i++) {
                 this.tempMeterItem.sections.push({
-                    // Nome visualizzato nel carrello/comanda
-                    name: `Gusto ${i + 1} (${(100 / count).toFixed(0)}%)`,
+                    name: `Gusto ${i + 1}`,
                     gusto: null,
                     modifiers: [],
-                    activeSection: false
+                    activeSection: false 
                 });
             }
+        },
+        // FUNZIONE AGGIUNTA PER FILTRO GUSTI
+        filteredPizzaGustiBySection(secIdx) {
+            const term = this.tempMeterItem?.sections[secIdx]?.gusto?.toLowerCase().trim() || '';
+            
+            let filtered = this.allPizzaGusti;
+            if (term) {
+                filtered = filtered.filter(p => p.nome.toLowerCase().includes(term));
+            }
+            return filtered;
         },
         selectMeterGusto(secIdx, gustoName) {
             this.tempMeterItem.sections[secIdx].gusto = gustoName;
@@ -1498,7 +1504,16 @@
             return this.tempMeterItem ? this.calculateItemTotal(this.tempMeterItem) : 0;
         },
 
-        // Logica composizione Pizza a Metà (Invariata)
+        // Logica composizione Pizza a Metà (AGGIORNATA per filtro)
+        filteredPizzaGustiHalf(half) {
+            const term = half === 1 ? this.tempHalfPizzaItem?.gusto1?.toLowerCase().trim() : this.tempHalfPizzaItem?.gusto2?.toLowerCase().trim();
+            
+            let filtered = this.allPizzaGusti;
+            if (term) {
+                filtered = filtered.filter(p => p.nome.toLowerCase().includes(term));
+            }
+            return filtered;
+        },
         selectHalfPizzaGusto(half, gustoName) {
             if (half === 1) {
                 this.tempHalfPizzaItem.gusto1 = gustoName;
@@ -1563,7 +1578,6 @@
             return date.toISOString();
         },
         getPizzasInOrder(order) {
-            // Conta solo le pizze standard/metà/metro
             return order.items.filter(i => 
                 (this.menu['Pizza Classica'] && this.menu['Pizza Classica'].some(p => p.nome === i.nome)) ||
                 (this.menu['Pizze Speciali'] && this.menu['Pizze Speciali'].some(p => p.nome === i.nome)) ||
@@ -1802,7 +1816,7 @@
             }
         },
 
-        // Import/Export/Cache (Invariata)
+        // Import/Export/Cache
         exportData() {
             const data = {};
             for (let i = 0; i < localStorage.length; i++) {
@@ -1854,23 +1868,25 @@
             input.click();
         },
         clearCache() {
-            if (!confirm("ATTENZIONE: Sei sicuro di voler PULIRE la gestione? Questo eliminerà menu, ordini attivi, storico e impostazioni. I DATI CLIENTE SARANNO MANTENUTI.")) return;
+            if (!confirm("ATTENZIONE: Sei sicuro di voler PULIRE gli ordini? Questo eliminerà gli Ordini Attivi e lo Storico Archiviato. Menu, Modificatori e Clienti saranno MANTENUTI.")) return;
             
-            const keysToKeep = ['pz_customerData', 'pz_admin_pin'];
+            // Definisce le chiavi da resettare (solo ordini e archivio)
+            localStorage.setItem('pz_orders', '[]');
+            localStorage.setItem('pz_archive', '[]');
             
-            for (let i = localStorage.length - 1; i >= 0; i--) {
-                const key = localStorage.key(i);
-                if (key.startsWith('pz_') && !keysToKeep.includes(key)) {
-                    localStorage.removeItem(key);
-                }
-            }
-            alert("Dati di gestione puliti. Ricarica l'applicazione.");
+            // Resetta lo stato Vue
+            this.orders = [];
+            this.archive = [];
+            this.resetCurrentOrderState(); 
+            this.saveData();
+
+            alert("Ordini e storico puliti. La gestione è stata resettata.");
+            // Ricarica la pagina per assicurare la pulizia completa
             window.location.reload(); 
         },
 
         // Inizializzazione (Invariata)
         mounted() {
-            // Logica di inizializzazione
             if (this.drivers.length === 0) {
                 this.drivers = ["Mario Rossi", "Luca Bianchi"];
                 this.saveData();
