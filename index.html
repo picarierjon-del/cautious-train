@@ -696,7 +696,7 @@
 <div class="modal-overlay" v-show="showMeterModal" @click.self="showMeterModal=false">
     <div class="modal-content">
         <h3>Componi {{ tempMeterItem?.nome }}</h3>
-        <p>Prezzo Base: €{{ tempMeterItem?.prezzo.toFixed(2) }}</p>
+        <p>Prezzo Base: €{{ calculateTempMeterTotal.toFixed(2) }} ({{tempMeterItem?.prezzo.toFixed(2)}} + Aggiunte)</p>
         <p style="font-size: 0.9rem; color: #6b7280;">Scegli il numero di gusti, seleziona il gusto base, poi aggiungi i modificatori.</p>
         
         <div class="composition-options cat-row" style="margin-bottom: 20px;">
@@ -944,7 +944,12 @@
         orderCapacity: { total: 0, remaining: 0, interval: '' },
 
         // --- DATI INIZIALI ---
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizza Classica":[{"nome":"Margherita","prezzo":6.00},{"nome":"Diavola","prezzo":7.50},{"nome":"Capricciosa","prezzo":8.00}],"Pizze Speciali":[{"nome":"Pistacchio & Mortazza","prezzo":12.00}],"Pizza a Metà":[{"nome":"Pizza a Metà","prezzo":0.00,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Mezzo Metro","prezzo":16.00,"isMeter":true,"totalSections":4}],"Schiacciata Grande":[{"nome":"Schiacciata Grande","prezzo":12.00,"isMeter":true,"totalSections":2}],"Bevande":[{"nome":"Acqua Nat","prezzo":2.00}],"Dolci":[{"nome":"Tiramisù","prezzo":4.50}]}'),
+        // AGGIUNTA LOGICA PREZZI COMPOSIZIONI BASE
+        compositionPrices: {
+            "Mezzo Metro": { 1: 18.00, 2: 20.00, 3: 23.00 },
+            "Schiacciata Grande": { 1: 10.00, 2: 12.00, 3: 15.00 } // Prezzi Schiacciata di esempio
+        },
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizza Classica":[{"nome":"Margherita","prezzo":6.00},{"nome":"Diavola","prezzo":7.50},{"nome":"Capricciosa","prezzo":8.00}],"Pizze Speciali":[{"nome":"Pistacchio & Mortazza","prezzo":12.00}],"Pizza a Metà":[{"nome":"Pizza a Metà","prezzo":0.00,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Mezzo Metro","prezzo":18.00,"isMeter":true,"totalSections":4}],"Schiacciata Grande":[{"nome":"Schiacciata Grande","prezzo":10.00,"isMeter":true,"totalSections":2}],"Bevande":[{"nome":"Acqua Nat","prezzo":2.00}],"Dolci":[{"nome":"Tiramisù","prezzo":4.50}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Mozzarella","prezzo":0.50},{"nome":"Wurstel","prezzo":1.00}],"Senza":[{"nome":"Aglio","prezzo":0.00}],"Poco":[{"nome":"Sale","prezzo":0.00}],"Abbondante":[{"nome":"Olio","prezzo":0.00}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Zona A","price":3.00},{"name":"Zona B","price":4.00}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
@@ -1191,8 +1196,23 @@
                 return item.manualPrice;
             }
 
-            let total = item.prezzo || 0;
+            let total = item.prezzo || 0; // Prezzo base dal menu (che è il prezzo fisso per 1 gusto)
             
+            // AGGIUNTA: Ricalcola il prezzo base se è una composizione Mezzo Metro/Schiacciata
+            if (item.isMeter && item.gustiCount > 0) {
+                const type = item.nome;
+                const count = item.gustiCount;
+                
+                // Usa il prezzo fisso basato su gustiCount
+                if (this.compositionPrices[type] && this.compositionPrices[type][count]) {
+                    total = this.compositionPrices[type][count];
+                } else {
+                    // Fallback se la configurazione è mancante
+                    total = item.prezzo; 
+                }
+            }
+
+
             if (item.modifiers && !item.isMeter && !item.isHalfPizza) {
                 total += item.modifiers.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
             }
@@ -1223,6 +1243,7 @@
                     modifiersPrice += item.modifiers2.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
                 }
 
+                // Calcolo media arrotondata per eccesso sul totale base + gusti
                 let subTotal = (total + gustiPrice) / 2;
                 subTotal = roundUpToHalf(subTotal);
 
