@@ -934,10 +934,12 @@
         editingOrderId: null, 
         
         // Accesso
-        adminPin: localStorage.getItem('pz_admin_pin') || '0000',
+        adminPin: localStorage.getItem('pz_admin_pin') || '1234', // Operatore/Titolare
+        manutentorePin: localStorage.getItem('pz_manutentore_pin') || '9999', // Manutentore
         newAdminPin: '',
         accessPin: '',
         isAccessGranted: false, 
+        userRole: '', // 'Operatore', 'Titolare', 'Manutentore'
 
         // Capacità Oraria
         capacitySettings: JSON.parse(localStorage.getItem('pz_capacity_settings') || '{"maxPizzas": 20, "intervalMinutes": 30}'),
@@ -947,7 +949,7 @@
         // AGGIUNTA LOGICA PREZZI COMPOSIZIONI BASE
         compositionPrices: {
             "Mezzo Metro": { 1: 18.00, 2: 20.00, 3: 23.00 },
-            "Schiacciata Grande": { 1: 10.00, 2: 12.00, 3: 15.00 } // Prezzi Schiacciata di esempio
+            "Schiacciata Grande": { 1: 10.00, 2: 12.00, 3: 15.00 }
         },
         menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizza Classica":[{"nome":"Margherita","prezzo":6.00},{"nome":"Diavola","prezzo":7.50},{"nome":"Capricciosa","prezzo":8.00}],"Pizze Speciali":[{"nome":"Pistacchio & Mortazza","prezzo":12.00}],"Pizza a Metà":[{"nome":"Pizza a Metà","prezzo":0.00,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Mezzo Metro","prezzo":18.00,"isMeter":true,"totalSections":4}],"Schiacciata Grande":[{"nome":"Schiacciata Grande","prezzo":10.00,"isMeter":true,"totalSections":2}],"Bevande":[{"nome":"Acqua Nat","prezzo":2.00}],"Dolci":[{"nome":"Tiramisù","prezzo":4.50}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Mozzarella","prezzo":0.50},{"nome":"Wurstel","prezzo":1.00}],"Senza":[{"nome":"Aglio","prezzo":0.00}],"Poco":[{"nome":"Sale","prezzo":0.00}],"Abbondante":[{"nome":"Olio","prezzo":0.00}]}'),
@@ -1025,6 +1027,8 @@
         newZoneName: '',
         newZonePrice: 0,
         newDriverName: '',
+        
+        // --- PROPRIETÀ COMPUTATE ---
 
         get calculatedOrderTotal(){
             if (this.order.length === 0) return 0;
@@ -1038,6 +1042,19 @@
                 return this.accontoRicevuto - this.total;
             }
             return 0;
+        },
+        // PROPRIETÀ CRITICA PER FINALIZZA ORDINE
+        get isOrderFinalizable() {
+            // Requisiti di base: carrello non vuoto e nome cliente
+            if (this.order.length === 0 || !this.customer.trim()) return false;
+            
+            // Requisiti per la modalità Consegna
+            if (this.mode === 'consegna' && (!this.address.trim() || !this.zoneName.trim())) return false;
+            
+            // Requisiti di data e ora
+            if (!this.date || !this.hour) return false;
+
+            return true;
         },
         get archiveDateFilterDisplay(){
              const date = new Date(this.archiveDateFilter.replace(/-/g, '/'));
@@ -1189,6 +1206,7 @@
             localStorage.setItem('pz_customerData',JSON.stringify(this.customerData)); 
             localStorage.setItem('pz_capacity_settings', JSON.stringify(this.capacitySettings));
             localStorage.setItem('pz_admin_pin', this.adminPin); 
+            localStorage.setItem('pz_manutentore_pin', this.manutentorePin); 
         },
 
         calculateItemTotal(item) {
@@ -1196,18 +1214,16 @@
                 return item.manualPrice;
             }
 
-            let total = item.prezzo || 0; // Prezzo base dal menu (che è il prezzo fisso per 1 gusto)
+            let total = item.prezzo || 0;
             
             // AGGIUNTA: Ricalcola il prezzo base se è una composizione Mezzo Metro/Schiacciata
             if (item.isMeter && item.gustiCount > 0) {
                 const type = item.nome;
                 const count = item.gustiCount;
                 
-                // Usa il prezzo fisso basato su gustiCount
                 if (this.compositionPrices[type] && this.compositionPrices[type][count]) {
                     total = this.compositionPrices[type][count];
                 } else {
-                    // Fallback se la configurazione è mancante
                     total = item.prezzo; 
                 }
             }
@@ -1243,7 +1259,6 @@
                     modifiersPrice += item.modifiers2.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
                 }
 
-                // Calcolo media arrotondata per eccesso sul totale base + gusti
                 let subTotal = (total + gustiPrice) / 2;
                 subTotal = roundUpToHalf(subTotal);
 
@@ -1821,28 +1836,35 @@
         },
 
 
-        // Gestione Accesso (Invariata)
+        // Gestione Accesso (AGGIORNATA per i 3 ruoli)
         grantAccess() {
-            if (this.accessPin === this.adminPin) {
-                this.isAccessGranted = true;
-                this.accessPin = '';
-                alert("Accesso consentito!");
+            const pin = this.accessPin.trim();
+            if (pin === this.manutentorePin) {
+                 this.isAccessGranted = true;
+                 this.userRole = 'Manutentore';
+                 alert('Accesso Manutentore Concesso.');
+            } else if (pin === this.adminPin) {
+                 this.isAccessGranted = true;
+                 this.userRole = 'Titolare'; // Titolare e Operatore condividono lo stesso PIN per semplicità in questo setup
+                 alert('Accesso Titolare/Operatore Concesso.');
             } else {
                 alert("PIN/Password errato.");
-                this.accessPin = '';
             }
+            this.accessPin = '';
+            this.saveData();
         },
         saveAdminPin() {
             const newPin = this.newAdminPin.trim();
             if (newPin.length >= 4) {
                 this.adminPin = newPin;
                 localStorage.setItem('pz_admin_pin', newPin);
-                alert("PIN/Password aggiornato!");
+                alert("PIN/Password Operatore/Titolare aggiornato!");
                 this.newAdminPin = '';
             } else {
                 alert("Il PIN deve essere di almeno 4 caratteri/numeri.");
             }
         },
+        // Nota: Manutentore PIN non è modificabile dall'interfaccia per sicurezza.
 
         // Import/Export/Cache (Corretta la logica di clearCache)
         exportData() {
