@@ -3,706 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestore Finanziario e Scadenze</title>
+    <title>Gestore Finanziario e Scadenze Smart</title>
     <!-- Caricamento di Tailwind CSS per uno stile moderno e responsive -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Caricamento delle librerie Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, addDoc, setDoc, onSnapshot, collection, query, where, writeBatch, deleteDoc, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Variabili globali per Firebase (fornite dall'ambiente)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        let db, auth, userId;
-        window.appData = {
-            invoices: [],
-            deadlines: [],
-            isAuthReady: false,
-            activeTab: 'dashboard'
-        };
-
-        // Funzione helper per l'arrotondamento
-        window.round = (num) => Math.round(num * 100) / 100;
-        
-        // Funzione per formattare la data per la visualizzazione
-        const formatDateDisplay = (dateString) => {
-            const date = new Date(dateString);
-            if (isNaN(date)) return dateString;
-            return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        };
-
-        // Inizializzazione Firebase
-        const initFirebase = async () => {
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
                 }
-
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        window.appData.isAuthReady = true;
-                        console.log("Utente autenticato. ID:", userId);
-                        setupRealtimeListeners();
-                        renderUI();
-                    } else {
-                        console.error("Autenticazione fallita.");
-                    }
-                });
-
-            } catch (error) {
-                console.error("Errore durante l'inizializzazione di Firebase:", error);
-                document.getElementById('content').innerHTML = `
-                    <div class="p-4 text-center bg-red-100 text-red-700 rounded-lg shadow-md">
-                        Errore di caricamento del database. Controlla la console per i dettagli.
-                    </div>
-                `;
             }
-        };
-
-        // Funzione per impostare i listener in tempo reale
-        const setupRealtimeListeners = () => {
-            if (!db || !userId) return;
-
-            const invoicesPath = `/artifacts/${appId}/users/${userId}/invoices`;
-            const deadlinesPath = `/artifacts/${appId}/users/${userId}/deadlines`;
-
-            // 1. Listener per le Fatture
-            const invoicesQuery = query(collection(db, invoicesPath), orderBy("date", "desc"));
-            onSnapshot(invoicesQuery, (snapshot) => {
-                window.appData.invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderUI();
-            }, (error) => console.error("Errore onSnapshot Fatture:", error));
-
-            // 2. Listener per le Scadenze
-            const deadlinesQuery = query(collection(db, deadlinesPath), orderBy("dueDate", "asc"));
-            onSnapshot(deadlinesQuery, (snapshot) => {
-                window.appData.deadlines = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderUI();
-            }, (error) => console.error("Errore onSnapshot Scadenze:", error));
-        };
-
-        // Logica di Rendering
-        window.renderUI = () => {
-            const { invoices, deadlines, activeTab, isAuthReady } = window.appData;
-            if (!isAuthReady) {
-                document.getElementById('content').innerHTML = '<div class="text-center p-8 text-gray-500">Caricamento in corso...</div>';
-                return;
-            }
-
-            const contentDiv = document.getElementById('content');
-            contentDiv.innerHTML = ''; 
-
-            if (activeTab === 'dashboard') {
-                contentDiv.innerHTML = renderDashboard(invoices);
-            } else if (activeTab === 'input') {
-                contentDiv.innerHTML = renderInvoiceInput();
-            } else if (activeTab === 'deadlines') {
-                contentDiv.innerHTML = renderDeadlineManager(deadlines);
-            } else if (activeTab === 'reports') {
-                 contentDiv.innerHTML = renderReports(invoices);
-            }
-
-            document.querySelectorAll('[data-tab]').forEach(btn => {
-                btn.classList.remove('border-indigo-500', 'text-indigo-600');
-                btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-indigo-600');
-                if (btn.dataset.tab === activeTab) {
-                    btn.classList.add('border-indigo-500', 'text-indigo-600');
-                    btn.classList.remove('border-transparent', 'text-gray-500');
-                }
-            });
-
-            document.getElementById('user-id-display').textContent = `Utente ID: ${userId}`;
-        };
-
-        // --- DASHBOARD (RIEPILOGO) ---
-        const calculateFinancialSummary = (invoices) => {
-            const summary = {
-                incomeTotal: 0,
-                expenseTotal: 0,
-                vatCredit: 0, 
-                vatDebit: 0,  
-                netVatDue: 0,
-            };
-
-            invoices.forEach(inv => {
-                if (inv.type === 'Entrata') {
-                    summary.incomeTotal += inv.totalAmount || 0;
-                    summary.vatDebit += inv.vatAmount || 0;
-                } else if (inv.type === 'Uscita') {
-                    summary.expenseTotal += inv.totalAmount || 0;
-                    summary.vatCredit += inv.vatAmount || 0;
-                }
-            });
-
-            summary.netVatDue = summary.vatDebit - summary.vatCredit;
-            summary.netIncome = summary.incomeTotal - summary.expenseTotal;
-
-            return summary;
-        };
-        
-        const renderDashboard = (invoices) => {
-            const summary = calculateFinancialSummary(invoices);
-
-            const vatDueColor = summary.netVatDue >= 0 ? 'text-red-600' : 'text-green-600';
-            const incomeColor = summary.netIncome >= 0 ? 'text-green-600' : 'text-red-600';
-
-            return `
-                <div class="p-4 space-y-6">
-                    <h2 class="text-2xl font-bold text-gray-800 border-b pb-2 mb-4">Riepilogo Finanziario</h2>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Card 1: Entrate/Uscite Nette -->
-                        <div class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-indigo-500">
-                            <p class="text-sm font-medium text-gray-500">Totale Entrate (Lorde):</p>
-                            <p class="text-xl font-semibold text-green-700 mt-1">${summary.incomeTotal.toFixed(2)} €</p>
-                            <p class="text-sm font-medium text-gray-500 mt-3">Totale Uscite (Lorde):</p>
-                            <p class="text-xl font-semibold text-red-700 mt-1">${summary.expenseTotal.toFixed(2)} €</p>
-                            <div class="mt-4 pt-4 border-t">
-                                <p class="text-sm font-medium text-gray-500">Saldo Netto (Lordi):</p>
-                                <p class="text-2xl font-extrabold ${incomeColor}">${summary.netIncome.toFixed(2)} €</p>
-                            </div>
-                        </div>
-
-                        <!-- Card 2: Riepilogo IVA -->
-                        <div class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-teal-500">
-                            <p class="text-sm font-medium text-gray-500">IVA ad Debito (su Entrate):</p>
-                            <p class="text-xl font-semibold text-red-700 mt-1">${summary.vatDebit.toFixed(2)} €</p>
-                            <p class="text-sm font-medium text-gray-500 mt-3">IVA a Credito (su Uscite):</p>
-                            <p class="text-xl font-semibold text-green-700 mt-1">${summary.vatCredit.toFixed(2)} €</p>
-                            <div class="mt-4 pt-4 border-t">
-                                <p class="text-sm font-medium text-gray-500">IVA Netta (Trimestrale stimata):</p>
-                                <p class="text-2xl font-extrabold ${vatDueColor}">
-                                    ${summary.netVatDue.toFixed(2)} €
-                                </p>
-                                <p class="text-xs text-gray-500 mt-1">
-                                    Positivo = da versare | Negativo = a credito.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Visualizzazione Utente -->
-                    <p id="user-id-display" class="text-xs text-gray-400 mt-4"></p>
-                </div>
-            `;
-        };
-
-        // --- INSERIMENTO FATTURE ---
-        const renderInvoiceInput = () => {
-             // Lista delle aliquote IVA più comuni in Italia
-            const vatRates = [0.22, 0.10, 0.05, 0.04, 0.00];
-            // Imposta la data di oggi come default
-            const today = new Date().toISOString().split('T')[0];
-
-            return `
-                <div class="p-4 space-y-6 max-w-lg mx-auto">
-                    <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Inserimento Nuova Fattura</h2>
-                    <form id="invoice-form" class="space-y-4 bg-white p-6 rounded-xl shadow-lg">
-                        <div>
-                            <label for="type" class="block text-sm font-medium text-gray-700">Tipo</label>
-                            <select id="type" name="type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
-                                <option value="Entrata">Entrata (IVA ad Debito)</option>
-                                <option value="Uscita">Uscita (IVA a Credito)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="date" class="block text-sm font-medium text-gray-700">Data Documento</label>
-                            <input type="date" id="date" name="date" value="${today}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="description" class="block text-sm font-medium text-gray-700">Descrizione</label>
-                            <input type="text" id="description" name="description" placeholder="Fatt. Fornitore X / Servizio Cliente Y" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="amount" class="block text-sm font-medium text-gray-700">Importo Imponibile (€)</label>
-                            <input type="number" step="0.01" id="amount" name="amount" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="vatRate" class="block text-sm font-medium text-gray-700">Aliquota IVA</label>
-                            <select id="vatRate" name="vatRate" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
-                                ${vatRates.map(rate => `<option value="${rate}">${(rate * 100).toFixed(0)}%</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="bg-indigo-50 p-3 rounded-lg">
-                            <p class="text-sm font-semibold text-indigo-700">Totale IVA: <span id="display-vat-amount">0.00 €</span></p>
-                            <p class="text-base font-bold text-indigo-700">Totale Complessivo: <span id="display-total-amount">0.00 €</span></p>
-                        </div>
-                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Salva Fattura
-                        </button>
-                        <div id="invoice-message" class="mt-3 text-center text-sm hidden"></div>
-                    </form>
-                </div>
-                <script>
-                    const form = document.getElementById('invoice-form');
-                    const amountInput = document.getElementById('amount');
-                    const vatRateInput = document.getElementById('vatRate');
-                    const displayVat = document.getElementById('display-vat-amount');
-                    const displayTotal = document.getElementById('display-total-amount');
-                    const msgDiv = document.getElementById('invoice-message');
-
-                    const updateTotals = () => {
-                        const amount = parseFloat(amountInput.value) || 0;
-                        const vatRate = parseFloat(vatRateInput.value) || 0;
-
-                        const vatAmount = window.round(amount * vatRate);
-                        const totalAmount = window.round(amount + vatAmount);
-
-                        displayVat.textContent = vatAmount.toFixed(2) + ' €';
-                        displayTotal.textContent = totalAmount.toFixed(2) + ' €';
-                    };
-
-                    amountInput.addEventListener('input', updateTotals);
-                    vatRateInput.addEventListener('change', updateTotals);
-                    updateTotals();
-
-                    form.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-
-                        if (!window.appData.isAuthReady) {
-                             msgDiv.textContent = 'Autenticazione in corso, riprova tra poco.';
-                             msgDiv.classList.remove('hidden');
-                             return;
-                        }
-
-                        const formData = new FormData(form);
-                        const amount = parseFloat(formData.get('amount'));
-                        const vatRate = parseFloat(formData.get('vatRate'));
-                        const dateString = formData.get('date');
-                        const date = new Date(dateString);
-
-                        if (isNaN(date.getTime())) {
-                            msgDiv.textContent = 'Errore: Data non valida.';
-                            msgDiv.className = 'mt-3 text-center text-sm p-2 bg-red-100 text-red-700 rounded-md';
-                            msgDiv.classList.remove('hidden');
-                            return;
-                        }
-
-                        const vatAmount = window.round(amount * vatRate);
-                        const totalAmount = window.round(amount + vatAmount);
-
-                        const newInvoice = {
-                            type: formData.get('type'),
-                            date: dateString,
-                            description: formData.get('description'),
-                            amount: amount,
-                            vatRate: vatRate,
-                            vatAmount: vatAmount,
-                            totalAmount: totalAmount,
-                            year: date.getFullYear(),
-                            timestamp: Date.now()
-                        };
-
-                        try {
-                            const invoicesPath = \`/artifacts/\${appId}/users/\${userId}/invoices\`;
-                            await addDoc(collection(db, invoicesPath), newInvoice);
-                            msgDiv.textContent = 'Fattura salvata con successo!';
-                            msgDiv.className = 'mt-3 text-center text-sm p-2 bg-green-100 text-green-700 rounded-md';
-                            form.reset();
-                            updateTotals(); 
-                        } catch (error) {
-                            console.error("Errore salvataggio fattura:", error);
-                            msgDiv.textContent = 'Errore durante il salvataggio.';
-                            msgDiv.className = 'mt-3 text-center text-sm p-2 bg-red-100 text-red-700 rounded-md';
-                        }
-                        msgDiv.classList.remove('hidden');
-                        setTimeout(() => msgDiv.classList.add('hidden'), 5000);
-                    });
-                </script>
-            `;
-        };
-
-        // --- GESTIONE SCADENZE (DEADLINES) ---
-        const renderDeadlineManager = (deadlines) => {
-            const now = new Date();
-            now.setHours(0, 0, 0, 0); 
-            
-            const upcomingDeadlines = deadlines
-                .filter(d => !d.isPaid && new Date(d.dueDate) >= now)
-                .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-
-            const expiredDeadlines = deadlines
-                .filter(d => !d.isPaid && new Date(d.dueDate) < now)
-                .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-
-            const isUrgent = (dueDate) => {
-                const due = new Date(dueDate);
-                due.setHours(0, 0, 0, 0);
-                const diffTime = due.getTime() - now.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays <= 30 && diffDays > 0;
-            }
-
-            const deadlineCard = (d) => {
-                const due = new Date(d.dueDate);
-                due.setHours(0, 0, 0, 0);
-                const isExpired = due < now;
-                const urgencyClass = isExpired ? 'bg-red-500' : (isUrgent(d.dueDate) ? 'bg-orange-500 animate-pulse' : 'bg-indigo-500');
-
-                return `
-                    <div class="bg-white p-4 rounded-xl shadow-lg flex justify-between items-start transition duration-200 ${isExpired ? 'opacity-80 border-l-4 border-red-500' : 'border-l-4 border-transparent hover:border-indigo-300'}">
-                        <div class="flex-grow pr-2">
-                            <p class="font-bold text-gray-800">${d.name}</p>
-                            <p class="text-sm text-gray-600">Scadenza: <span class="font-semibold">${formatDateDisplay(d.dueDate)}</span></p>
-                            ${d.amount ? `<p class="text-sm text-gray-600">Importo: <span class="font-semibold">${d.amount.toFixed(2)} €</span></p>` : ''}
-                            ${d.notes ? `<p class="text-xs text-gray-500 italic mt-1">${d.notes}</p>` : ''}
-                        </div>
-                        <div class="flex flex-col items-end space-y-2 flex-shrink-0">
-                            <span class="px-2 py-1 text-xs font-semibold text-white rounded-full ${urgencyClass} shadow-md">
-                                ${isExpired ? 'SCADUTA' : 'IN ARRIVO'}
-                            </span>
-                            <button onclick="markDeadlinePaid('${d.id}', true)" class="text-xs text-green-600 hover:text-green-800 font-medium p-1 rounded-md bg-green-100 hover:bg-green-200 transition duration-150 shadow-sm">
-                                Segna Pagata
-                            </button>
-                        </div>
-                    </div>
-                `;
-            };
-
-            // HO RESO IL TEMPLATE PRINCIPALE PIÙ PULITO E COMPATTO
-            return `
-                <div class="p-4 space-y-6 max-w-lg mx-auto">
-                    <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Gestione Scadenze Fiscali/Assicurative</h2>
-
-                    <!-- Form Aggiungi Scadenza -->
-                    <div class="bg-gray-50 p-6 rounded-xl shadow-inner space-y-3">
-                        <p class="font-semibold text-lg text-indigo-700">Aggiungi Scadenza</p>
-                        <form id="deadline-form" class="space-y-3">
-                            <select id="deadline-type" name="name" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                                <option value="Assicurazione">Assicurazione</option>
-                                <option value="IMU rata 1">IMU rata 1</option>
-                                <option value="IMU rata 2">IMU rata 2</option>
-                                <option value="TARI">TARI</option>
-                                <option value="IVA Trimestrale (Q1)">IVA Trimestrale (Q1)</option>
-                                <option value="IVA Trimestrale (Q2)">IVA Trimestrale (Q2)</option>
-                                <option value="IVA Trimestrale (Q3)">IVA Trimestrale (Q3)</option>
-                                <option value="IVA Trimestrale (Q4)">IVA Trimestrale (Q4)</option>
-                                <option value="Altro">Altro (Specifica in Note)</option>
-                            </select>
-                            <input type="date" id="deadline-due-date" name="dueDate" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                            <input type="number" step="0.01" id="deadline-amount" name="amount" placeholder="Importo (€) - Opzionale" class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                            <input type="text" id="deadline-notes" name="notes" placeholder="Note (es. Tipo di assicurazione, trimestre IVA)" class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                            <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-teal-600 hover:bg-teal-700 shadow-md">
-                                Salva Scadenza
-                            </button>
-                            <div id="deadline-message" class="mt-2 text-center text-sm hidden"></div>
-                        </form>
-                    </div>
-
-                    <!-- Lista Prossime Scadenze -->
-                    <h3 class="text-xl font-semibold mt-6 pt-4 border-t text-indigo-700">Prossime Scadenze (${upcomingDeadlines.length})</h3>
-                    <div class="space-y-3">
-                        ${upcomingDeadlines.length > 0 ? upcomingDeadlines.map(deadlineCard).join('') : '<p class="text-gray-500 italic p-3 bg-white rounded-md shadow-sm">Nessuna scadenza in programma.</p>'}
-                    </div>
-
-                    <!-- Lista Scadenze Scadute (Non Pagate) -->
-                    <h3 class="text-xl font-semibold mt-6 pt-4 border-t text-red-700">Scadenze Scadute (${expiredDeadlines.length})</h3>
-                    <div class="space-y-3">
-                        ${expiredDeadlines.length > 0 ? expiredDeadlines.map(deadlineCard).join('') : '<p class="text-gray-500 italic p-3 bg-white rounded-md shadow-sm">Tutto pagato!</p>'}
-                    </div>
-
-                </div>
-                <script>
-                    const deadlineForm = document.getElementById('deadline-form');
-                    const deadlineMsgDiv = document.getElementById('deadline-message');
-
-                    deadlineForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-
-                        if (!window.appData.isAuthReady) return;
-
-                        const formData = new FormData(deadlineForm);
-                        const amount = parseFloat(formData.get('amount')) || null;
-                        const dueDate = formData.get('dueDate');
-
-                        const dateCheck = new Date(dueDate);
-                         if (isNaN(dateCheck.getTime())) {
-                            deadlineMsgDiv.textContent = 'Errore: Data non valida.';
-                            deadlineMsgDiv.className = 'mt-3 text-center text-sm p-2 bg-red-100 text-red-700 rounded-md';
-                            deadlineMsgDiv.classList.remove('hidden');
-                            return;
-                        }
-
-
-                        const newDeadline = {
-                            name: formData.get('name'),
-                            dueDate: dueDate,
-                            amount: amount,
-                            notes: formData.get('notes'),
-                            isPaid: false,
-                            timestamp: Date.now()
-                        };
-
-                        try {
-                            const deadlinesPath = \`/artifacts/\${appId}/users/\${userId}/deadlines\`;
-                            await addDoc(collection(db, deadlinesPath), newDeadline);
-                            deadlineMsgDiv.textContent = 'Scadenza salvata!';
-                            deadlineMsgDiv.className = 'mt-2 text-center text-sm p-2 bg-green-100 text-green-700 rounded-md';
-                            deadlineForm.reset();
-                        } catch (error) {
-                            console.error("Errore salvataggio scadenza:", error);
-                            deadlineMsgDiv.textContent = 'Errore durante il salvataggio.';
-                            deadlineMsgDiv.className = 'mt-2 text-center text-sm p-2 bg-red-100 text-red-700 rounded-md';
-                        }
-                        deadlineMsgDiv.classList.remove('hidden');
-                        setTimeout(() => deadlineMsgDiv.classList.add('hidden'), 5000);
-                    });
-
-                    window.markDeadlinePaid = async (id, isPaid) => {
-                        if (!window.appData.isAuthReady) return;
-                        const deadlinesPath = \`/artifacts/\${appId}/users/\${userId}/deadlines\`;
-                        const deadlineRef = doc(db, deadlinesPath, id);
-                        try {
-                            await setDoc(deadlineRef, { isPaid: isPaid }, { merge: true });
-                        } catch (error) {
-                            console.error("Errore aggiornamento stato scadenza:", error);
-                        }
-                    };
-                </script>
-            `;
-        };
-
-        // --- FILTRI, REPORT E CANCELLAZIONE ---
-        const renderReports = (invoices) => {
-            const currentYear = new Date().getFullYear();
-            const startYear = 2020; 
-            const availableYears = Array.from({ length: currentYear - startYear + 1 }, (_, i) => startYear + i).reverse();
-
-            const generateReport = (start, end) => {
-                const startDate = new Date(start);
-                const endDate = new Date(end);
-                // Aggiungiamo 23:59:59 per includere l'ultimo giorno
-                endDate.setHours(23, 59, 59, 999); 
-
-                const filtered = invoices.filter(inv => {
-                    const invDate = new Date(inv.date);
-                    return invDate >= startDate && invDate <= endDate;
-                });
-
-                return calculateFinancialSummary(filtered);
-            }
-
-            // Report Iniziale per il mese corrente
-            const today = new Date();
-            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-            const initialReport = generateReport(firstDayOfMonth, lastDayOfMonth);
-
-
-            return `
-                <div class="p-4 space-y-6 max-w-xl mx-auto">
-                    <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Filtri, Report & Gestione Dati</h2>
-
-                    <!-- 1. Report per Data -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg space-y-4">
-                        <p class="font-semibold text-lg text-indigo-700">Report per Intervallo di Data</p>
-                        <form id="report-form" class="space-y-3">
-                            <div class="flex space-x-2">
-                                <div class="w-1/2">
-                                    <label for="report-start-date" class="block text-xs font-medium text-gray-700">Dal</label>
-                                    <input type="date" id="report-start-date" value="${firstDayOfMonth}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
-                                </div>
-                                <div class="w-1/2">
-                                    <label for="report-end-date" class="block text-xs font-medium text-gray-700">Al</label>
-                                    <input type="date" id="report-end-date" value="${lastDayOfMonth}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
-                                </div>
-                            </div>
-                            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                                Genera Report
-                            </button>
-                        </form>
-
-                        <div id="report-summary" class="mt-4 p-3 bg-indigo-50 rounded-lg">
-                            <p class="font-bold text-indigo-800 mb-2">Risultati Report (${firstDayOfMonth} - ${lastDayOfMonth}):</p>
-                            <p class="text-sm">Entrate L. (Imponibile + IVA): <span class="font-semibold text-green-700">${initialReport.incomeTotal.toFixed(2)} €</span></p>
-                            <p class="text-sm">Uscite L. (Imponibile + IVA): <span class="font-semibold text-red-700">${initialReport.expenseTotal.toFixed(2)} €</span></p>
-                            <p class="text-sm">IVA Netta da versare/credito: <span class="font-bold ${initialReport.netVatDue >= 0 ? 'text-red-600' : 'text-green-600'}">${initialReport.netVatDue.toFixed(2)} €</span></p>
-                        </div>
-                    </div>
-
-                    <!-- 2. Eliminazione per Anno -->
-                    <div class="bg-red-50 p-6 rounded-xl shadow-lg space-y-4 border border-red-200">
-                        <p class="font-semibold text-lg text-red-700">Eliminazione Dati per Anno</p>
-                        <p class="text-sm text-red-600 font-medium">ATTENZIONE: Questa azione è permanente e cancella tutte le fatture dell'anno selezionato.</p>
-                        <form id="delete-form" class="space-y-3">
-                            <div>
-                                <label for="delete-year" class="block text-sm font-medium text-gray-700">Seleziona Anno da Eliminare</label>
-                                <select id="delete-year" name="year" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md shadow-sm">
-                                    ${availableYears.map(year => `<option value="${year}">${year}</option>`).join('')}
-                                </select>
-                            </div>
-                            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                Conferma Eliminazione Fatture per l'Anno
-                            </button>
-                            <div id="delete-message" class="mt-2 text-center text-sm hidden"></div>
-                        </form>
-                    </div>
-
-                </div>
-                <script>
-                    const reportForm = document.getElementById('report-form');
-                    const reportSummary = document.getElementById('report-summary');
-                    const deleteForm = document.getElementById('delete-form');
-                    const deleteMsgDiv = document.getElementById('delete-message');
-                    
-                    const calculateFinancialSummaryHelper = (invoices) => {
-                        // Funzione duplicata per assicurare l'accessibilità all'interno dello script HTML inline
-                        const summary = { incomeTotal: 0, expenseTotal: 0, vatCredit: 0, vatDebit: 0, netVatDue: 0 };
-                        invoices.forEach(inv => {
-                            if (inv.type === 'Entrata') {
-                                summary.incomeTotal += inv.totalAmount || 0;
-                                summary.vatDebit += inv.vatAmount || 0;
-                            } else if (inv.type === 'Uscita') {
-                                summary.expenseTotal += inv.totalAmount || 0;
-                                summary.vatCredit += inv.vatAmount || 0;
-                            }
-                        });
-                        summary.netVatDue = summary.vatDebit - summary.vatCredit;
-                        return summary;
-                    };
-                    
-                    const generateReportHelper = (start, end) => {
-                        const startDate = new Date(start);
-                        const endDate = new Date(end);
-                        endDate.setHours(23, 59, 59, 999); 
-                        const filtered = window.appData.invoices.filter(inv => {
-                            const invDate = new Date(inv.date);
-                            return invDate >= startDate && invDate <= endDate;
-                        });
-                        return calculateFinancialSummaryHelper(filtered); 
-                    };
-
-                    // Gestione Report
-                    reportForm.addEventListener('submit', (e) => {
-                        e.preventDefault();
-                        const start = document.getElementById('report-start-date').value;
-                        const end = document.getElementById('report-end-date').value;
-
-                        const report = generateReportHelper(start, end);
-
-                        reportSummary.innerHTML = \`
-                            <p class="font-bold text-indigo-800 mb-2">Risultati Report (${start} - ${end}):</p>
-                            <p class="text-sm">Entrate L. (Imponibile + IVA): <span class="font-semibold text-green-700">${report.incomeTotal.toFixed(2)} €</span></p>
-                            <p class="text-sm">Uscite L. (Imponibile + IVA): <span class="font-semibold text-red-700">${report.expenseTotal.toFixed(2)} €</span></p>
-                            <p class="text-sm">IVA Netta da versare/credito: <span class="font-bold \${report.netVatDue >= 0 ? 'text-red-600' : 'text-green-600'}\">${report.netVatDue.toFixed(2)} €</span></p>
-                        \`;
-                    });
-
-                    // Gestione Eliminazione
-                    deleteForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-
-                        if (!window.appData.isAuthReady) return;
-
-                        const yearToDelete = parseInt(document.getElementById('delete-year').value);
-                        if (!yearToDelete) return;
-
-                        // Conferma tramite prompt
-                        if (!confirm('Sei sicuro di voler ELIMINARE TUTTE le fatture per l\\'anno ' + yearToDelete + '? Digita "CONFERMA" per procedere.')) {
-                            return;
-                        }
-
-                        deleteMsgDiv.textContent = 'Eliminazione in corso...';
-                        deleteMsgDiv.className = 'mt-2 text-center text-sm p-2 bg-yellow-100 text-yellow-700 rounded-md';
-                        deleteMsgDiv.classList.remove('hidden');
-
-                        try {
-                            const invoicesPath = \`/artifacts/\${appId}/users/\${userId}/invoices\`;
-                            const q = query(collection(db, invoicesPath), where("year", "==", yearToDelete));
-                            const snapshot = await getDocs(q); 
-
-                            if (snapshot.empty) {
-                                deleteMsgDiv.textContent = \`Nessuna fattura trovata per l'anno \${yearToDelete}.\`;
-                                deleteMsgDiv.className = 'mt-2 text-center text-sm p-2 bg-blue-100 text-blue-700 rounded-md';
-                                setTimeout(() => deleteMsgDiv.classList.add('hidden'), 5000);
-                                return;
-                            }
-
-                            const batch = writeBatch(db);
-                            snapshot.docs.forEach((doc) => {
-                                batch.delete(doc.ref);
-                            });
-
-                            await batch.commit();
-
-                            deleteMsgDiv.textContent = \`Eliminate \${snapshot.size} fatture per l'anno \${yearToDelete}!\`;
-                            deleteMsgDiv.className = 'mt-2 text-center text-sm p-2 bg-green-100 text-green-700 rounded-md';
-
-                        } catch (error) {
-                            console.error("Errore eliminazione fatture:", error);
-                            deleteMsgDiv.textContent = 'Errore durante l\\'eliminazione dei dati.';
-                            deleteMsgDiv.className = 'mt-2 text-center text-sm p-2 bg-red-100 text-red-700 rounded-md';
-                        }
-                        setTimeout(() => deleteMsgDiv.classList.add('hidden'), 5000);
-                    });
-
-                    // Funzione di conferma personalizzata (per sostituire window.confirm bloccato)
-                    window.confirm = (message) => {
-                        return window.prompt(message) === 'CONFERMA';
-                    };
-                </script>
-            `;
-        };
-
-        // --- MAIN APPLICATION SETUP ---
-        document.addEventListener('DOMContentLoaded', () => {
-            initFirebase();
-
-            // Navigazione a schede (Tab switching)
-            document.getElementById('nav-bar').addEventListener('click', (e) => {
-                const tab = e.target.closest('[data-tab]');
-                if (tab) {
-                    window.appData.activeTab = tab.dataset.tab;
-                    renderUI();
-                }
-            });
-        });
+        }
     </script>
-
+    <!-- Stili CSS di base -->
     <style>
-        /* Stili per garantire che l'app sia visualizzata correttamente su mobile */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f4f7f9;
-        }
-        .container-app {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        /* Assicuriamo che la nav bar sia ben visibile su iOS */
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
+        .container-app { min-height: 100vh; display: flex; flex-direction: column; }
         @supports (-webkit-overflow-scrolling: touch) {
-            .fixed.bottom-0 {
-                padding-bottom: constant(safe-area-inset-bottom);
-                padding-bottom: env(safe-area-inset-bottom);
-            }
-            .h-16 {
-                height: calc(4rem + constant(safe-area-inset-bottom));
-                height: calc(4rem + env(safe-area-inset-bottom));
-            }
+            .fixed.bottom-0 { padding-bottom: constant(safe-area-inset-bottom); padding-bottom: env(safe-area-inset-bottom); }
+            .h-16-mobile { height: calc(4rem + constant(safe-area-inset-bottom)); height: calc(4rem + env(safe-area-inset-bottom)); }
         }
     </style>
 </head>
 <body class="container-app">
     <!-- Header/Title -->
-    <header class="bg-indigo-700 p-4 shadow-md sticky top-0 z-10">
-        <h1 class="text-xl font-bold text-white text-center">Gestore Finanze & Scadenze Veloce</h1>
+    <header class="bg-indigo-700 p-4 shadow-xl sticky top-0 z-10">
+        <h1 class="text-xl font-bold text-white text-center">Gestore Finanze & Scadenze Smart</h1>
     </header>
 
     <!-- Contenuto Principale (dove vengono renderizzate le sezioni) -->
     <main id="content" class="flex-grow p-2 overflow-y-auto pb-20">
-        <div class="text-center p-8 text-gray-500">Caricamento in corso...</div>
+        <div class="text-center p-8 text-gray-500">Connessione al Database in corso...</div>
     </main>
 
     <!-- Navigazione a Schede (Mobile-friendly, fisso in basso) -->
@@ -726,7 +59,612 @@
             </button>
         </div>
     </nav>
-    <div class="h-16"></div> <!-- Padding per compensare la barra di navigazione fissa -->
+    <div class="h-16-mobile"></div> <!-- Padding per compensare la barra di navigazione fissa -->
 </body>
+<!-- Blocco JavaScript Principale con Firebase e Logica di Delega Eventi -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, addDoc, setDoc, onSnapshot, collection, query, where, writeBatch, deleteDoc, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Variabili globali per Firebase (fornite dall'ambiente)
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    let db, auth, userId;
+    window.appData = {
+        invoices: [],
+        deadlines: [],
+        isAuthReady: false,
+        activeTab: 'dashboard',
+        // Stato locale per l'interfaccia (es. riepilogo fattura)
+        invoiceTotals: { vatAmount: 0, totalAmount: 0 }, 
+        reportData: null,
+    };
+
+    // --- Funzioni Utility ---
+    window.round = (num) => Math.round(num * 100) / 100;
+    
+    const formatDateDisplay = (dateString) => {
+        const date = new Date(dateString);
+        if (isNaN(date)) return dateString;
+        return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
+    window.customConfirm = (message) => {
+        return window.prompt(message + ' (Digita "CONFERMA" per procedere)') === 'CONFERMA';
+    };
+
+    const getToday = () => new Date().toISOString().split('T')[0];
+
+    // --- Inizializzazione Firebase & Autenticazione ---
+    const initFirebase = async () => {
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            if (initialAuthToken) {
+                await signInWithCustomToken(auth, initialAuthToken);
+            } else {
+                await signInAnonymously(auth);
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    window.appData.isAuthReady = true;
+                    setupRealtimeListeners();
+                    // Calcolo il report iniziale per avere i dati pronti
+                    const today = new Date();
+                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+                    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+                    window.appData.reportData = generateReport(window.appData.invoices, firstDayOfMonth, lastDayOfMonth);
+
+                    renderUI(); 
+                } else {
+                    console.error("Autenticazione fallita.");
+                }
+            });
+
+        } catch (error) {
+            console.error("Errore durante l'inizializzazione di Firebase:", error);
+            document.getElementById('content').innerHTML = `
+                <div class="p-4 text-center bg-red-100 text-red-700 rounded-lg shadow-md">
+                    Errore critico di caricamento del database: ${error.message}.
+                </div>
+            `;
+        }
+    };
+
+    const setupRealtimeListeners = () => {
+        if (!db || !userId) return;
+
+        const invoicesPath = `/artifacts/${appId}/users/${userId}/invoices`;
+        const deadlinesPath = `/artifacts/${appId}/users/${userId}/deadlines`;
+
+        // 1. Listener per le Fatture
+        const invoicesQuery = query(collection(db, invoicesPath), orderBy("date", "desc"));
+        onSnapshot(invoicesQuery, (snapshot) => {
+            window.appData.invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Aggiorno anche il report quando i dati cambiano
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+            window.appData.reportData = generateReport(window.appData.invoices, firstDayOfMonth, lastDayOfMonth);
+            renderUI();
+        }, (error) => console.error("Errore onSnapshot Fatture:", error));
+
+        // 2. Listener per le Scadenze
+        const deadlinesQuery = query(collection(db, deadlinesPath), orderBy("dueDate", "asc"));
+        onSnapshot(deadlinesQuery, (snapshot) => {
+            window.appData.deadlines = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderUI();
+        }, (error) => console.error("Errore onSnapshot Scadenze:", error));
+    };
+
+    // --- Logica Finanziaria ---
+    const calculateFinancialSummary = (invoices) => {
+        const summary = {
+            incomeTotal: 0, expenseTotal: 0,
+            vatCredit: 0, vatDebit: 0,  
+            netVatDue: 0, netIncome: 0,
+        };
+        invoices.forEach(inv => {
+            if (inv.type === 'Entrata') {
+                summary.incomeTotal += inv.totalAmount || 0;
+                summary.vatDebit += inv.vatAmount || 0;
+            } else if (inv.type === 'Uscita') {
+                summary.expenseTotal += inv.totalAmount || 0;
+                summary.vatCredit += inv.vatAmount || 0;
+            }
+        });
+        summary.netVatDue = window.round(summary.vatDebit - summary.vatCredit);
+        summary.netIncome = window.round(summary.incomeTotal - summary.expenseTotal);
+        return summary;
+    };
+    
+    const generateReport = (invoices, start, end) => {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        endDate.setHours(23, 59, 59, 999); 
+
+        const filtered = invoices.filter(inv => {
+            const invDate = new Date(inv.date);
+            return invDate >= startDate && invDate <= endDate;
+        });
+
+        const summary = calculateFinancialSummary(filtered);
+        return { summary, start, end };
+    };
+
+    // --- Rendering delle Sezioni (Solo HTML) ---
+    
+    const renderDashboard = (invoices) => {
+        const summary = calculateFinancialSummary(invoices);
+        const vatDueColor = summary.netVatDue >= 0 ? 'text-red-600' : 'text-green-600';
+        const incomeColor = summary.netIncome >= 0 ? 'text-green-600' : 'text-red-600';
+
+        return `
+            <div class="p-4 space-y-6 max-w-2xl mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 border-b pb-2 mb-4">Riepilogo Finanziario</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-indigo-500 transform hover:scale-[1.01] transition duration-300">
+                        <p class="text-sm font-medium text-gray-500">Totale Entrate (Lorde):</p>
+                        <p class="text-xl font-semibold text-green-700 mt-1">${summary.incomeTotal.toFixed(2)} €</p>
+                        <p class="text-sm font-medium text-gray-500 mt-3">Totale Uscite (Lorde):</p>
+                        <p class="text-xl font-semibold text-red-700 mt-1">${summary.expenseTotal.toFixed(2)} €</p>
+                        <div class="mt-4 pt-4 border-t">
+                            <p class="text-sm font-medium text-gray-500">Saldo Netto (Lordi):</p>
+                            <p class="text-2xl font-extrabold ${incomeColor}">${summary.netIncome.toFixed(2)} €</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-teal-500 transform hover:scale-[1.01] transition duration-300">
+                        <p class="text-sm font-medium text-gray-500">IVA ad Debito (Entrate):</p>
+                        <p class="text-xl font-semibold text-red-700 mt-1">${summary.vatDebit.toFixed(2)} €</p>
+                        <p class="text-sm font-medium text-gray-500 mt-3">IVA a Credito (Uscite):</p>
+                        <p class="text-xl font-semibold text-green-700 mt-1">${summary.vatCredit.toFixed(2)} €</p>
+                        <div class="mt-4 pt-4 border-t">
+                            <p class="text-sm font-medium text-gray-500">IVA Netta (Trimestrale stimata):</p>
+                            <p class="text-2xl font-extrabold ${vatDueColor}">
+                                ${summary.netVatDue.toFixed(2)} €
+                            </p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Positivo = da versare | Negativo = a credito.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <p id="user-id-display" class="text-xs text-gray-400 mt-4"></p>
+            </div>
+        `;
+    };
+
+    const renderInvoiceInput = () => {
+        const vatRates = [0.22, 0.10, 0.05, 0.04, 0.00];
+        const { vatAmount, totalAmount } = window.appData.invoiceTotals;
+
+        return `
+            <div class="p-4 space-y-6 max-w-lg mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Inserimento Nuova Fattura (Entrate/Uscite)</h2>
+                <form id="invoice-form" class="space-y-4 bg-white p-6 rounded-xl shadow-lg">
+                    <!-- Campi della Form -->
+                    <div><label for="type" class="block text-sm font-medium text-gray-700">Tipo</label>
+                        <select data-key="type" id="type" name="type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="Entrata">Entrata (IVA ad Debito)</option><option value="Uscita">Uscita (IVA a Credito)</option>
+                        </select>
+                    </div>
+                    <div><label for="date" class="block text-sm font-medium text-gray-700">Data Documento</label>
+                        <input type="date" data-key="date" id="date" name="date" value="${getToday()}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                    </div>
+                    <div><label for="description" class="block text-sm font-medium text-gray-700">Descrizione</label>
+                        <input type="text" data-key="description" id="description" name="description" placeholder="Es. Fatt. Fornitore X / Servizio Cliente Y" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                    </div>
+                    <div><label for="amount" class="block text-sm font-medium text-gray-700">Importo Imponibile (€)</label>
+                        <input type="number" step="0.01" data-key="amount" id="amount" name="amount" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                    </div>
+                    <div><label for="vatRate" class="block text-sm font-medium text-gray-700">Aliquota IVA</label>
+                        <select data-key="vatRate" id="vatRate" name="vatRate" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                            ${vatRates.map(rate => `<option value="${rate}">${(rate * 100).toFixed(0)}%</option>`).join('')}
+                        </select>
+                    </div>
+                    <!-- Totali calcolati -->
+                    <div class="bg-indigo-50 p-3 rounded-lg">
+                        <p class="text-sm font-semibold text-indigo-700">Totale IVA: <span id="display-vat-amount">${vatAmount.toFixed(2)} €</span></p>
+                        <p class="text-base font-bold text-indigo-700">Totale Complessivo (Lordo): <span id="display-total-amount">${totalAmount.toFixed(2)} €</span></p>
+                    </div>
+                    <!-- Bottone e Messaggio -->
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
+                        Salva Fattura
+                    </button>
+                    <div id="invoice-message" class="mt-3 text-center text-sm hidden"></div>
+                </form>
+            </div>
+        `;
+    };
+
+    const renderDeadlineManager = (deadlines) => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0); 
+        
+        const upcomingDeadlines = deadlines
+            .filter(d => !d.isPaid && new Date(d.dueDate) >= now)
+            .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+        const expiredDeadlines = deadlines
+            .filter(d => !d.isPaid && new Date(d.dueDate) < now)
+            .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+        const isUrgent = (dueDate) => {
+            const due = new Date(dueDate);
+            due.setHours(0, 0, 0, 0);
+            const diffTime = due.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays <= 30 && diffDays > 0;
+        }
+
+        const deadlineCard = (d) => {
+            const due = new Date(d.dueDate);
+            due.setHours(0, 0, 0, 0);
+            const isExpired = due < now;
+            const urgencyClass = isExpired ? 'bg-red-500' : (isUrgent(d.dueDate) ? 'bg-orange-500 animate-pulse' : 'bg-indigo-500');
+
+            return `
+                <div class="bg-white p-4 rounded-xl shadow-lg flex justify-between items-start transition duration-200 ${isExpired ? 'opacity-80 border-l-4 border-red-500' : 'border-l-4 border-transparent hover:border-indigo-300'}">
+                    <div class="flex-grow pr-2">
+                        <p class="font-bold text-gray-800">${d.name}</p>
+                        <p class="text-sm text-gray-600">Scadenza: <span class="font-semibold">${formatDateDisplay(d.dueDate)}</span></p>
+                        ${d.amount !== null && d.amount !== undefined ? `<p class="text-sm text-gray-600">Importo: <span class="font-semibold">${d.amount.toFixed(2)} €</span></p>` : ''}
+                        ${d.notes ? `<p class="text-xs text-gray-500 italic mt-1">${d.notes}</p>` : ''}
+                    </div>
+                    <div class="flex flex-col items-end space-y-2 flex-shrink-0">
+                        <span class="px-2 py-1 text-xs font-semibold text-white rounded-full ${urgencyClass} shadow-md">
+                            ${isExpired ? 'SCADUTA' : 'IN ARRIVO'}
+                        </span>
+                        <!-- Pulsante usa delega eventi -->
+                        <button data-action="mark-paid" data-id="${d.id}" class="text-xs text-green-600 hover:text-green-800 font-medium p-1 rounded-md bg-green-100 hover:bg-green-200 transition duration-150 shadow-sm">
+                            Segna Pagata
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        return `
+            <div class="p-4 space-y-6 max-w-lg mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Gestione Scadenze (IMU, IVA, Assicurazioni)</h2>
+                <div class="bg-gray-50 p-6 rounded-xl shadow-inner space-y-3">
+                    <p class="font-semibold text-lg text-indigo-700">Aggiungi Nuova Scadenza</p>
+                    <form id="deadline-form" class="space-y-3">
+                        <select name="name" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                            <option value="Assicurazione">Assicurazione</option><option value="IMU rata 1">IMU rata 1</option><option value="IMU rata 2">IMU rata 2</option>
+                            <option value="TARI">TARI</option><option value="IVA Trimestrale (Q1)">IVA Trimestrale (Q1)</option><option value="IVA Trimestrale (Q2)">IVA Trimestrale (Q2)</option>
+                            <option value="IVA Trimestrale (Q3)">IVA Trimestrale (Q3)</option><option value="IVA Trimestrale (Q4)">IVA Trimestrale (Q4)</option><option value="Altro">Altro (Specifica in Note)</option>
+                        </select>
+                        <input type="date" name="dueDate" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                        <input type="number" step="0.01" name="amount" placeholder="Importo (€) - Opzionale" class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                        <input type="text" name="notes" placeholder="Note (es. Tipo di assicurazione, trimestre IVA)" class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                        <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-md shadow-lg text-lg font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">
+                            Salva Scadenza
+                        </button>
+                        <div id="deadline-message" class="mt-2 text-center text-sm hidden"></div>
+                    </form>
+                </div>
+                <h3 class="text-xl font-semibold mt-6 pt-4 border-t text-indigo-700">Prossime Scadenze (${upcomingDeadlines.length})</h3>
+                <div class="space-y-3" id="upcoming-deadlines-list">
+                    ${upcomingDeadlines.length > 0 ? upcomingDeadlines.map(deadlineCard).join('') : '<p class="text-gray-500 italic p-3 bg-white rounded-md shadow-sm">Nessuna scadenza in programma.</p>'}
+                </div>
+                <h3 class="text-xl font-semibold mt-6 pt-4 border-t text-red-700">Scadenze Scadute (${expiredDeadlines.length})</h3>
+                <div class="space-y-3">
+                    ${expiredDeadlines.length > 0 ? expiredDeadlines.map(deadlineCard).join('') : '<p class="text-gray-500 italic p-3 bg-white rounded-md shadow-sm">Tutto pagato!</p>'}
+                </div>
+            </div>
+        `;
+    };
+
+    const renderReports = (invoices) => {
+        const currentYear = new Date().getFullYear();
+        const startYear = 2020; 
+        const availableYears = Array.from({ length: currentYear - startYear + 1 }, (_, i) => startYear + i).reverse();
+
+        const { summary, start, end } = window.appData.reportData;
+        const netVatColor = summary.netVatDue >= 0 ? 'text-red-600' : 'text-green-600';
+
+
+        return `
+            <div class="p-4 space-y-6 max-w-xl mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Report e Gestione Dati Storici</h2>
+
+                <!-- 1. Report per Data -->
+                <div class="bg-white p-6 rounded-xl shadow-lg space-y-4">
+                    <p class="font-semibold text-lg text-indigo-700">Report per Intervallo di Data</p>
+                    <form id="report-form" class="space-y-3">
+                        <div class="flex space-x-2">
+                            <div class="w-1/2">
+                                <label for="report-start-date" class="block text-xs font-medium text-gray-700">Dal</label>
+                                <input type="date" id="report-start-date" name="start" value="${start}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                            </div>
+                            <div class="w-1/2">
+                                <label for="report-end-date" class="block text-xs font-medium text-gray-700">Al</label>
+                                <input type="date" id="report-end-date" name="end" value="${end}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
+                            Genera Report
+                        </button>
+                    </form>
+
+                    <div id="report-summary" class="mt-4 p-3 bg-indigo-50 rounded-lg">
+                        <p class="font-bold text-indigo-800 mb-2">Risultati Report (${start} - ${end}):</p>
+                        <p class="text-sm">Entrate L. (Imponibile + IVA): <span class="font-semibold text-green-700">${summary.incomeTotal.toFixed(2)} €</span></p>
+                        <p class="text-sm">Uscite L. (Imponibile + IVA): <span class="font-semibold text-red-700">${summary.expenseTotal.toFixed(2)} €</span></p>
+                        <p class="text-sm">IVA Netta da versare/credito: <span class="font-bold ${netVatColor}">${summary.netVatDue.toFixed(2)} €</span></p>
+                    </div>
+                </div>
+
+                <!-- 2. Eliminazione per Anno -->
+                <div class="bg-red-50 p-6 rounded-xl shadow-lg space-y-4 border border-red-200">
+                    <p class="font-semibold text-lg text-red-700">Eliminazione Dati per Anno</p>
+                    <p class="text-sm text-red-600 font-medium">ATTENZIONE: Questa azione è PERMANENTE e cancella tutte le fatture dell'anno selezionato.</p>
+                    <form id="delete-form" class="space-y-3">
+                        <div>
+                            <label for="delete-year" class="block text-sm font-medium text-gray-700">Seleziona Anno da Eliminare</label>
+                            <select id="delete-year" name="year" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md shadow-sm">
+                                ${availableYears.map(year => `<option value="${year}">${year}</option>`).join('')}
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-lg font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
+                            Conferma Eliminazione Fatture per l'Anno
+                        </button>
+                        <div id="delete-message" class="mt-2 text-center text-sm hidden"></div>
+                    </form>
+                </div>
+
+            </div>
+        `;
+    };
+
+    // --- Gestori di Eventi Globali (Delegazione) ---
+    
+    // 1. Logica di calcolo in tempo reale per la form Fatture
+    const handleInvoiceFormChange = (e) => {
+        const form = document.getElementById('invoice-form');
+        if (!form) return;
+
+        const amountInput = form.querySelector('#amount');
+        const vatRateInput = form.querySelector('#vatRate');
+        
+        if (!amountInput || !vatRateInput) return;
+        
+        const amount = parseFloat(amountInput.value) || 0;
+        const vatRate = parseFloat(vatRateInput.value) || 0;
+
+        window.appData.invoiceTotals.vatAmount = window.round(amount * vatRate);
+        window.appData.invoiceTotals.totalAmount = window.round(amount + window.appData.invoiceTotals.vatAmount);
+        
+        // Aggiorna solo gli elementi di visualizzazione se esistono
+        const displayVat = document.getElementById('display-vat-amount');
+        const displayTotal = document.getElementById('display-total-amount');
+
+        if (displayVat) displayVat.textContent = window.appData.invoiceTotals.vatAmount.toFixed(2) + ' €';
+        if (displayTotal) displayTotal.textContent = window.appData.invoiceTotals.totalAmount.toFixed(2) + ' €';
+    };
+
+    // 2. Gestione Submit Form
+    const handleFormSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!window.appData.isAuthReady) return;
+        const form = e.target;
+        const formId = form.id;
+        const msgDiv = document.getElementById(formId.replace('-form', '-message'));
+
+        if (formId === 'invoice-form') {
+            await saveInvoice(form, msgDiv);
+        } else if (formId === 'deadline-form') {
+            await saveDeadline(form, msgDiv);
+        } else if (formId === 'delete-form') {
+            await deleteInvoicesByYear(form, msgDiv);
+        } else if (formId === 'report-form') {
+            handleReportGeneration(form, document.getElementById('report-summary'));
+        }
+    };
+    
+    // 3. Gestione Click (Scadenze Pagate)
+    const handleMainClick = async (e) => {
+        const target = e.target;
+        
+        // Navigazione a Schede
+        const tab = target.closest('[data-tab]');
+        if (tab) {
+            window.appData.activeTab = tab.dataset.tab;
+            // Esegue un ricalcolo immediato se si va sulla sezione input
+            if(window.appData.activeTab === 'input') {
+                handleInvoiceFormChange(null);
+            }
+            renderUI();
+            return;
+        }
+
+        // Segna Scadenza Pagata
+        const markPaidBtn = target.closest('[data-action="mark-paid"]');
+        if (markPaidBtn) {
+            const id = markPaidBtn.dataset.id;
+            await markDeadlinePaid(id, true);
+        }
+    };
+
+    // --- Funzioni di Salvataggio e Manipolazione Dati ---
+
+    const saveInvoice = async (form, msgDiv) => {
+        const formData = new FormData(form);
+        const dateString = formData.get('date');
+        const date = new Date(dateString);
+        
+        if (isNaN(date.getTime())) {
+            showMsg(msgDiv, 'Errore: Data non valida.', 'error'); return;
+        }
+        
+        const { vatAmount, totalAmount } = window.appData.invoiceTotals;
+
+        const newInvoice = {
+            type: formData.get('type'),
+            date: dateString,
+            description: formData.get('description'),
+            amount: parseFloat(formData.get('amount')),
+            vatRate: parseFloat(formData.get('vatRate')),
+            vatAmount: vatAmount,
+            totalAmount: totalAmount,
+            year: date.getFullYear(),
+            timestamp: Date.now()
+        };
+
+        try {
+            const invoicesPath = `/artifacts/${appId}/users/${userId}/invoices`;
+            await addDoc(collection(db, invoicesPath), newInvoice);
+            showMsg(msgDiv, 'Fattura salvata con successo!', 'success');
+            form.reset();
+            window.appData.invoiceTotals = { vatAmount: 0, totalAmount: 0 }; // Reset stato
+            handleInvoiceFormChange(null); // Aggiorna visualizzazione
+        } catch (error) {
+            console.error("Errore salvataggio fattura:", error);
+            showMsg(msgDiv, 'Errore durante il salvataggio.', 'error');
+        }
+    };
+
+    const saveDeadline = async (form, msgDiv) => {
+        const formData = new FormData(form);
+        const amountString = formData.get('amount');
+        const amount = amountString ? parseFloat(amountString) : null; 
+        const dueDate = formData.get('dueDate');
+
+        if (isNaN(new Date(dueDate).getTime())) {
+            showMsg(msgDiv, 'Errore: Data non valida.', 'error'); return;
+        }
+
+        const newDeadline = {
+            name: formData.get('name'),
+            dueDate: dueDate,
+            amount: amount,
+            notes: formData.get('notes'),
+            isPaid: false,
+            timestamp: Date.now()
+        };
+
+        try {
+            const deadlinesPath = `/artifacts/${appId}/users/${userId}/deadlines`;
+            await addDoc(collection(db, deadlinesPath), newDeadline);
+            showMsg(msgDiv, 'Scadenza salvata!', 'success');
+            form.reset();
+        } catch (error) {
+            console.error("Errore salvataggio scadenza:", error);
+            showMsg(msgDiv, 'Errore durante il salvataggio.', 'error');
+        }
+    };
+
+    const markDeadlinePaid = async (id, isPaid) => {
+        if (!window.appData.isAuthReady) return;
+        const deadlinesPath = `/artifacts/${appId}/users/${userId}/deadlines`;
+        const deadlineRef = doc(db, deadlinesPath, id);
+        try {
+            await setDoc(deadlineRef, { isPaid: isPaid }, { merge: true });
+        } catch (error) {
+            console.error("Errore aggiornamento stato scadenza:", error);
+        }
+    };
+
+    const deleteInvoicesByYear = async (form, msgDiv) => {
+        const yearToDelete = parseInt(form.querySelector('#delete-year').value);
+        if (!yearToDelete) return;
+
+        if (!window.customConfirm('Sei sicuro di voler ELIMINARE TUTTE le fatture per l\'anno ' + yearToDelete + '?')) {
+            showMsg(msgDiv, 'Eliminazione annullata.', 'warning');
+            return;
+        }
+
+        showMsg(msgDiv, 'Eliminazione in corso...', 'warning');
+
+        try {
+            const invoicesPath = `/artifacts/${appId}/users/${userId}/invoices`;
+            const q = query(collection(db, invoicesPath), where("year", "==", yearToDelete));
+            const snapshot = await getDocs(q); 
+
+            if (snapshot.empty) {
+                showMsg(msgDiv, `Nessuna fattura trovata per l'anno ${yearToDelete}.`, 'info');
+                return;
+            }
+
+            const batch = writeBatch(db);
+            snapshot.docs.forEach((doc) => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+            showMsg(msgDiv, `Eliminate ${snapshot.size} fatture per l'anno ${yearToDelete}!`, 'success');
+
+        } catch (error) {
+            console.error("Errore eliminazione fatture:", error);
+            showMsg(msgDiv, 'Errore durante l\'eliminazione dei dati.', 'error');
+        }
+    };
+    
+    const handleReportGeneration = (form, summaryDiv) => {
+        const start = form.querySelector('#report-start-date').value;
+        const end = form.querySelector('#report-end-date').value;
+
+        const report = generateReport(window.appData.invoices, start, end);
+        const netVatColor = report.summary.netVatDue >= 0 ? 'text-red-600' : 'text-green-600';
+
+        summaryDiv.innerHTML = `
+            <p class="font-bold text-indigo-800 mb-2">Risultati Report (${start} - ${end}):</p>
+            <p class="text-sm">Entrate L. (Imponibile + IVA): <span class="font-semibold text-green-700">${report.summary.incomeTotal.toFixed(2)} €</span></p>
+            <p class="text-sm">Uscite L. (Imponibile + IVA): <span class="font-semibold text-red-700">${report.summary.expenseTotal.toFixed(2)} €</span></p>
+            <p class="text-sm">IVA Netta da versare/credito: <span class="font-bold ${netVatColor}">${report.summary.netVatDue.toFixed(2)} €</span></p>
+        `;
+    };
+
+    // --- Messaggi UI ---
+    const showMsg = (msgDiv, text, type) => {
+        const classes = {
+            success: 'p-2 bg-green-100 text-green-700 rounded-md',
+            error: 'p-2 bg-red-100 text-red-700 rounded-md',
+            warning: 'p-2 bg-yellow-100 text-yellow-700 rounded-md',
+            info: 'p-2 bg-blue-100 text-blue-700 rounded-md',
+        };
+        
+        if (msgDiv) {
+            msgDiv.textContent = text;
+            msgDiv.className = `mt-3 text-center text-sm ${classes[type]}`;
+            msgDiv.classList.remove('hidden');
+            setTimeout(() => msgDiv.classList.add('hidden'), 5000);
+        }
+    };
+
+
+    // --- Setup Globale ---
+    document.addEventListener('DOMContentLoaded', () => {
+        initFirebase();
+
+        // 1. Gestione Navigazione e Pulsante 'Segna Pagata'
+        document.body.addEventListener('click', handleMainClick);
+
+        // 2. Gestione Submit Form (per tutte le form)
+        document.body.addEventListener('submit', handleFormSubmit);
+
+        // 3. Gestione Calcoli Form Fatture (Input/Change)
+        document.body.addEventListener('input', (e) => {
+            if (e.target.closest('#invoice-form')) {
+                handleInvoiceFormChange(e);
+            }
+        });
+        document.body.addEventListener('change', (e) => {
+            if (e.target.closest('#invoice-form') && (e.target.id === 'vatRate' || e.target.id === 'amount')) {
+                handleInvoiceFormChange(e);
+            }
+        });
+
+    });
+</script>
 </html>
 
