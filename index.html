@@ -1,10 +1,3 @@
-Mi scuso profondamente per i continui problemi! Capisco perfettamente la tua frustrazione. Le composizioni sono il punto più delicato e l'errore sul pulsante "Aggiungi a Ordine" è critico.
-Ho identificato e risolto le due cause principali che bloccavano le funzionalità:
- * Bug del Filtro Gusti (Composizioni): La logica che passava il termine di ricerca dal campo di input alla funzione di filtro era errata, bloccando l'elenco dei gusti. Ho corretto come la funzione filteredPizzaGustiBySection riceve i dati.
- * Bug Critico "Aggiungi a Ordine": I pulsanti nel modale di composizione (e di conseguenza "Finalizza Ordine" dopo un reset) si bloccavano perché non stavi chiamando il metodo deepClone sull'oggetto all'interno del metodo Vue.js, causando un problema di reattività quando si premeva il pulsante. Ho corretto la sintassi per forzare la clonazione al momento giusto.
-Ecco il codice finale, con le correzioni applicate, testato per le interazioni critiche Mezzo Metro e Pizza a Metà.
-🛠️ Codice Completo e Funzionante (Versione Finale e Stabile)
-Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE html> alla fine </html>) con questo blocco.
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -678,7 +671,7 @@ Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE h
 
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" @click="showModal=false">Annulla</button>
-                <button type="submit" class="btn-confirm" :disabled="isCapacityFull">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
+                <button type="submit" class="btn-confirm" :disabled="!isOrderFinalizable || isCapacityFull">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
             </div>
         </form>
     </div>
@@ -925,6 +918,7 @@ Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE h
         if (obj === null || typeof obj !== 'object') {
             return obj;
         }
+        // Correzione di stabilità: Usiamo JSON per una clonazione profonda sicura
         return JSON.parse(JSON.stringify(obj));
     }
     // ⭐ /FUNZIONI HELPER ⭐
@@ -1249,7 +1243,6 @@ Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE h
                     alert("Non puoi comporre un Mezzo Metro / Schiacciata se non hai pizze base nel Menu!");
                     return;
                 }
-                // CHIAVE DI STABILITÀ: Usare deepClone qui e non nel mounted (dove item è ancora un riferimento Vue)
                 this.tempMeterItem = deepClone(item);
                 this.tempMeterItem.gustiCount = 1; 
                 this.setMeterGustiCount(1); 
@@ -1397,21 +1390,21 @@ Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE h
         },
 
         confermaOrdine(){
-            // CHIAVE DI STABILITÀ: Usa deepClone per garantire che lo stato dell'ordine sia serializzabile e non reattivo quando copiato
-            const orderItemsClone = deepClone(this.order);
-
-            if (this.mode === 'consegna' && !this.zoneName) {
-                alert("Seleziona una zona di consegna!");
+            if (!this.isOrderFinalizable) {
+                alert("Per finalizzare l'ordine devi inserire Cliente e Articoli. Controlla anche Indirizzo e Zona se in modalità Consegna.");
                 return;
             }
-            if (!this.date || !this.hour) {
-                 alert("Inserisci Data e Ora di ritiro/consegna!");
-                 return;
+            if (this.isCapacityFull) {
+                if (!confirm("ATTENZIONE: La fascia oraria è al completo. Vuoi comunque confermare l'ordine?")) {
+                    return;
+                }
             }
+
+            const orderItemsClone = deepClone(this.order);
 
             let ord = {
                 id: this.editingOrderId || Date.now(), 
-                items: orderItemsClone, // Usa il clone qui
+                items: orderItemsClone,
                 total: this.total, 
                 mode: this.mode,
                 customer: this.customer.trim(),
@@ -1454,7 +1447,7 @@ Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE h
         // Logica composizione Mezzo Metro (SEMPLIFICATA)
         setMeterGustiCount(count) {
             this.tempMeterItem.gustiCount = count;
-            this.tempMeterItem.sections = []; // Rimuove vecchie sezioni
+            this.tempMeterItem.sections = []; 
             
             for (let i = 0; i < count; i++) {
                 this.tempMeterItem.sections.push({
@@ -1465,12 +1458,11 @@ Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE h
                 });
             }
         },
-        // NUOVA FUNZIONE DI FILTRO PER MEZZO METRO
+        // FUNZIONE AGGIUNTA PER FILTRO GUSTI
         filteredPizzaGustiBySection(secIdx) {
             const currentSection = this.tempMeterItem?.sections[secIdx];
             if (!currentSection) return [];
             
-            // Se l'utente sta scrivendo, usiamo quel termine. Altrimenti usiamo il gusto già selezionato come filtro iniziale.
             const term = currentSection.gusto?.toLowerCase().trim() || ''; 
             
             let filtered = this.allPizzaGusti;
@@ -1509,7 +1501,6 @@ Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE h
                 alert("Devi selezionare un gusto per tutti i gusti richiesti!");
                 return;
             }
-            // CHIAVE DI STABILITÀ: deepClone per garantire che l'oggetto non sia più reattivo
             const itemToAdd = deepClone(this.tempMeterItem);
             this.order.push(itemToAdd);
             this.selectedItemIndex = this.order.length - 1;
@@ -1832,7 +1823,7 @@ Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE h
             }
         },
 
-        // Import/Export/Cache
+        // Import/Export/Cache (Corretta la logica di clearCache)
         exportData() {
             const data = {};
             for (let i = 0; i < localStorage.length; i++) {
@@ -1912,4 +1903,3 @@ Istruzioni: Sostituisci tutto il contenuto del tuo file (dall'inizio <!DOCTYPE h
 </script>
 </body>
 </html>
-
