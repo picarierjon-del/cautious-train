@@ -946,7 +946,6 @@
         orderCapacity: { total: 0, remaining: 0, interval: '' },
 
         // --- DATI INIZIALI ---
-        // AGGIUNTA LOGICA PREZZI COMPOSIZIONI BASE
         compositionPrices: {
             "Mezzo Metro": { 1: 18.00, 2: 20.00, 3: 23.00 },
             "Schiacciata Grande": { 1: 10.00, 2: 12.00, 3: 15.00 }
@@ -1027,8 +1026,6 @@
         newZoneName: '',
         newZonePrice: 0,
         newDriverName: '',
-        
-        // --- PROPRIETÀ COMPUTATE ---
 
         get calculatedOrderTotal(){
             if (this.order.length === 0) return 0;
@@ -1045,15 +1042,13 @@
         },
         // PROPRIETÀ CRITICA PER FINALIZZA ORDINE
         get isOrderFinalizable() {
-            // Requisiti di base: carrello non vuoto e nome cliente
             if (this.order.length === 0 || !this.customer.trim()) return false;
             
-            // Requisiti per la modalità Consegna
-            if (this.mode === 'consegna' && (!this.address.trim() || !this.zoneName.trim())) return false;
+            if (this.mode === 'consegna' && (!this.address.trim() || !this.zoneName.trim() || !this.streetNumber.trim() || !this.town.trim())) return false;
+            if (this.mode === 'asporto' && !this.phone.trim()) return false;
             
-            // Requisiti di data e ora
             if (!this.date || !this.hour) return false;
-
+            
             return true;
         },
         get archiveDateFilterDisplay(){
@@ -1214,7 +1209,7 @@
                 return item.manualPrice;
             }
 
-            let total = item.prezzo || 0;
+            let total = item.prezzo || 0; 
             
             // AGGIUNTA: Ricalcola il prezzo base se è una composizione Mezzo Metro/Schiacciata
             if (item.isMeter && item.gustiCount > 0) {
@@ -1845,7 +1840,7 @@
                  alert('Accesso Manutentore Concesso.');
             } else if (pin === this.adminPin) {
                  this.isAccessGranted = true;
-                 this.userRole = 'Titolare'; // Titolare e Operatore condividono lo stesso PIN per semplicità in questo setup
+                 this.userRole = 'Titolare'; 
                  alert('Accesso Titolare/Operatore Concesso.');
             } else {
                 alert("PIN/Password errato.");
@@ -1864,7 +1859,6 @@
                 alert("Il PIN deve essere di almeno 4 caratteri/numeri.");
             }
         },
-        // Nota: Manutentore PIN non è modificabile dall'interfaccia per sicurezza.
 
         // Import/Export/Cache (Corretta la logica di clearCache)
         exportData() {
