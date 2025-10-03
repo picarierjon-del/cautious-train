@@ -1,670 +1,641 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestore Finanziario e Scadenze Smart</title>
-    <!-- Caricamento di Tailwind CSS per uno stile moderno e responsive -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                }
-            }
-        }
-    </script>
-    <!-- Stili CSS di base -->
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
-        .container-app { min-height: 100vh; display: flex; flex-direction: column; }
-        @supports (-webkit-overflow-scrolling: touch) {
-            .fixed.bottom-0 { padding-bottom: constant(safe-area-inset-bottom); padding-bottom: env(safe-area-inset-bottom); }
-            .h-16-mobile { height: calc(4rem + constant(safe-area-inset-bottom)); height: calc(4rem + env(safe-area-inset-bottom)); }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Finanza Smart Definitiva 7.0</title>
+  <!-- UI & Charts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    body { font-family:'Inter',sans-serif; background:#f7f9fc; color:#1e293b; }
+    .card { box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.06); }
+    .tab-active { border-bottom:3px solid #10b981; color:#10b981; }
+    .cta-button { transition:all .2s; box-shadow:0 2px 4px rgba(16,185,129,.4); }
+    .bar-container { height:20px; border-radius:9999px; overflow:hidden; display:flex; }
+    .bar-income{background:#10b981}.bar-expense{background:#ef4444}
+    .bar-addebito{background:#fb923c}.bar-credito{background:#3b82f6}
+    #quick-actions{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(to top,#fff,#fff8);padding:10px;box-shadow:0 -2px 10px rgba(0,0,0,.1);z-index:40;}
+    /* Dark mode */
+    body.dark { background:#0f172a; color:#f1f5f9; }
+    body.dark .card { background:#111827; color:#e5e7eb; }
+    body.dark input, body.dark select, body.dark textarea { background:#111827; color:#e5e7eb; border-color:#374151; }
+    body.dark .bg-white { background:#111827 !important; }
+    body.dark .text-gray-700 { color:#e5e7eb !important; }
+    body.dark .text-gray-800 { color:#f9fafb !important; }
+    body.dark .text-gray-500 { color:#9ca3af !important; }
+  </style>
+  <!-- Manifest PWA creato al volo -->
+  <link id="dynamic-manifest" rel="manifest">
 </head>
-<body class="container-app">
-    <!-- Header/Title -->
-    <header class="bg-indigo-700 p-4 shadow-xl sticky top-0 z-10">
-        <h1 class="text-xl font-bold text-white text-center">Gestore Finanze & Scadenze Smart</h1>
+<body class="min-h-screen">
+  <div id="app" class="max-w-4xl mx-auto p-4 md:p-6">
+    <!-- Header -->
+    <header class="mb-6 flex items-center justify-between">
+      <div class="flex-1 text-center">
+        <h1 class="text-3xl font-bold text-gray-800">Finanza Smart 7.0 🚀</h1>
+        <p class="text-center text-sm text-gray-500">Attività & Personale</p>
+      </div>
+      <!-- Dark mode toggle -->
+      <button id="theme-toggle"
+        class="ml-4 px-3 py-2 rounded-lg border text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+        🌙 Dark
+      </button>
     </header>
 
-    <!-- Contenuto Principale (dove vengono renderizzate le sezioni) -->
-    <main id="content" class="flex-grow p-2 overflow-y-auto pb-20">
-        <div class="text-center p-8 text-gray-500">Connessione al Database in corso...</div>
-    </main>
+    <!-- Nav -->
+    <nav id="navbar" class="flex justify-around bg-white p-2 rounded-xl shadow-lg card"></nav>
 
-    <!-- Navigazione a Schede (Mobile-friendly, fisso in basso) -->
-    <nav id="nav-bar" class="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-20 shadow-2xl">
-        <div class="flex justify-around">
-            <button data-tab="dashboard" class="flex flex-col items-center justify-center p-3 w-1/4 border-b-2 text-indigo-600 border-indigo-500 transition-colors duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
-                <span class="text-xs font-medium mt-1">Riepilogo</span>
-            </button>
-            <button data-tab="input" class="flex flex-col items-center justify-center p-3 w-1/4 border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                <span class="text-xs font-medium mt-1">Fatture</span>
-            </button>
-            <button data-tab="deadlines" class="flex flex-col items-center justify-center p-3 w-1/4 border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h.01M3 15h18M3 9h18a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2h4" /></svg>
-                <span class="text-xs font-medium mt-1">Scadenze</span>
-            </button>
-            <button data-tab="reports" class="flex flex-col items-center justify-center p-3 w-1/4 border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l2 2 4-4M3 20h18" /></svg>
-                <span class="text-xs font-medium mt-1">Gestione</span>
-            </button>
+    <!-- Content -->
+    <div id="content-area" class="mt-4"></div>
+
+    <!-- Quick actions -->
+    <div id="quick-actions" class="hidden md:hidden">
+      <div class="flex space-x-3 max-w-lg mx-auto">
+        <button onclick="quickRegister('true')"
+          class="flex-1 bg-emerald-500 text-white p-3 rounded-xl font-bold hover:bg-emerald-600 shadow-xl transition transform hover:scale-[1.02] text-lg">
+          💰 Registra Entrata
+        </button>
+        <button onclick="quickRegister('false')"
+          class="flex-1 bg-red-500 text-white p-3 rounded-xl font-bold hover:bg-red-600 shadow-xl transition transform hover:scale-[1.02] text-lg">
+          💸 Registra Uscita
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex justify-center items-center p-4">
+      <div class="bg-white p-6 rounded-xl w-full max-w-sm card">
+        <h3 id="modal-title" class="text-xl font-bold mb-3 text-red-600">Attenzione</h3>
+        <p id="modal-message" class="text-gray-700 mb-4">Messaggio di esempio.</p>
+        <div class="flex justify-end space-x-3">
+          <button id="modal-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Annulla</button>
+          <button id="modal-confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 cta-button">Conferma</button>
         </div>
-    </nav>
-    <div class="h-16-mobile"></div> <!-- Padding per compensare la barra di navigazione fissa -->
-</body>
-<!-- Blocco JavaScript Principale con Firebase e Logica di Delega Eventi -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, addDoc, setDoc, onSnapshot, collection, query, where, writeBatch, deleteDoc, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // Variabili globali per Firebase (fornite dall'ambiente)
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-    let db, auth, userId;
-    window.appData = {
-        invoices: [],
-        deadlines: [],
-        isAuthReady: false,
-        activeTab: 'dashboard',
-        // Stato locale per l'interfaccia (es. riepilogo fattura)
-        invoiceTotals: { vatAmount: 0, totalAmount: 0 }, 
-        reportData: null,
-    };
-
-    // --- Funzioni Utility ---
-    window.round = (num) => Math.round(num * 100) / 100;
-    
-    const formatDateDisplay = (dateString) => {
-        const date = new Date(dateString);
-        if (isNaN(date)) return dateString;
-        return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    };
-
-    window.customConfirm = (message) => {
-        return window.prompt(message + ' (Digita "CONFERMA" per procedere)') === 'CONFERMA';
-    };
-
-    const getToday = () => new Date().toISOString().split('T')[0];
-
-    // --- Inizializzazione Firebase & Autenticazione ---
-    const initFirebase = async () => {
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-
-            if (initialAuthToken) {
-                await signInWithCustomToken(auth, initialAuthToken);
-            } else {
-                await signInAnonymously(auth);
-            }
-
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    userId = user.uid;
-                    window.appData.isAuthReady = true;
-                    setupRealtimeListeners();
-                    // Calcolo il report iniziale per avere i dati pronti
-                    const today = new Date();
-                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-                    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-                    window.appData.reportData = generateReport(window.appData.invoices, firstDayOfMonth, lastDayOfMonth);
-
-                    renderUI(); 
-                } else {
-                    console.error("Autenticazione fallita.");
-                }
-            });
-
-        } catch (error) {
-            console.error("Errore durante l'inizializzazione di Firebase:", error);
-            document.getElementById('content').innerHTML = `
-                <div class="p-4 text-center bg-red-100 text-red-700 rounded-lg shadow-md">
-                    Errore critico di caricamento del database: ${error.message}.
-                </div>
-            `;
-        }
-    };
-
-    const setupRealtimeListeners = () => {
-        if (!db || !userId) return;
-
-        const invoicesPath = `/artifacts/${appId}/users/${userId}/invoices`;
-        const deadlinesPath = `/artifacts/${appId}/users/${userId}/deadlines`;
-
-        // 1. Listener per le Fatture
-        const invoicesQuery = query(collection(db, invoicesPath), orderBy("date", "desc"));
-        onSnapshot(invoicesQuery, (snapshot) => {
-            window.appData.invoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // Aggiorno anche il report quando i dati cambiano
-            const today = new Date();
-            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-            window.appData.reportData = generateReport(window.appData.invoices, firstDayOfMonth, lastDayOfMonth);
-            renderUI();
-        }, (error) => console.error("Errore onSnapshot Fatture:", error));
-
-        // 2. Listener per le Scadenze
-        const deadlinesQuery = query(collection(db, deadlinesPath), orderBy("dueDate", "asc"));
-        onSnapshot(deadlinesQuery, (snapshot) => {
-            window.appData.deadlines = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderUI();
-        }, (error) => console.error("Errore onSnapshot Scadenze:", error));
-    };
-
-    // --- Logica Finanziaria ---
-    const calculateFinancialSummary = (invoices) => {
-        const summary = {
-            incomeTotal: 0, expenseTotal: 0,
-            vatCredit: 0, vatDebit: 0,  
-            netVatDue: 0, netIncome: 0,
-        };
-        invoices.forEach(inv => {
-            if (inv.type === 'Entrata') {
-                summary.incomeTotal += inv.totalAmount || 0;
-                summary.vatDebit += inv.vatAmount || 0;
-            } else if (inv.type === 'Uscita') {
-                summary.expenseTotal += inv.totalAmount || 0;
-                summary.vatCredit += inv.vatAmount || 0;
-            }
-        });
-        summary.netVatDue = window.round(summary.vatDebit - summary.vatCredit);
-        summary.netIncome = window.round(summary.incomeTotal - summary.expenseTotal);
-        return summary;
-    };
-    
-    const generateReport = (invoices, start, end) => {
-        const startDate = new Date(start);
-        const endDate = new Date(end);
-        endDate.setHours(23, 59, 59, 999); 
-
-        const filtered = invoices.filter(inv => {
-            const invDate = new Date(inv.date);
-            return invDate >= startDate && invDate <= endDate;
-        });
-
-        const summary = calculateFinancialSummary(filtered);
-        return { summary, start, end };
-    };
-
-    // --- Rendering delle Sezioni (Solo HTML) ---
-    
-    const renderDashboard = (invoices) => {
-        const summary = calculateFinancialSummary(invoices);
-        const vatDueColor = summary.netVatDue >= 0 ? 'text-red-600' : 'text-green-600';
-        const incomeColor = summary.netIncome >= 0 ? 'text-green-600' : 'text-red-600';
-
-        return `
-            <div class="p-4 space-y-6 max-w-2xl mx-auto">
-                <h2 class="text-2xl font-bold text-gray-800 border-b pb-2 mb-4">Riepilogo Finanziario</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-indigo-500 transform hover:scale-[1.01] transition duration-300">
-                        <p class="text-sm font-medium text-gray-500">Totale Entrate (Lorde):</p>
-                        <p class="text-xl font-semibold text-green-700 mt-1">${summary.incomeTotal.toFixed(2)} €</p>
-                        <p class="text-sm font-medium text-gray-500 mt-3">Totale Uscite (Lorde):</p>
-                        <p class="text-xl font-semibold text-red-700 mt-1">${summary.expenseTotal.toFixed(2)} €</p>
-                        <div class="mt-4 pt-4 border-t">
-                            <p class="text-sm font-medium text-gray-500">Saldo Netto (Lordi):</p>
-                            <p class="text-2xl font-extrabold ${incomeColor}">${summary.netIncome.toFixed(2)} €</p>
-                        </div>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-teal-500 transform hover:scale-[1.01] transition duration-300">
-                        <p class="text-sm font-medium text-gray-500">IVA ad Debito (Entrate):</p>
-                        <p class="text-xl font-semibold text-red-700 mt-1">${summary.vatDebit.toFixed(2)} €</p>
-                        <p class="text-sm font-medium text-gray-500 mt-3">IVA a Credito (Uscite):</p>
-                        <p class="text-xl font-semibold text-green-700 mt-1">${summary.vatCredit.toFixed(2)} €</p>
-                        <div class="mt-4 pt-4 border-t">
-                            <p class="text-sm font-medium text-gray-500">IVA Netta (Trimestrale stimata):</p>
-                            <p class="text-2xl font-extrabold ${vatDueColor}">
-                                ${summary.netVatDue.toFixed(2)} €
-                            </p>
-                            <p class="text-xs text-gray-500 mt-1">
-                                Positivo = da versare | Negativo = a credito.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <p id="user-id-display" class="text-xs text-gray-400 mt-4"></p>
-            </div>
-        `;
-    };
-
-    const renderInvoiceInput = () => {
-        const vatRates = [0.22, 0.10, 0.05, 0.04, 0.00];
-        const { vatAmount, totalAmount } = window.appData.invoiceTotals;
-
-        return `
-            <div class="p-4 space-y-6 max-w-lg mx-auto">
-                <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Inserimento Nuova Fattura (Entrate/Uscite)</h2>
-                <form id="invoice-form" class="space-y-4 bg-white p-6 rounded-xl shadow-lg">
-                    <!-- Campi della Form -->
-                    <div><label for="type" class="block text-sm font-medium text-gray-700">Tipo</label>
-                        <select data-key="type" id="type" name="type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
-                            <option value="Entrata">Entrata (IVA ad Debito)</option><option value="Uscita">Uscita (IVA a Credito)</option>
-                        </select>
-                    </div>
-                    <div><label for="date" class="block text-sm font-medium text-gray-700">Data Documento</label>
-                        <input type="date" data-key="date" id="date" name="date" value="${getToday()}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    </div>
-                    <div><label for="description" class="block text-sm font-medium text-gray-700">Descrizione</label>
-                        <input type="text" data-key="description" id="description" name="description" placeholder="Es. Fatt. Fornitore X / Servizio Cliente Y" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    </div>
-                    <div><label for="amount" class="block text-sm font-medium text-gray-700">Importo Imponibile (€)</label>
-                        <input type="number" step="0.01" data-key="amount" id="amount" name="amount" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    </div>
-                    <div><label for="vatRate" class="block text-sm font-medium text-gray-700">Aliquota IVA</label>
-                        <select data-key="vatRate" id="vatRate" name="vatRate" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
-                            ${vatRates.map(rate => `<option value="${rate}">${(rate * 100).toFixed(0)}%</option>`).join('')}
-                        </select>
-                    </div>
-                    <!-- Totali calcolati -->
-                    <div class="bg-indigo-50 p-3 rounded-lg">
-                        <p class="text-sm font-semibold text-indigo-700">Totale IVA: <span id="display-vat-amount">${vatAmount.toFixed(2)} €</span></p>
-                        <p class="text-base font-bold text-indigo-700">Totale Complessivo (Lordo): <span id="display-total-amount">${totalAmount.toFixed(2)} €</span></p>
-                    </div>
-                    <!-- Bottone e Messaggio -->
-                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
-                        Salva Fattura
-                    </button>
-                    <div id="invoice-message" class="mt-3 text-center text-sm hidden"></div>
-                </form>
-            </div>
-        `;
-    };
-
-    const renderDeadlineManager = (deadlines) => {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0); 
-        
-        const upcomingDeadlines = deadlines
-            .filter(d => !d.isPaid && new Date(d.dueDate) >= now)
-            .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-
-        const expiredDeadlines = deadlines
-            .filter(d => !d.isPaid && new Date(d.dueDate) < now)
-            .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-
-        const isUrgent = (dueDate) => {
-            const due = new Date(dueDate);
-            due.setHours(0, 0, 0, 0);
-            const diffTime = due.getTime() - now.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays <= 30 && diffDays > 0;
-        }
-
-        const deadlineCard = (d) => {
-            const due = new Date(d.dueDate);
-            due.setHours(0, 0, 0, 0);
-            const isExpired = due < now;
-            const urgencyClass = isExpired ? 'bg-red-500' : (isUrgent(d.dueDate) ? 'bg-orange-500 animate-pulse' : 'bg-indigo-500');
-
-            return `
-                <div class="bg-white p-4 rounded-xl shadow-lg flex justify-between items-start transition duration-200 ${isExpired ? 'opacity-80 border-l-4 border-red-500' : 'border-l-4 border-transparent hover:border-indigo-300'}">
-                    <div class="flex-grow pr-2">
-                        <p class="font-bold text-gray-800">${d.name}</p>
-                        <p class="text-sm text-gray-600">Scadenza: <span class="font-semibold">${formatDateDisplay(d.dueDate)}</span></p>
-                        ${d.amount !== null && d.amount !== undefined ? `<p class="text-sm text-gray-600">Importo: <span class="font-semibold">${d.amount.toFixed(2)} €</span></p>` : ''}
-                        ${d.notes ? `<p class="text-xs text-gray-500 italic mt-1">${d.notes}</p>` : ''}
-                    </div>
-                    <div class="flex flex-col items-end space-y-2 flex-shrink-0">
-                        <span class="px-2 py-1 text-xs font-semibold text-white rounded-full ${urgencyClass} shadow-md">
-                            ${isExpired ? 'SCADUTA' : 'IN ARRIVO'}
-                        </span>
-                        <!-- Pulsante usa delega eventi -->
-                        <button data-action="mark-paid" data-id="${d.id}" class="text-xs text-green-600 hover:text-green-800 font-medium p-1 rounded-md bg-green-100 hover:bg-green-200 transition duration-150 shadow-sm">
-                            Segna Pagata
-                        </button>
-                    </div>
-                </div>
-            `;
-        };
-
-        return `
-            <div class="p-4 space-y-6 max-w-lg mx-auto">
-                <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Gestione Scadenze (IMU, IVA, Assicurazioni)</h2>
-                <div class="bg-gray-50 p-6 rounded-xl shadow-inner space-y-3">
-                    <p class="font-semibold text-lg text-indigo-700">Aggiungi Nuova Scadenza</p>
-                    <form id="deadline-form" class="space-y-3">
-                        <select name="name" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                            <option value="Assicurazione">Assicurazione</option><option value="IMU rata 1">IMU rata 1</option><option value="IMU rata 2">IMU rata 2</option>
-                            <option value="TARI">TARI</option><option value="IVA Trimestrale (Q1)">IVA Trimestrale (Q1)</option><option value="IVA Trimestrale (Q2)">IVA Trimestrale (Q2)</option>
-                            <option value="IVA Trimestrale (Q3)">IVA Trimestrale (Q3)</option><option value="IVA Trimestrale (Q4)">IVA Trimestrale (Q4)</option><option value="Altro">Altro (Specifica in Note)</option>
-                        </select>
-                        <input type="date" name="dueDate" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        <input type="number" step="0.01" name="amount" placeholder="Importo (€) - Opzionale" class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        <input type="text" name="notes" placeholder="Note (es. Tipo di assicurazione, trimestre IVA)" class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                        <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-md shadow-lg text-lg font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">
-                            Salva Scadenza
-                        </button>
-                        <div id="deadline-message" class="mt-2 text-center text-sm hidden"></div>
-                    </form>
-                </div>
-                <h3 class="text-xl font-semibold mt-6 pt-4 border-t text-indigo-700">Prossime Scadenze (${upcomingDeadlines.length})</h3>
-                <div class="space-y-3" id="upcoming-deadlines-list">
-                    ${upcomingDeadlines.length > 0 ? upcomingDeadlines.map(deadlineCard).join('') : '<p class="text-gray-500 italic p-3 bg-white rounded-md shadow-sm">Nessuna scadenza in programma.</p>'}
-                </div>
-                <h3 class="text-xl font-semibold mt-6 pt-4 border-t text-red-700">Scadenze Scadute (${expiredDeadlines.length})</h3>
-                <div class="space-y-3">
-                    ${expiredDeadlines.length > 0 ? expiredDeadlines.map(deadlineCard).join('') : '<p class="text-gray-500 italic p-3 bg-white rounded-md shadow-sm">Tutto pagato!</p>'}
-                </div>
-            </div>
-        `;
-    };
-
-    const renderReports = (invoices) => {
-        const currentYear = new Date().getFullYear();
-        const startYear = 2020; 
-        const availableYears = Array.from({ length: currentYear - startYear + 1 }, (_, i) => startYear + i).reverse();
-
-        const { summary, start, end } = window.appData.reportData;
-        const netVatColor = summary.netVatDue >= 0 ? 'text-red-600' : 'text-green-600';
-
-
-        return `
-            <div class="p-4 space-y-6 max-w-xl mx-auto">
-                <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Report e Gestione Dati Storici</h2>
-
-                <!-- 1. Report per Data -->
-                <div class="bg-white p-6 rounded-xl shadow-lg space-y-4">
-                    <p class="font-semibold text-lg text-indigo-700">Report per Intervallo di Data</p>
-                    <form id="report-form" class="space-y-3">
-                        <div class="flex space-x-2">
-                            <div class="w-1/2">
-                                <label for="report-start-date" class="block text-xs font-medium text-gray-700">Dal</label>
-                                <input type="date" id="report-start-date" name="start" value="${start}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
-                            </div>
-                            <div class="w-1/2">
-                                <label for="report-end-date" class="block text-xs font-medium text-gray-700">Al</label>
-                                <input type="date" id="report-end-date" name="end" value="${end}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
-                            Genera Report
-                        </button>
-                    </form>
-
-                    <div id="report-summary" class="mt-4 p-3 bg-indigo-50 rounded-lg">
-                        <p class="font-bold text-indigo-800 mb-2">Risultati Report (${start} - ${end}):</p>
-                        <p class="text-sm">Entrate L. (Imponibile + IVA): <span class="font-semibold text-green-700">${summary.incomeTotal.toFixed(2)} €</span></p>
-                        <p class="text-sm">Uscite L. (Imponibile + IVA): <span class="font-semibold text-red-700">${summary.expenseTotal.toFixed(2)} €</span></p>
-                        <p class="text-sm">IVA Netta da versare/credito: <span class="font-bold ${netVatColor}">${summary.netVatDue.toFixed(2)} €</span></p>
-                    </div>
-                </div>
-
-                <!-- 2. Eliminazione per Anno -->
-                <div class="bg-red-50 p-6 rounded-xl shadow-lg space-y-4 border border-red-200">
-                    <p class="font-semibold text-lg text-red-700">Eliminazione Dati per Anno</p>
-                    <p class="text-sm text-red-600 font-medium">ATTENZIONE: Questa azione è PERMANENTE e cancella tutte le fatture dell'anno selezionato.</p>
-                    <form id="delete-form" class="space-y-3">
-                        <div>
-                            <label for="delete-year" class="block text-sm font-medium text-gray-700">Seleziona Anno da Eliminare</label>
-                            <select id="delete-year" name="year" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md shadow-sm">
-                                ${availableYears.map(year => `<option value="${year}">${year}</option>`).join('')}
-                            </select>
-                        </div>
-                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-lg font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
-                            Conferma Eliminazione Fatture per l'Anno
-                        </button>
-                        <div id="delete-message" class="mt-2 text-center text-sm hidden"></div>
-                    </form>
-                </div>
-
-            </div>
-        `;
-    };
-
-    // --- Gestori di Eventi Globali (Delegazione) ---
-    
-    // 1. Logica di calcolo in tempo reale per la form Fatture
-    const handleInvoiceFormChange = (e) => {
-        const form = document.getElementById('invoice-form');
-        if (!form) return;
-
-        const amountInput = form.querySelector('#amount');
-        const vatRateInput = form.querySelector('#vatRate');
-        
-        if (!amountInput || !vatRateInput) return;
-        
-        const amount = parseFloat(amountInput.value) || 0;
-        const vatRate = parseFloat(vatRateInput.value) || 0;
-
-        window.appData.invoiceTotals.vatAmount = window.round(amount * vatRate);
-        window.appData.invoiceTotals.totalAmount = window.round(amount + window.appData.invoiceTotals.vatAmount);
-        
-        // Aggiorna solo gli elementi di visualizzazione se esistono
-        const displayVat = document.getElementById('display-vat-amount');
-        const displayTotal = document.getElementById('display-total-amount');
-
-        if (displayVat) displayVat.textContent = window.appData.invoiceTotals.vatAmount.toFixed(2) + ' €';
-        if (displayTotal) displayTotal.textContent = window.appData.invoiceTotals.totalAmount.toFixed(2) + ' €';
-    };
-
-    // 2. Gestione Submit Form
-    const handleFormSubmit = async (e) => {
-        e.preventDefault();
-        
-        if (!window.appData.isAuthReady) return;
-        const form = e.target;
-        const formId = form.id;
-        const msgDiv = document.getElementById(formId.replace('-form', '-message'));
-
-        if (formId === 'invoice-form') {
-            await saveInvoice(form, msgDiv);
-        } else if (formId === 'deadline-form') {
-            await saveDeadline(form, msgDiv);
-        } else if (formId === 'delete-form') {
-            await deleteInvoicesByYear(form, msgDiv);
-        } else if (formId === 'report-form') {
-            handleReportGeneration(form, document.getElementById('report-summary'));
-        }
-    };
-    
-    // 3. Gestione Click (Scadenze Pagate)
-    const handleMainClick = async (e) => {
-        const target = e.target;
-        
-        // Navigazione a Schede
-        const tab = target.closest('[data-tab]');
-        if (tab) {
-            window.appData.activeTab = tab.dataset.tab;
-            // Esegue un ricalcolo immediato se si va sulla sezione input
-            if(window.appData.activeTab === 'input') {
-                handleInvoiceFormChange(null);
-            }
-            renderUI();
-            return;
-        }
-
-        // Segna Scadenza Pagata
-        const markPaidBtn = target.closest('[data-action="mark-paid"]');
-        if (markPaidBtn) {
-            const id = markPaidBtn.dataset.id;
-            await markDeadlinePaid(id, true);
-        }
-    };
-
-    // --- Funzioni di Salvataggio e Manipolazione Dati ---
-
-    const saveInvoice = async (form, msgDiv) => {
-        const formData = new FormData(form);
-        const dateString = formData.get('date');
-        const date = new Date(dateString);
-        
-        if (isNaN(date.getTime())) {
-            showMsg(msgDiv, 'Errore: Data non valida.', 'error'); return;
-        }
-        
-        const { vatAmount, totalAmount } = window.appData.invoiceTotals;
-
-        const newInvoice = {
-            type: formData.get('type'),
-            date: dateString,
-            description: formData.get('description'),
-            amount: parseFloat(formData.get('amount')),
-            vatRate: parseFloat(formData.get('vatRate')),
-            vatAmount: vatAmount,
-            totalAmount: totalAmount,
-            year: date.getFullYear(),
-            timestamp: Date.now()
-        };
-
-        try {
-            const invoicesPath = `/artifacts/${appId}/users/${userId}/invoices`;
-            await addDoc(collection(db, invoicesPath), newInvoice);
-            showMsg(msgDiv, 'Fattura salvata con successo!', 'success');
-            form.reset();
-            window.appData.invoiceTotals = { vatAmount: 0, totalAmount: 0 }; // Reset stato
-            handleInvoiceFormChange(null); // Aggiorna visualizzazione
-        } catch (error) {
-            console.error("Errore salvataggio fattura:", error);
-            showMsg(msgDiv, 'Errore durante il salvataggio.', 'error');
-        }
-    };
-
-    const saveDeadline = async (form, msgDiv) => {
-        const formData = new FormData(form);
-        const amountString = formData.get('amount');
-        const amount = amountString ? parseFloat(amountString) : null; 
-        const dueDate = formData.get('dueDate');
-
-        if (isNaN(new Date(dueDate).getTime())) {
-            showMsg(msgDiv, 'Errore: Data non valida.', 'error'); return;
-        }
-
-        const newDeadline = {
-            name: formData.get('name'),
-            dueDate: dueDate,
-            amount: amount,
-            notes: formData.get('notes'),
-            isPaid: false,
-            timestamp: Date.now()
-        };
-
-        try {
-            const deadlinesPath = `/artifacts/${appId}/users/${userId}/deadlines`;
-            await addDoc(collection(db, deadlinesPath), newDeadline);
-            showMsg(msgDiv, 'Scadenza salvata!', 'success');
-            form.reset();
-        } catch (error) {
-            console.error("Errore salvataggio scadenza:", error);
-            showMsg(msgDiv, 'Errore durante il salvataggio.', 'error');
-        }
-    };
-
-    const markDeadlinePaid = async (id, isPaid) => {
-        if (!window.appData.isAuthReady) return;
-        const deadlinesPath = `/artifacts/${appId}/users/${userId}/deadlines`;
-        const deadlineRef = doc(db, deadlinesPath, id);
-        try {
-            await setDoc(deadlineRef, { isPaid: isPaid }, { merge: true });
-        } catch (error) {
-            console.error("Errore aggiornamento stato scadenza:", error);
-        }
-    };
-
-    const deleteInvoicesByYear = async (form, msgDiv) => {
-        const yearToDelete = parseInt(form.querySelector('#delete-year').value);
-        if (!yearToDelete) return;
-
-        if (!window.customConfirm('Sei sicuro di voler ELIMINARE TUTTE le fatture per l\'anno ' + yearToDelete + '?')) {
-            showMsg(msgDiv, 'Eliminazione annullata.', 'warning');
-            return;
-        }
-
-        showMsg(msgDiv, 'Eliminazione in corso...', 'warning');
-
-        try {
-            const invoicesPath = `/artifacts/${appId}/users/${userId}/invoices`;
-            const q = query(collection(db, invoicesPath), where("year", "==", yearToDelete));
-            const snapshot = await getDocs(q); 
-
-            if (snapshot.empty) {
-                showMsg(msgDiv, `Nessuna fattura trovata per l'anno ${yearToDelete}.`, 'info');
-                return;
-            }
-
-            const batch = writeBatch(db);
-            snapshot.docs.forEach((doc) => {
-                batch.delete(doc.ref);
-            });
-
-            await batch.commit();
-            showMsg(msgDiv, `Eliminate ${snapshot.size} fatture per l'anno ${yearToDelete}!`, 'success');
-
-        } catch (error) {
-            console.error("Errore eliminazione fatture:", error);
-            showMsg(msgDiv, 'Errore durante l\'eliminazione dei dati.', 'error');
-        }
-    };
-    
-    const handleReportGeneration = (form, summaryDiv) => {
-        const start = form.querySelector('#report-start-date').value;
-        const end = form.querySelector('#report-end-date').value;
-
-        const report = generateReport(window.appData.invoices, start, end);
-        const netVatColor = report.summary.netVatDue >= 0 ? 'text-red-600' : 'text-green-600';
-
-        summaryDiv.innerHTML = `
-            <p class="font-bold text-indigo-800 mb-2">Risultati Report (${start} - ${end}):</p>
-            <p class="text-sm">Entrate L. (Imponibile + IVA): <span class="font-semibold text-green-700">${report.summary.incomeTotal.toFixed(2)} €</span></p>
-            <p class="text-sm">Uscite L. (Imponibile + IVA): <span class="font-semibold text-red-700">${report.summary.expenseTotal.toFixed(2)} €</span></p>
-            <p class="text-sm">IVA Netta da versare/credito: <span class="font-bold ${netVatColor}">${report.summary.netVatDue.toFixed(2)} €</span></p>
-        `;
-    };
-
-    // --- Messaggi UI ---
-    const showMsg = (msgDiv, text, type) => {
-        const classes = {
-            success: 'p-2 bg-green-100 text-green-700 rounded-md',
-            error: 'p-2 bg-red-100 text-red-700 rounded-md',
-            warning: 'p-2 bg-yellow-100 text-yellow-700 rounded-md',
-            info: 'p-2 bg-blue-100 text-blue-700 rounded-md',
-        };
-        
-        if (msgDiv) {
-            msgDiv.textContent = text;
-            msgDiv.className = `mt-3 text-center text-sm ${classes[type]}`;
-            msgDiv.classList.remove('hidden');
-            setTimeout(() => msgDiv.classList.add('hidden'), 5000);
-        }
-    };
-
-
-    // --- Setup Globale ---
-    document.addEventListener('DOMContentLoaded', () => {
-        initFirebase();
-
-        // 1. Gestione Navigazione e Pulsante 'Segna Pagata'
-        document.body.addEventListener('click', handleMainClick);
-
-        // 2. Gestione Submit Form (per tutte le form)
-        document.body.addEventListener('submit', handleFormSubmit);
-
-        // 3. Gestione Calcoli Form Fatture (Input/Change)
-        document.body.addEventListener('input', (e) => {
-            if (e.target.closest('#invoice-form')) {
-                handleInvoiceFormChange(e);
-            }
-        });
-        document.body.addEventListener('change', (e) => {
-            if (e.target.closest('#invoice-form') && (e.target.id === 'vatRate' || e.target.id === 'amount')) {
-                handleInvoiceFormChange(e);
-            }
-        });
-
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 p-3 bg-green-500 text-white rounded-xl shadow-lg transition-opacity duration-300 opacity-0" role="alert">
+      Azione completata con successo!
+    </div>
+  </div>
+
+  <script>
+  /* =========================
+     CONFIG & GLOBAL STATE
+  ========================== */
+  const LOCAL_STORAGE_KEY = 'smartFinApp_v70';
+  const IVA_RATES = [0,4,5,10,22];
+  const MAX_RECENT_TRANSACTIONS = 10;
+  const DEFAULT_CATEGORIES = ['Affitto','Bollette','Spesa','Marketing','Servizi','Stipendi','Carburante','Ristoranti','Abbonamenti','Altro'];
+
+  let appData = {
+    invoices: [],
+    expenses: [],
+    reminders: [],
+    contacts: [],
+    categories: DEFAULT_CATEGORIES.slice(),
+    lastId: 0
+  };
+  let currentPage = 'report';
+
+  /* =========================
+     THEME (DARK MODE)
+  ========================== */
+  function applySavedTheme(){
+    const saved = localStorage.getItem('theme') || 'light';
+    document.body.classList.toggle('dark', saved === 'dark');
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = saved === 'dark' ? '☀️ Light' : '🌙 Dark';
+  }
+  function toggleTheme(){
+    const isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    applySavedTheme();
+  }
+
+  /* =========================
+     STORAGE
+  ========================== */
+  function loadData(){
+    try{
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (raw){
+        const parsed = JSON.parse(raw);
+        appData = { ...appData, ...parsed };
+        appData.invoices ||= [];
+        appData.expenses ||= [];
+        appData.reminders ||= [];
+        appData.contacts ||= [];
+        appData.categories ||= DEFAULT_CATEGORIES.slice();
+        appData.lastId ||= 0;
+      }
+    }catch(e){ console.error(e); showToast('Errore nel caricamento dati','red'); }
+  }
+  function saveData(){
+    try{ localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData)); }
+    catch(e){ console.error(e); showToast('Errore salvataggio dati','red'); }
+  }
+  function getNextId(){ appData.lastId++; saveData(); return appData.lastId; }
+
+  /* =========================
+     UI HELPERS
+  ========================== */
+  function showModal(title,message,isConfirmation,onConfirm,onCancel=null){
+    const modal = document.getElementById('modal');
+    const t = document.getElementById('modal-title'); const m = document.getElementById('modal-message');
+    const ok = document.getElementById('modal-confirm-btn'); const cancel = document.getElementById('modal-cancel-btn');
+    t.textContent = title; m.textContent = message;
+    if (isConfirmation){
+      ok.textContent = 'Conferma';
+      ok.classList.remove('bg-gray-500','hover:bg-gray-600');
+      ok.classList.add('bg-red-600','hover:bg-red-700');
+      ok.onclick = ()=>{ modal.classList.add('hidden'); onConfirm&&onConfirm(); };
+      cancel.classList.remove('hidden'); cancel.onclick = ()=>{ modal.classList.add('hidden'); onCancel&&onCancel(); };
+    } else {
+      ok.textContent='OK';
+      ok.classList.remove('bg-red-600','hover:bg-red-700');
+      ok.classList.add('bg-gray-500','hover:bg-gray-600');
+      ok.onclick = ()=> modal.classList.add('hidden');
+      cancel.classList.add('hidden');
+    }
+    modal.classList.remove('hidden');
+  }
+  function showToast(message,type='green'){
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = `fixed bottom-5 left-1/2 transform -translate-x-1/2 p-3 text-white rounded-xl shadow-lg transition-opacity duration-300 opacity-100 ${type==='red'?'bg-red-500':'bg-green-500'}`;
+    setTimeout(()=>toast.classList.add('opacity-0'), 2500);
+  }
+
+  /* =========================
+     QUICK REGISTER
+  ========================== */
+  function quickRegister(isIncomeString){
+    const isIncome = isIncomeString === 'true';
+    document.getElementById('transaction-form-anchor')?.scrollIntoView({behavior:'smooth'});
+    const isIncomeSelect = document.getElementById('isIncome');
+    if (isIncomeSelect){
+      isIncomeSelect.value = isIncomeString;
+      isIncomeSelect.dispatchEvent(new Event('change'));
+    }
+    const form = document.getElementById('transaction-form');
+    if (form){
+      form.removeAttribute('data-transaction-id'); form.reset();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn){
+        submitBtn.textContent='Registra Movimento';
+        submitBtn.classList.remove('bg-blue-500','hover:bg-blue-600');
+        submitBtn.classList.add('bg-emerald-500','hover:bg-emerald-600');
+      }
+    }
+    const incomeTypeSelect = document.getElementById('incomeType');
+    if (incomeTypeSelect && isIncome){ incomeTypeSelect.value='Fattura (Cliente)'; incomeTypeSelect.dispatchEvent(new Event('change')); }
+    showToast(isIncome?'Modulo pronto per Entrata!':'Modulo pronto per Uscita!');
+  }
+
+  /* =========================
+     PERIOD FILTERS & SUMMARY
+  ========================== */
+  function filterByPeriod(itemDateStr, filterType, filterValue){
+    if (filterType==='all'||!filterValue||filterValue==='all') return true;
+    const itemDate = new Date(itemDateStr); if (isNaN(itemDate)) return false;
+    const y=itemDate.getFullYear(), m=itemDate.getMonth();
+    if (filterType==='year'){ return y===parseInt(filterValue); }
+    if (filterType==='month'){ const [fy,fm]=filterValue.split('-').map(Number); return y===fy && m===(fm-1); }
+    if (filterType==='quarter'){ const [fy,fm]=filterValue.split('-').map(Number); return y===fy && Math.ceil((m+1)/3)===Math.ceil(fm/3); }
+    if (filterType==='day'){ return itemDateStr===filterValue; }
+    if (filterType==='week'){
+      const d=new Date(filterValue);
+      const w=d.getDay();
+      const start=new Date(d); start.setDate(d.getDate()-(w===0?6:w-1)); start.setHours(0,0,0,0);
+      const end=new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59,999);
+      return itemDate>=start && itemDate<=end;
+    }
+    return false;
+  }
+
+  function calculateFinancialSummary(type, filterType, filterDateStr){
+    let totalIncomes=0,totalExpenses=0, ivaAddebito=0, ivaCredito=0;
+    const types = type==='global' ? ['activity','personal'] : [type];
+    const all = [
+      ...appData.invoices.map(t=>({...t,isIncome:true,key:'inv'})),
+      ...appData.expenses.map(t=>({...t,isIncome:false,key:'exp'}))
+    ];
+    const filtered = all.filter(i=>types.includes(i.type)).filter(i=>filterByPeriod(i.date,filterType,filterDateStr));
+    filtered.forEach(i=>{
+      if (i.isIncome){ totalIncomes+=i.gross; if (i.type==='activity') ivaAddebito+=i.vatAmount; }
+      else { totalExpenses+=i.gross; if (i.type==='activity') ivaCredito+=i.vatAmount; }
     });
-</script>
-</html>
+    const netBalance=totalIncomes-totalExpenses;
+    const ivaBalance=ivaAddebito-ivaCredito;
+    return { totalIncomes,totalExpenses,netBalance,ivaAddebito,ivaCredito,ivaBalance, transactions: filtered.sort((a,b)=> new Date(b.date)-new Date(a.date)) };
+  }
 
+  /* =========================
+     CONTACTS & CATEGORIES
+  ========================== */
+  function addContact(name, scope, relation){
+    const clean=(name||'').trim(); if(!clean) return;
+    const exists=appData.contacts.find(c=> c.name.toLowerCase()===clean.toLowerCase() && c.scope===scope );
+    if(!exists){ appData.contacts.push({id:getNextId(), name:clean, scope, relation}); saveData(); }
+  }
+  function deleteContact(id){
+    const i=appData.contacts.findIndex(c=>c.id===id);
+    if (i>-1){
+      showModal('Eliminare contatto?','Le transazioni restano ma senza suggerimenti autocomplete.',true,()=>{
+        appData.contacts.splice(i,1); saveData(); showToast('Contatto eliminato.','red'); renderPage('settings');
+      });
+    }
+  }
+  function ensureCategory(cat){
+    const c=(cat||'').trim(); if(!c) return;
+    if (!appData.categories.includes(c)){ appData.categories.push(c); appData.categories.sort((a,b)=>a.localeCompare(b)); saveData(); }
+  }
+
+  /* =========================
+     TRANSACTIONS CRUD
+  ========================== */
+  function saveTransaction(isIncome, data){
+    const list = isIncome ? appData.invoices : appData.expenses;
+    const vatRate = parseFloat(data.vatRate)||0;
+    const net = parseFloat(data.net)||0;
+    const vatAmount = (net*vatRate/100);
+    const gross = net+vatAmount;
+    const tags = (data.tags||'').split(',').map(s=>s.trim()).filter(Boolean);
+
+    const updatedItem = {
+      id: data.id || getNextId(),
+      type: data.dataType, // 'activity' | 'personal'
+      date: data.date,
+      description: data.description || '',
+      category: (data.category||'Altro').trim(),
+      tags,
+      net:+net.toFixed(2),
+      vatRate:+vatRate,
+      vatAmount:+vatAmount.toFixed(2),
+      gross:+gross.toFixed(2),
+      incomeType: data.incomeType || (isIncome && data.dataType==='activity' ? 'Fattura (Cliente)' : null)
+    };
+
+    const isFatturaOrPersonal = (isIncome && data.dataType==='activity' && data.incomeType==='Fattura (Cliente)') || data.dataType==='personal';
+    if (isFatturaOrPersonal && updatedItem.description?.trim()){
+      if (!data.id || (list.find(it=>it.id===data.id)?.description !== data.description)){
+        addContact(updatedItem.description, data.dataType, isIncome?'client':'supplier');
+      }
+    }
+    ensureCategory(updatedItem.category);
+
+    if (isIncome && data.dataType==='activity' && data.incomeType==='Incasso/Corrispettivo'){
+      updatedItem.description = updatedItem.description || 'Corrispettivi/Incasso Giornaliero';
+    }
+
+    if (data.id){
+      const idx=list.findIndex(i=>i.id===data.id);
+      if (idx>-1){ list[idx]=updatedItem; showToast(`Transazione #${data.id} aggiornata!`); }
+    } else { list.push(updatedItem); showToast(`"${updatedItem.description}" registrato!`); }
+
+    saveData(); renderPage(currentPage);
+  }
+
+  function handleTransactionSubmit(type){
+    const form = document.getElementById('transaction-form');
+    const data = new FormData(form);
+    const isIncome = data.get('isIncome')==='true';
+    const transactionId = form.getAttribute('data-transaction-id');
+
+    const payload = {
+      id: transactionId ? parseInt(transactionId) : null,
+      dataType: type,
+      isIncome,
+      date: data.get('date'),
+      description: data.get('description'),
+      net: data.get('net'),
+      vatRate: data.get('vatRate'),
+      incomeType: data.get('incomeType'),
+      category: data.get('category') || 'Altro',
+      tags: data.get('tags') || ''
+    };
+
+    const isCorrisp = type==='activity' && isIncome && payload.incomeType==='Incasso/Corrispettivo';
+    if (payload.net && payload.date && (isCorrisp || (payload.description && payload.description.trim()))){
+      saveTransaction(isIncome, payload);
+      form.reset();
+      form.removeAttribute('data-transaction-id');
+      document.getElementById('description-div')?.classList.remove('hidden');
+    } else {
+      showToast('Compila tutti i campi richiesti.','red');
+    }
+  }
+
+  function editTransaction(isIncome,id,scope){
+    const list = isIncome ? appData.invoices : appData.expenses;
+    const item = list.find(t=>t.id===id);
+    if (!item) return showToast('Transazione non trovata.','red');
+    renderPage(scope);
+    const form = document.getElementById('transaction-form'); if(!form) return;
+    form.setAttribute('data-transaction-id', item.id);
+    document.getElementById('isIncome').value = isIncome ? 'true':'false';
+    document.getElementById('date').value = item.date;
+    document.getElementById('description').value = item.description || '';
+    document.getElementById('net-amount').value = item.net.toFixed(2);
+    document.getElementById('vat-rate').value = item.vatRate;
+    document.getElementById('category').value = item.category || 'Altro';
+    document.getElementById('tags').value = (item.tags||[]).join(', ');
+    if (scope==='activity' && isIncome){ document.getElementById('incomeType').value = item.incomeType || 'Fattura (Cliente)'; }
+    setupActivityIncomeTypeListeners(scope);
+    setupContactAutocomplete(scope);
+    setupCategoryAutocomplete();
+    calculateGross();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.textContent = `Salva Modifiche (ID ${item.id})`;
+    submitBtn.classList.remove('bg-emerald-500','hover:bg-emerald-600');
+    submitBtn.classList.add('bg-blue-500','hover:bg-blue-600');
+    showToast(`Modulo in modifica per ID ${item.id}.`);
+  }
+
+  function deleteTransaction(isIncome,id){
+    const listName = isIncome ? 'invoices':'expenses';
+    const idx = appData[listName].findIndex(i=>i.id===id);
+    if (idx>-1){
+      showModal('Eliminare la transazione?','Operazione irreversibile.',true,()=>{
+        appData[listName].splice(idx,1); saveData(); showToast('Transazione eliminata.','red'); renderPage(currentPage);
+      });
+    }
+  }
+
+  /* =========================
+     REMINDERS
+  ========================== */
+  function saveReminder(data){
+    appData.reminders ||= [];
+    if (data.id){
+      const i=appData.reminders.findIndex(r=>r.id===data.id);
+      if(i>-1) appData.reminders[i]={...appData.reminders[i],...data};
+    } else {
+      appData.reminders.push({ id:getNextId(), ...data, paid:false });
+    }
+    saveData(); showToast('Promemoria salvato!'); renderPage('reminders');
+  }
+  function handleReminderSubmit(){
+    const f=document.getElementById('reminder-form'); const d=new FormData(f);
+    const payload={ type:d.get('type'), description:d.get('description'), date:d.get('date'), amount: parseFloat(d.get('amount'))||0 };
+    if (payload.description && payload.date && payload.amount>0){ saveReminder(payload); f.reset(); document.getElementById('reminder-date').value = new Date().toISOString().slice(0,10); }
+    else showToast('Compila tutti i campi validi.','red');
+  }
+  function toggleReminderPaid(id){
+    const r=(appData.reminders||[]).find(x=>x.id===id);
+    if (r){ r.paid=!r.paid; saveData(); showToast(r.paid?'Pagamento registrato!':'Pagamento annullato.'); renderPage('reminders'); }
+  }
+  function deleteReminder(id){
+    const i=(appData.reminders||[]).findIndex(r=>r.id===id);
+    if (i>-1){
+      showModal('Eliminare promemoria?','Operazione irreversibile.',true,()=>{
+        appData.reminders.splice(i,1); saveData(); showToast('Promemoria eliminato.','red'); renderPage('reminders');
+      });
+    }
+  }
+
+  /* =========================
+     FORM LOGIC (autocomplete)
+  ========================== */
+  function setupActivityIncomeTypeListeners(scope){
+    if (scope!=='activity') return;
+    const incomeTypeSelect = document.getElementById('incomeType');
+    const isIncomeSelect = document.getElementById('isIncome');
+    const descriptionDiv = document.getElementById('description-div');
+
+    const updateVisibility = ()=>{
+      const isIncome = isIncomeSelect.value==='true';
+      const incomeType = incomeTypeSelect?.value || 'Fattura (Cliente)';
+      if (isIncome && incomeType==='Incasso/Corrispettivo'){
+        descriptionDiv.classList.add('hidden');
+        const desc = document.getElementById('description');
+        desc.removeAttribute('required'); desc.value='Corrispettivi/Incasso Giornaliero';
+        document.getElementById('description-label').textContent='Descrizione Incasso (Opzionale)';
+      } else {
+        descriptionDiv.classList.remove('hidden');
+        const desc = document.getElementById('description');
+        desc.setAttribute('required','required');
+        if (document.getElementById('transaction-form').getAttribute('data-transaction-id')===null){ desc.value=''; }
+        document.getElementById('description-label').textContent = isIncome ? 'Cliente / Descrizione' : 'Fornitore / Descrizione';
+        setupContactAutocomplete(scope);
+      }
+    };
+
+    incomeTypeSelect?.addEventListener('change', updateVisibility);
+    isIncomeSelect.addEventListener('change', ()=>{
+      const isIncome=isIncomeSelect.value==='true';
+      const ctl=document.getElementById('income-type-control');
+      if (scope==='activity' && ctl){ ctl.classList.toggle('hidden', !isIncome); }
+      updateVisibility();
+    });
+    updateVisibility();
+  }
+
+  function setupContactAutocomplete(scope){
+    const isIncome = document.getElementById('isIncome').value==='true';
+    const incomeType = document.getElementById('incomeType')?.value;
+    const input = document.getElementById('description');
+    const datalist = document.getElementById('contact-list');
+    if (!input || !datalist) return;
+
+    if (scope==='activity' && isIncome && incomeType==='Incasso/Corrispettivo'){ datalist.innerHTML=''; return; }
+    const relation = isIncome ? 'client':'supplier';
+    const contacts = appData.contacts
+      .filter(c=> c.scope===scope && (c.relation===relation || c.relation==='both'))
+      .sort((a,b)=> a.name.localeCompare(b.name));
+    datalist.innerHTML = contacts.map(c=> `<option value="${c.name}"></option>`).join('');
+    input.setAttribute('list','contact-list');
+  }
+
+  function setupCategoryAutocomplete(){
+    const dl = document.getElementById('category-list');
+    if (!dl) return;
+    const all = (appData.categories||DEFAULT_CATEGORIES).slice().sort((a,b)=>a.localeCompare(b));
+    dl.innerHTML = all.map(c=> `<option value="${c}"></option>`).join('');
+  }
+
+  function calculateGross(){
+    const netInput=document.getElementById('net-amount');
+    const vatSelect=document.getElementById('vat-rate');
+    const vatAmountDisplay=document.getElementById('vat-amount-display');
+    const grossAmountDisplay=document.getElementById('gross-amount-display');
+    const net=parseFloat(netInput.value)||0; const rate=parseFloat(vatSelect.value)||0;
+    const vatAmt=net*rate/100; const gross=net+vatAmt;
+    vatAmountDisplay.textContent = vatAmt.toFixed(2)+' €';
+    grossAmountDisplay.textContent = gross.toFixed(2)+' €';
+  }
+        /* =========================
+     EXPORT / IMPORT
+  ========================== */
+  function exportDataJSON(){
+    const blob=new Blob([JSON.stringify(appData,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup.json';a.click();
+  }
+  function exportCSV(){
+    const all=[...appData.invoices.map(t=>({...t,isIncome:true})),...appData.expenses.map(t=>({...t,isIncome:false}))];
+    const rows=all.map(t=>[t.id,t.date,t.description,t.category,t.net,t.vatRate,t.vatAmount,t.gross,t.isIncome]);
+    const csv='ID,Data,Descrizione,Categoria,Netto,IVA%,IVA,Lordo,Entrata\n'+rows.map(r=>r.join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download='export.csv';a.click();
+  }
+  function importCSV(file){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const lines=e.target.result.split('\n').slice(1);
+      lines.forEach(l=>{
+        const [id,date,desc,cat,net,vatRate,vatAmount,gross,isIncome]=l.split(',');
+        if(date){
+          const obj={id:getNextId(),date,description:desc,category:cat,net:parseFloat(net),vatRate:parseFloat(vatRate),vatAmount:parseFloat(vatAmount),gross:parseFloat(gross),isIncome:isIncome==='true'};
+          if(obj.isIncome) appData.invoices.push(obj); else appData.expenses.push(obj);
+        }
+      });
+      saveData();showToast('Import CSV completato');renderPage('report');
+    };
+    reader.readAsText(file);
+  }
+
+  /* =========================
+     REMINDER NOTIFICATIONS
+  ========================== */
+  function checkReminders(){
+    const today=new Date();
+    (appData.reminders||[]).forEach(r=>{
+      const diff=(new Date(r.date)-today)/(1000*60*60*24);
+      if(!r.paid && diff>=0 && diff<=3){
+        if(Notification.permission==='granted'){
+          new Notification(`🔔 ${r.type}`,{body:`${r.description} - scade il ${new Date(r.date).toLocaleDateString('it-IT')}`});
+        }
+      }
+    });
+  }
+
+  /* =========================
+     DASHBOARD KPI + CHART
+  ========================== */
+  function calcSummary(){
+    const inc=[...appData.invoices].reduce((a,t)=>a+t.gross,0);
+    const exp=[...appData.expenses].reduce((a,t)=>a+t.gross,0);
+    const saving=inc>0?((inc-exp)/inc*100):0;
+    return{inc,exp,saving};
+  }
+  function renderTrendChart(){
+    const ctx=document.getElementById('trend');if(!ctx)return;
+    const grouped={};
+    [...appData.invoices.map(t=>({...t,isIncome:true})),...appData.expenses.map(t=>({...t,isIncome:false}))]
+    .forEach(t=>{
+      const ym=t.date.slice(0,7);
+      if(!grouped[ym])grouped[ym]={inc:0,exp:0};
+      if(t.isIncome)grouped[ym].inc+=t.gross;else grouped[ym].exp+=t.gross;
+    });
+    const labels=Object.keys(grouped).sort();
+    const dataInc=labels.map(l=>grouped[l].inc);
+    const dataExp=labels.map(l=>grouped[l].exp);
+    new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Entrate',data:dataInc,borderColor:'green'},{label:'Uscite',data:dataExp,borderColor:'red'}]}});
+  }
+
+  /* =========================
+     NAVBAR & PAGES
+  ========================== */
+  function renderNavbar(){
+    const nav=[{id:'activity',label:'Attività',icon:'💼'},{id:'personal',label:'Personale',icon:'🏠'},{id:'report',label:'Riepilogo',icon:'📊'},{id:'reminders',label:'Scadenze',icon:'🔔'},{id:'settings',label:'Dati',icon:'⚙️'}];
+    document.getElementById('navbar').innerHTML=nav.map(n=>`<button onclick="renderPage('${n.id}')" class="${currentPage===n.id?'tab-active':''}">${n.icon} ${n.label}</button>`).join('');
+  }
+
+  function renderPage(p){
+    currentPage=p;renderNavbar();
+    if(p==='report'){
+      const s=calcSummary();
+      document.getElementById('content-area').innerHTML=`
+        <div class="card p-4">
+          <h2 class="text-xl font-bold">📊 Dashboard</h2>
+          <p>Entrate: ${s.inc.toFixed(2)} €</p>
+          <p>Uscite: ${s.exp.toFixed(2)} €</p>
+          <p>Risparmio: ${s.saving.toFixed(1)}%</p>
+          <input id="search" placeholder="🔍 Cerca" class="border p-1 mt-2 w-full"/>
+          <div id="results"></div>
+          <canvas id="trend" class="mt-4"></canvas>
+          <div class="mt-4 flex space-x-2">
+            <button onclick="exportDataJSON()" class="bg-blue-500 text-white px-3 py-2 rounded">Export JSON</button>
+            <button onclick="exportCSV()" class="bg-green-500 text-white px-3 py-2 rounded">Export CSV</button>
+            <input type="file" onchange="importCSV(this.files[0])" class="border"/>
+          </div>
+        </div>`;
+      renderTrendChart();
+      document.getElementById('search').addEventListener('input',e=>{
+        const q=e.target.value.toLowerCase();
+        const all=[...appData.invoices.map(t=>({...t,isIncome:true})),...appData.expenses.map(t=>({...t,isIncome:false}))];
+        const f=all.filter(t=>(t.description||'').toLowerCase().includes(q)||t.category.toLowerCase().includes(q)||t.gross.toString().includes(q));
+        document.getElementById('results').innerHTML=f.map(t=>`<div class="border-b">${t.date} ${t.description} ${t.gross}€</div>`).join('');
+      });
+    }
+    if(p==='settings'){
+      document.getElementById('content-area').innerHTML=`
+        <div class="card p-4">
+          <h2 class="text-xl font-bold">⚙️ Impostazioni</h2>
+          <button onclick="localStorage.clear();location.reload()" class="mt-2 bg-red-500 text-white px-3 py-2 rounded">Reset Dati</button>
+        </div>`;
+    }
+    if(p==='reminders'){
+      document.getElementById('content-area').innerHTML=`
+        <div class="card p-4">
+          <h2>🔔 Promemoria</h2>
+          ${(appData.reminders||[]).map(r=>`<div>${r.description} ${r.date}</div>`).join('')}
+        </div>`;
+    }
+    if(p==='activity'||p==='personal'){
+      document.getElementById('content-area').innerHTML=`
+        <div class="card p-4">
+          <h2>${p==='activity'?'💼 Attività':'🏠 Personale'}</h2>
+          <form onsubmit="event.preventDefault();addTx('${p}')">
+            <input id="desc" placeholder="Descrizione" class="border p-2"/>
+            <input id="val" type="number" step="0.01" placeholder="Netto" class="border p-2"/>
+            <select id="cat">${appData.categories.map(c=>`<option>${c}</option>`).join('')}</select>
+            <button class="bg-emerald-500 text-white px-3 py-2">Aggiungi</button>
+          </form>
+        </div>`;
+    }
+  }
+
+  function addTx(scope){
+    const d=document.getElementById('desc').value;
+    const v=parseFloat(document.getElementById('val').value)||0;
+    const cat=document.getElementById('cat').value;
+    const obj={id:getNextId(),type:scope,date:new Date().toISOString().slice(0,10),description:d,category:cat,net:v,vatRate:22,vatAmount:v*0.22,gross:v*1.22};
+    if(scope==='activity')appData.invoices.push(obj);else appData.expenses.push(obj);
+    saveData();showToast('Transazione aggiunta!');renderPage(scope);
+  }
+
+  /* =========================
+     PWA
+  ========================== */
+  function installManifest(){
+    const manifest={name:"Finanza Smart",short_name:"Finanza",start_url:".",display:"standalone",theme_color:"#10b981"};
+    const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+    document.getElementById('dynamic-manifest').href=URL.createObjectURL(blob);
+  }
+  async function installServiceWorker(){
+    if(!('serviceWorker'in navigator))return;
+    const sw=`self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})`;
+    const blob=new Blob([sw],{type:'text/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(blob));
+  }
+
+  /* =========================
+     INIT
+  ========================== */
+  window.onload=()=>{
+    applySavedTheme();
+    document.getElementById('theme-toggle').onclick=toggleTheme;
+    loadData();
+    renderPage('report');
+    if(Notification.permission!=='granted')Notification.requestPermission();
+    setInterval(checkReminders,3600000);
+    installManifest();installServiceWorker();
+  }
+  </script>
+</body>
+</html>
