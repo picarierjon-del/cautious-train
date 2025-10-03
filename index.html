@@ -140,17 +140,33 @@
         'Abbonamenti': '🔗',
         'Altro': '📦'
     };
+    
+    // NUOVO: Frequenze comuni per la logica di previsione
+    const COMMON_FREQUENCIES = {
+        'affitto': 'monthly',
+        'stipendio': 'monthly',
+        'bollette': 'monthly',
+        'abbonamento': 'monthly',
+        'assicurazione': 'annual',
+        'tasse': 'quarterly',
+        'imu': 'annual',
+        'mensile': 'monthly',
+        'trimestrale': 'quarterly',
+        'annuale': 'annual'
+    };
 
     let appData = { 
         invoices:[], 
         expenses:[], 
         reminders:[], 
         contacts:[], 
-        birthdays: [], // NUOVO: Aggiunta lista compleanni
+        birthdays: [],
+        recurringExpenses: [], // NUOVO: Traccia spese ricorrenti per previsione
         lastId:0, 
         categories: DEFAULT_CATEGORIES.slice(), 
         pin: '1234',
-        currencySymbol: '€'
+        currencySymbol: '€',
+        monthlySavingsTarget: 0 
     };
     let currentPage = 'activity';
 
@@ -190,13 +206,15 @@
           // Ensure arrays exist
           appData.invoices ||= []; appData.expenses ||= [];
           appData.reminders ||= []; appData.contacts ||= [];
-          appData.birthdays ||= []; // Ensure birthdays array exists
+          appData.birthdays ||= [];
+          appData.recurringExpenses ||= []; // Ensure array exists
           
-          // Ensure categories/lastId/pin/currency exist
+          // Ensure categories/lastId/pin/currency/target exist
           appData.categories ||= DEFAULT_CATEGORIES.slice();
           appData.lastId ||= 0;
           appData.pin ||= '1234';
-          appData.currencySymbol ||= '€'; // Default Valuta
+          appData.currencySymbol ||= '€';
+          appData.monthlySavingsTarget ||= 0;
         }
       } catch(e){ console.error(e); showToast('Errore nel caricamento dati','red'); }
     }
@@ -372,6 +390,66 @@
         });
     }
 
+    // NUOVO: Calcola Saldo Netto Giornaliero per gli ultimi 7 giorni
+    function calculateDailyNetBalance(type) {
+        const days = 7;
+        const today = new Date();
+        const dates = [];
+        for (let i = 0; i < days; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() - (days - 1 - i));
+            dates.push(d.toISOString().slice(0, 10));
+        }
+
+        const dailyData = dates.map(dateStr => {
+            const summary = calculateFinancialSummary(type, 'day', dateStr);
+            return summary.netBalance;
+        });
+
+        return { labels: dates.map(d => d.slice(5)), data: dailyData };
+    }
+
+    // NUOVO: Renderizza Grafico Saldo Settimanale
+    function renderWeeklyBalanceChart(type) {
+        const chartId = `weeklyBalanceChart-${type}`;
+        const ctx = document.getElementById(chartId)?.getContext('2d');
+        if (!ctx) return;
+        
+        const { labels, data } = calculateDailyNetBalance(type);
+        
+        if (ctx.chart) ctx.chart.destroy();
+
+        ctx.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `Saldo Netto (${getCurrencySymbol()})`,
+                    data: data,
+                    borderColor: data[data.length - 1] >= 0 ? '#10b981' : '#ef4444',
+                    backgroundColor: data[data.length - 1] >= 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: 'Saldo Netto Ultimi 7 Giorni', color: document.body.classList.contains('dark') ? '#f1f5f9' : '#1e293b' }
+                },
+                scales: {
+                    x: { ticks: { color: document.body.classList.contains('dark') ? '#9ca3af' : '#6b7280' } },
+                    y: { 
+                        beginAtZero: false,
+                        ticks: { color: document.body.classList.contains('dark') ? '#9ca3af' : '#6b7280' }
+                    }
+                }
+            }
+        });
+    }
+
 
     // --- Core calculations ---
     function calculateFinancialSummary(type, filterType, filterDateStr) {
@@ -429,6 +507,61 @@
         saveData(); 
       }
     }
+    
+    // NUOVO: Trova la media storica di spesa per una categoria
+    function getAverageMonthlyExpense(category) {
+        const target = (category || 'Altro').toLowerCase();
+        
+        // Filtra solo le spese relative alla categoria e le raggruppa per mese
+        const relevantExpenses = appData.expenses.filter(e => 
+            (e.category || 'Altro').toLowerCase() === target
+        );
+        
+        const monthlyTotals = {};
+        relevantExpenses.forEach(e => {
+            const ym = e.date.slice(0, 7);
+            monthlyTotals[ym] = (monthlyTotals[ym] || 0) + e.gross;
+        });
+
+        const totalMonths = Object.keys(monthlyTotals).length;
+        if (totalMonths === 0) return 0;
+        
+        const totalExpense = Object.values(monthlyTotals).reduce((sum, current) => sum + current, 0);
+        
+        return totalExpense / totalMonths;
+    }
+
+    // NUOVO: Logica di tracciamento spese ricorrenti
+    function trackRecurringExpense(description, gross, date) {
+        const desc = description.toLowerCase();
+        
+        // Cerca frequenze comuni basate sulla descrizione
+        const inferredFrequency = Object.keys(COMMON_FREQUENCIES).find(key => desc.includes(key)) 
+                                    ? COMMON_FREQUENCIES[Object.keys(COMMON_FREQUENCIES).find(key => desc.includes(key))]
+                                    : null;
+
+        if (!inferredFrequency) return;
+        
+        // Normalizza la chiave ricorrente (es. affitto-rossi, abbonamento-netflix)
+        const recurringKey = `${inferredFrequency}:${desc.replace(/[^a-z0-9]/g, '-').slice(0, 20)}`;
+
+        const existing = appData.recurringExpenses.find(r => r.key === recurringKey);
+        
+        const newRecord = {
+            key: recurringKey,
+            description: description,
+            lastDate: date,
+            lastAmount: +gross.toFixed(2),
+            frequency: inferredFrequency
+        };
+
+        if (existing) {
+            Object.assign(existing, newRecord);
+        } else {
+            appData.recurringExpenses.push(newRecord);
+        }
+    }
+
 
     // --- Transactions CRUD ---
     function saveTransaction(isIncome, data){
@@ -458,6 +591,12 @@
         gross: +gross.toFixed(2),
         incomeType: data.incomeType || (isIncome && data.dataType==='activity' ? 'Fattura (Cliente)' : null)
       };
+      
+      // NUOVO: Traccia spese ricorrenti (solo uscite)
+      if (!isIncome && data.dataType === 'personal' && updatedItem.description) {
+          trackRecurringExpense(updatedItem.description, updatedItem.gross, updatedItem.date);
+      }
+
 
       // maintain contacts and categories
       const isFatturaOrPersonal = (isIncome && data.dataType==='activity' && data.incomeType==='Fattura (Cliente)') || data.dataType==='personal';
@@ -501,11 +640,30 @@
 
       const isCorrisp = type==='activity' && isIncome && payload.incomeType==='Incasso/Corrispettivo';
       if (payload.net && payload.date && (isCorrisp || (payload.description && payload.description.trim()))){
-        saveTransaction(isIncome, payload);
-        form.reset();
-        form.removeAttribute('data-transaction-id');
-        // Reset description placeholder after saving
-        document.getElementById('description-label').textContent = isIncome ? 'Cliente / Descrizione' : 'Fornitore / Descrizione';
+          
+          const grossAmount = parseFloat(payload.net) * (1 + (parseFloat(payload.vatRate) / 100)) || 0;
+          
+          // NUOVO: Allerta di Spesa Anomala (solo nuove uscite, solo Personale)
+          if (!payload.id && !isIncome && type === 'personal') {
+              const monthlyAvg = getAverageMonthlyExpense(payload.category);
+              // Soglia di anomalia: 20% in più della media
+              if (monthlyAvg > 0 && grossAmount > monthlyAvg * 1.20) {
+                  const percentDifference = ((grossAmount / monthlyAvg) * 100).toFixed(0);
+                  showModal(
+                      '🚨 Allerta Spesa Anomala',
+                      `Questa spesa (${grossAmount.toFixed(2)}${getCurrencySymbol()}) è circa ${percentDifference}% superiore alla tua media mensile (${monthlyAvg.toFixed(2)}${getCurrencySymbol()}) per la categoria "${payload.category}". Continuare?`,
+                      true,
+                      () => saveTransaction(isIncome, payload), // Confermato
+                      () => showToast('Registrazione annullata.','red') // Annullato
+                  );
+                  return; // Blocca l'invio normale per attendere la modal
+              }
+          }
+          
+          saveTransaction(isIncome, payload);
+          form.reset();
+          form.removeAttribute('data-transaction-id');
+          document.getElementById('description-label').textContent = isIncome ? 'Cliente / Descrizione' : 'Fornitore / Descrizione';
       } else {
         showToast('Compila tutti i campi richiesti.','red');
       }
@@ -637,8 +795,17 @@
     // --- Compleanni CRUD ---
     function saveBirthday(data){
       appData.birthdays ||= [];
-      if (data.id){ const i=appData.birthdays.findIndex(r=>r.id===data.id); if(i>-1){ appData.birthdays[i]={...appData.birthdays[i],...data}; } }
-      else { appData.birthdays.push({ id:getNextId(), ...data }); }
+      
+      const dateStr = data.date;
+      const recurringDate = dateStr.slice(5); 
+
+      if (data.id){ 
+          const i=appData.birthdays.findIndex(r=>r.id===data.id); 
+          if(i>-1){ appData.birthdays[i]={...appData.birthdays[i],...data, recurringDate}; } 
+      }
+      else { 
+          appData.birthdays.push({ id:getNextId(), ...data, recurringDate }); 
+      }
       saveData(); showToast('Compleanno salvato!'); renderPage('reminders');
     }
     function deleteBirthday(id){
@@ -653,13 +820,9 @@
         const f=document.getElementById('birthday-form'); const d=new FormData(f);
         const dateStr = d.get('date');
         
-        // Estrai solo mese e giorno per la ricorrenza
-        const recurringDate = dateStr.slice(5); 
-
         const payload={ 
             name: d.get('name').trim(), 
-            date: dateStr, // Mantiene l'anno per il calcolo dell'età
-            recurringDate: recurringDate 
+            date: dateStr, 
         };
         
         if (payload.name && payload.date){ 
@@ -700,8 +863,8 @@
       const csvRm = [headerRm, ...rowsRm].join('\n');
       
       // Birthdays CSV
-      const headerBd = ['ID','Nome','DataNascita'].join(',');
-      const rowsBd = (appData.birthdays||[]).map(r => [r.id,r.name,r.date].map(esc).join(','));
+      const headerBd = ['ID','Nome','DataNascita','RicorrenzaMD'].join(',');
+      const rowsBd = (appData.birthdays||[]).map(r => [r.id,r.name,r.date,r.recurringDate].map(esc).join(','));
       const csvBd = [headerBd, ...rowsBd].join('\n');
 
       const zipContent = `### Transazioni\n${csvTx}\n\n### Promemoria\n${csvRm}\n\n### Compleanni\n${csvBd}\n`;
@@ -725,7 +888,14 @@
               appData.categories ||= DEFAULT_CATEGORIES.slice();
               appData.pin ||= '1234'; 
               appData.currencySymbol ||= '€'; 
-              appData.birthdays ||= []; // Ensure array exists
+              appData.birthdays ||= []; 
+              appData.recurringExpenses ||= []; 
+              // Assicurati che i compleanni importati abbiano recurringDate
+              appData.birthdays = appData.birthdays.map(bd => ({
+                  ...bd,
+                  recurringDate: (bd.date || bd.recurringDate).slice(5) 
+              }));
+              appData.monthlySavingsTarget ||= 0;
               saveData(); showToast('Dati importati!'); renderPage(currentPage);
             });
           } else { showToast('Backup JSON non valido.','red'); }
@@ -743,7 +913,6 @@
         appData.invoices = appData.invoices.filter(x=>!before(x));
         appData.expenses = appData.expenses.filter(x=>!before(x));
         appData.reminders = appData.reminders.filter(x=>!before(x));
-        // NOTA: I compleanni NON vengono eliminati perché la ricorrenza è infinita.
         
         // MIGLIORAMENTO: Reset lastId se non ci sono più movimenti/promemoria
         if (appData.invoices.length === 0 && appData.expenses.length === 0 && appData.reminders.length === 0) {
@@ -862,6 +1031,24 @@
       vatAmountDisplay.textContent = vatAmt.toFixed(2)+' '+getCurrencySymbol();
       grossAmountDisplay.textContent = gross.toFixed(2)+' '+getCurrencySymbol();
     }
+    
+    // NUOVO: Funzione per ottenere i dati di "Focus Oggi"
+    function getTodayFocusData(type) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        
+        const summary = calculateFinancialSummary(type, 'day', todayStr);
+        
+        const todayDate = new Date(todayStr);
+
+        const upcomingReminders = appData.reminders.filter(r => !r.paid && r.date === todayStr);
+        const upcomingBirthdays = appData.birthdays.filter(b => {
+            const bdRecurrence = new Date(`${todayDate.getFullYear()}-${b.recurringDate}`);
+            return bdRecurrence.toISOString().slice(0, 10) === todayStr;
+        });
+        
+        return { summary, upcomingReminders, upcomingBirthdays };
+    }
+
 
     // --- Rendering pages ---
     function renderNavbar(){
@@ -916,11 +1103,35 @@
       const year = new Date().getFullYear();
       const summary = calculateFinancialSummary(type,'year', String(year));
       const tx = summary.transactions.filter(t=>t.type===type).slice(0,MAX_RECENT_TRANSACTIONS);
+      
+      // Dati Focus Oggi
+      const todayData = getTodayFocusData(type);
+      const todayBalanceColor = todayData.summary.netBalance >= 0 ? 'text-emerald-500' : 'text-red-500';
+      const todaySummaryMessage = todayData.summary.netBalance.toFixed(2) + ' ' + symbol;
+
 
       return `
         <div class="space-y-6">
           <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700 dark:text-gray-300">${title}</h2>
           ${renderSummaryCard(summary,year)}
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card border-l-4 border-blue-500">
+                <h3 class="text-xl font-bold mb-2">Focus Oggi (${new Date().toLocaleDateString('it-IT')})</h3>
+                <p class="text-sm text-gray-500">Saldo Netto del Giorno:</p>
+                <p class="text-2xl font-extrabold ${todayBalanceColor} mb-2">${todaySummaryMessage}</p>
+                
+                <p class="text-xs text-gray-500">
+                    ${todayData.upcomingReminders.length > 0 ? `🔔 ${todayData.upcomingReminders.length} scadenza/e oggi. ` : ''}
+                    ${todayData.upcomingBirthdays.length > 0 ? `🎂 ${todayData.upcomingBirthdays.length} compleanno/i oggi!` : ''}
+                    ${todayData.upcomingReminders.length === 0 && todayData.upcomingBirthdays.length === 0 ? 'Nessun evento o scadenza urgente.' : ''}
+                </p>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card" style="height: 200px;">
+                <canvas id="weeklyBalanceChart-${type}"></canvas>
+            </div>
+          </div>
           <div id="transaction-form-anchor" class="pt-4"></div>
 
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card">
@@ -972,7 +1183,9 @@
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label for="net-amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Importo Netto (${symbol})</label>
-                  <input type="number" id="net-amount" name="net" step="0.01" min="0" required placeholder="100.00" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+                  <input type="number" id="net-amount" name="net" step="0.01" min="0" required placeholder="100.00" 
+                         class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" 
+                         inputmode="decimal">
                 </div>
                 <div>
                   <label for="vat-rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aliquota IVA (%)</label>
@@ -1159,6 +1372,13 @@
 
       // KPIs
       const KPIs = computeKPIs();
+      
+      // Calcolo Obiettivo Risparmio
+      const averageMonthlyNet = (KPIs.avgIncome || 0) - (KPIs.avgExpense || 0);
+      const targetDelta = averageMonthlyNet - (appData.monthlySavingsTarget || 0);
+      const targetColor = targetDelta >= 0 ? 'text-emerald-600' : 'text-red-600';
+      const targetLabel = targetDelta >= 0 ? 'Obiettivo Raggiunto (Surplus)' : 'Obiettivo Mancato (Deficit)';
+
 
       // period label
       let periodLabel='Periodo Selezionato';
@@ -1214,6 +1434,14 @@
                     ${allTags.map(t => `<option value="${t}" ${tagFilter === t ? 'selected' : ''}>${t}</option>`).join('')}
                 </select>
             </div>
+          </div>
+          
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-dashed border-purple-500">
+              <p class="text-sm text-gray-500">Obiettivo Risparmio Mensile: ${appData.monthlySavingsTarget.toFixed(2)} ${symbol}</p>
+              <p class="text-xl font-bold ${targetColor}">
+                  Proiezione Media Mensile: ${targetDelta.toFixed(2)} ${symbol} 
+                  <span class="text-xs text-gray-500">(${targetLabel})</span>
+              </p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1350,11 +1578,37 @@
           renderPage('report');
       }
     }
+    
+    // NUOVO: Calcola la data di previsione basata sulla frequenza
+    function calculateNextRecurrence(lastDateStr, frequency) {
+        let nextDate = new Date(lastDateStr);
+        nextDate.setDate(nextDate.getDate() + 1); // Start checking from next day
+
+        if (frequency === 'monthly') {
+            const currentMonth = nextDate.getMonth();
+            nextDate.setMonth(currentMonth + 1);
+            if (nextDate.getMonth() !== (currentMonth + 1) % 12) {
+                // Gestione giorni mancanti (es. 31/01 -> 03/03)
+                nextDate.setDate(0); 
+            }
+        } else if (frequency === 'quarterly') {
+            nextDate.setMonth(nextDate.getMonth() + 3);
+        } else if (frequency === 'annual') {
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+        } else {
+            return null;
+        }
+
+        // Formatta a YYYY-MM-DD per la visualizzazione
+        return nextDate.toISOString().slice(0, 10);
+    }
+
 
     function renderRemindersPage(){
       const symbol = getCurrencySymbol();
       const list = appData.reminders||[];
       const birthdays = appData.birthdays||[];
+      const recurring = appData.recurringExpenses||[];
       const today = new Date(); today.setHours(0,0,0,0);
       
       // Ordina i promemoria (scadenze finanziarie) per data
@@ -1365,6 +1619,27 @@
         const rDate = new Date(r.date); rDate.setHours(0,0,0,0);
         return !r.paid && rDate < today;
       });
+      
+      // NUOVO: Calcola le previsioni ricorrenti
+      const predictedRecurrences = recurring
+          .map(r => {
+              const nextDateStr = calculateNextRecurrence(r.lastDate, r.frequency);
+              if (!nextDateStr) return null;
+              
+              const nextDate = new Date(nextDateStr);
+              const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+              
+              if (diffDays > 90 || diffDays < 0) return null; // Mostra solo i prossimi 90 giorni
+              
+              return {
+                  ...r,
+                  nextDate: nextDateStr,
+                  status: `Previsto in ${diffDays} giorni`,
+                  amount: r.lastAmount
+              };
+          })
+          .filter(r => r !== null)
+          .sort((a, b) => new Date(a.nextDate) - new Date(b.nextDate));
       
       const types = ['IVA','IMU','TARI','Tasse/Acconto','Assicurazione','Bollo Auto','Affitto','Altri Costi Personali','Altri Costi Attività'];
       
@@ -1390,7 +1665,8 @@
         return {
             ...bd,
             recurrenceDate: recurrence,
-            displayDate: new Date(`${currentYear}-${bd.recurringDate}`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }),
+            displayDate: new Date(`${bd.date}`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }),
+            annualDate: new Date(`${bd.date}`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }),
             age: age >= 0 ? age : 'N/A',
             status: status
         };
@@ -1414,18 +1690,20 @@
           ${list.length? list.map(r=>`
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card flex justify-between items-center">
               <div class="flex-grow">
-                ${type === 'payment' ? `<span class="text-xs font-semibold px-2 py-1 rounded-full ${pill(r)}">${r.paid?'PAGATO':r.type}</span>` : ''}
+                ${type === 'payment' ? `<span class="text-xs font-semibold px-2 py-1 rounded-full ${pill(r)}">${r.paid?'PAGATO':r.type}</span>` : type === 'recurring' ? `<span class="text-xs font-semibold px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">PREVISTO (${r.frequency.toUpperCase().slice(0,1)})</span>` : ''}
                 
-                <p class="font-bold mt-1 ${r.paid?'line-through text-gray-500':'text-gray-800 dark:text-gray-200'}">${type === 'payment' ? r.description : r.name}</p>
+                <p class="font-bold mt-1 ${r.paid?'line-through text-gray-500':'text-gray-800 dark:text-gray-200'}">${type === 'payment' ? r.description : r.name || r.description}</p>
                 
                 ${type === 'payment' ? 
                     `<p class="text-sm text-gray-600 dark:text-gray-400">Scadenza: ${new Date(r.date).toLocaleDateString('it-IT')} | Importo: ${r.amount.toFixed(2)} ${symbol}</p>` :
-                    `<p class="text-sm text-gray-600 dark:text-gray-400">Data: ${r.displayDate} | Età: ${r.age} | ${r.status}</p>`}
+                type === 'recurring' ?
+                    `<p class="text-sm text-gray-600 dark:text-gray-400">Previsto il: ${new Date(r.nextDate).toLocaleDateString('it-IT')} | Est: ${r.amount.toFixed(2)} ${symbol} | ${r.status}</p>` :
+                    `<p class="text-sm text-gray-600 dark:text-gray-400">Ricorre il: ${r.annualDate} | Età Proiettata: ${r.age} | ${r.status}</p>`}
               </div>
               <div class="flex space-x-2">
                 ${type === 'payment' ? 
                     `<button onclick="toggleReminderPaid(${r.id})" class="text-sm px-3 py-1 rounded-lg ${r.paid?'bg-orange-500 hover:bg-orange-600':'bg-emerald-500 hover:bg-emerald-600'} text-white">${r.paid?'Annulla Pag.':'Paga'}</button>` : ''}
-                <button onclick="${type === 'payment' ? `deleteReminder(${r.id})` : `deleteBirthday(${r.id})`}" class="text-red-400 hover:text-red-600">🗑️</button>
+                <button onclick="${type === 'payment' ? `deleteReminder(${r.id})` : (type === 'birthday' ? `deleteBirthday(${r.id})` : `showToast('Non eliminabile da qui.', 'red')`)}" class="text-red-400 hover:text-red-600">🗑️</button>
               </div>
             </div>
           `).join(''):'<p class="text-gray-500">Nessun promemoria in questa categoria.</p>'}
@@ -1436,6 +1714,10 @@
         <div class="space-y-6">
           <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700 dark:text-gray-300">Promemoria Scadenze & Eventi</h2>
           
+          ${reminderSection(sortedBirthdays, 'Compleanni in Arrivo', 'birthday')}
+          
+          ${reminderSection(predictedRecurrences, 'Spese Ricorrenti Previste (90gg)', 'recurring')}
+
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card mt-6">
             <h3 class="text-xl font-medium mb-4 text-pink-600">Aggiungi Compleanno 🎂</h3>
             <form id="birthday-form" onsubmit="event.preventDefault(); handleBirthdaySubmit();" class="space-y-4">
@@ -1443,15 +1725,13 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome</label>
                 <input id="birthday-name" name="name" required placeholder="Es. Mario Rossi" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
               </div>
-              <div>
+              <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data di Nascita (Anno opzionale)</label>
                 <input type="date" id="birthday-date" name="date" value="${new Date().toISOString().slice(0,10)}" required class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
               </div>
               <button type="submit" class="cta-button w-full bg-pink-500 text-white p-3 rounded-lg font-bold hover:bg-pink-600">Aggiungi Compleanno</button>
             </form>
           </div>
-
-          ${reminderSection(sortedBirthdays, 'Compleanni in Arrivo', 'birthday')}
 
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card mt-6">
             <h3 class="text-xl font-medium mb-4 text-emerald-600">Aggiungi Nuovo Promemoria (Pagamento)</h3>
@@ -1497,6 +1777,17 @@
       return `
         <div class="space-y-6">
           <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700 dark:text-gray-300">Gestione e Manutenzione Dati</h2>
+          
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
+            <h3 class="text-xl font-medium text-purple-600">Pianificazione (Budgeting)</h3>
+            <div>
+              <label for="monthly-target" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Obiettivo Risparmio Mensile (${symbol})</label>
+              <input type="number" id="monthly-target" step="0.01" min="0" value="${appData.monthlySavingsTarget.toFixed(2)}"
+                     class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" 
+                     inputmode="decimal"/>
+            </div>
+            <button onclick="saveMonthlyTarget()" class="cta-button w-full bg-purple-500 text-white p-3 rounded-lg font-bold hover:bg-purple-600">Salva Obiettivo</button>
+          </div>
           
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
               <h3 class="text-xl font-medium text-blue-600">Configurazione Valuta</h3>
@@ -1575,6 +1866,19 @@
       `;
     }
     
+    // NUOVA FUNZIONE: Salvataggio Obiettivo Risparmio
+    function saveMonthlyTarget() {
+        const input = document.getElementById('monthly-target');
+        const target = parseFloat(input?.value) || 0;
+
+        showModal('Conferma Obiettivo', `Impostare l'obiettivo di risparmio su: ${target.toFixed(2)} ${getCurrencySymbol()}?`, true, () => {
+            appData.monthlySavingsTarget = target;
+            saveData();
+            showToast('Obiettivo risparmio salvato!');
+            renderPage('settings');
+        });
+    }
+
     // NUOVA FUNZIONE: Cambio Simbolo Valuta
     function changeCurrencySymbol() {
         const symbolInput = document.getElementById('currency-symbol-input');
@@ -1680,6 +1984,8 @@
           else { document.getElementById('isIncome')?.addEventListener('change', ()=>setupContactAutocomplete(pageId)); setupContactAutocomplete(pageId); }
           setupCategoryAutocomplete();
           calculateGross(); // Initialize gross/vat amounts
+          // NUOVO: Renderizza grafico saldo settimanale
+          renderWeeklyBalanceChart(pageId);
           break;
         case 'report':
           area.innerHTML = renderReportPage();
@@ -1819,22 +2125,23 @@
           }
       });
       
-      // 3. Hotkeys (I=Income, E=Expense, ENTER=Submit)
+      // 3. Hotkeys (I=Income, E=Expense)
       document.addEventListener('keydown', (e) => {
           if (document.getElementById('pin-lock-modal').style.display !== 'none') return;
           
           if (currentPage === 'activity' || currentPage === 'personal') {
+              
               // Submit form with ENTER
               if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
                   const form = document.getElementById('transaction-form');
-                  // Submit if the focus is on a button or the form has data
-                  if (e.target.tagName === 'BUTTON' || (form && form.querySelector('#net-amount')?.value > 0)) {
+                  if (form && form.querySelector('button[type="submit"]')) {
                       e.preventDefault();
-                      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                      // We must explicitly click the submit button to trigger the form's onSubmit handler
+                      form.querySelector('button[type="submit"]').click();
                       return;
                   }
               }
-
+              
               // Ignore if focus is in an input field (to allow normal typing)
               if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
                   return;
