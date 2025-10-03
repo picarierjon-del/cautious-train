@@ -126,8 +126,44 @@
     const IVA_RATES = [0,4,5,10,22];
     const MAX_RECENT_TRANSACTIONS = 10;
     const DEFAULT_CATEGORIES = ['Affitto','Bollette','Spesa','Marketing','Servizi','Stipendi','Carburante','Ristoranti','Abbonamenti','Altro'];
-    let appData = { invoices:[], expenses:[], reminders:[], contacts:[], lastId:0, categories: DEFAULT_CATEGORIES.slice(), pin: '1234' };
+    
+    // Mappa Icone per Categorie (Usabilità)
+    const CATEGORY_ICONS = {
+        'Affitto': '🏠',
+        'Bollette': '💡',
+        'Spesa': '🛒',
+        'Marketing': '📢',
+        'Servizi': '🛠️',
+        'Stipendi': '🧑‍💼',
+        'Carburante': '⛽',
+        'Ristoranti': '🍽️',
+        'Abbonamenti': '🔗',
+        'Altro': '📦'
+    };
+
+    let appData = { 
+        invoices:[], 
+        expenses:[], 
+        reminders:[], 
+        contacts:[], 
+        lastId:0, 
+        categories: DEFAULT_CATEGORIES.slice(), 
+        pin: '1234',
+        currencySymbol: '€' // NUOVO: Simbolo Valuta
+    };
     let currentPage = 'activity';
+
+    // --- UTILITY ---
+    function getCurrencySymbol() {
+        return appData.currencySymbol || '€';
+    }
+    function getCategoryIcon(category) {
+        const cat = category || 'Altro';
+        // Match case-insensitive, return default if not found
+        const key = Object.keys(CATEGORY_ICONS).find(k => k.toLowerCase() === cat.toLowerCase());
+        return CATEGORY_ICONS[key] || CATEGORY_ICONS['Altro'];
+    }
+
 
     // --- THEME (Dark Mode) ---
     function applySavedTheme() {
@@ -153,10 +189,11 @@
           // Ensure arrays exist
           appData.invoices ||= []; appData.expenses ||= [];
           appData.reminders ||= []; appData.contacts ||= [];
-          // Ensure categories/lastId/pin exist
+          // Ensure categories/lastId/pin/currency exist
           appData.categories ||= DEFAULT_CATEGORIES.slice();
           appData.lastId ||= 0;
-          appData.pin ||= '1234'; // Default PIN if not set
+          appData.pin ||= '1234';
+          appData.currencySymbol ||= '€'; // Default Valuta
         }
       } catch(e){ console.error(e); showToast('Errore nel caricamento dati','red'); }
     }
@@ -513,6 +550,49 @@
       submitBtn.classList.add('bg-blue-500','hover:bg-blue-600');
       showToast(`Modulo pronto per modificare ID ${item.id}.`);
     }
+    
+    // NUOVA FUNZIONE: Duplica Transazione
+    function duplicateTransaction(isIncome, id, scope) {
+      const list = isIncome ? appData.invoices : appData.expenses;
+      const item = list.find(t => t.id === id);
+      if (!item) return showToast('Transazione non trovata.', 'red');
+
+      // Riporta alla pagina del form (Activity/Personal)
+      if (currentPage !== scope) renderPage(scope);
+
+      const form = document.getElementById('transaction-form');
+      if (!form) return;
+
+      // Scroll to form and set values
+      document.getElementById('transaction-form-anchor')?.scrollIntoView({ behavior: 'smooth' });
+      form.removeAttribute('data-transaction-id'); // Non è una modifica, ma una nuova registrazione
+      
+      document.getElementById('isIncome').value = isIncome ? 'true' : 'false';
+      document.getElementById('isIncome').dispatchEvent(new Event('change'));
+      document.getElementById('date').value = new Date().toISOString().slice(0, 10); // Nuova data
+      document.getElementById('description').value = item.description || '';
+      document.getElementById('net-amount').value = item.net.toFixed(2);
+      document.getElementById('vat-rate').value = item.vatRate;
+      document.getElementById('category').value = item.category || 'Altro';
+      document.getElementById('tags').value = (item.tags || []).join(', ');
+
+      if (scope === 'activity' && isIncome) {
+        document.getElementById('incomeType').value = item.incomeType || 'Fattura (Cliente)';
+        document.getElementById('incomeType').dispatchEvent(new Event('change'));
+      }
+
+      setupActivityIncomeTypeListeners(scope);
+      setupContactAutocomplete(scope);
+      setupCategoryAutocomplete();
+      calculateGross();
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.textContent = `Registra Copia Movimento`;
+      submitBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+      submitBtn.classList.add('bg-emerald-500', 'hover:bg-emerald-600');
+      showToast(`Modulo pre-compilato (Copia ID ${item.id})!`);
+    }
+
 
     function deleteTransaction(isIncome,id){
       const listName = isIncome ? 'invoices':'expenses';
@@ -565,7 +645,7 @@
       const esc = (s)=> `"${String(s??'').replace(/"/g,'""')}"`;
       // AGGIUNTA: Dati riepilogativi in testa al CSV (molto basic)
       const summary = calculateFinancialSummary('global','all', 'all');
-      const summaryRow = ['---RIEPILOGO---', `Saldo Netto: ${summary.netBalance.toFixed(2)}€`, `Entrate Totali: ${summary.totalIncomes.toFixed(2)}€`, `Uscite Totali: ${summary.totalExpenses.toFixed(2)}€`].map(esc).join(',');
+      const summaryRow = ['---RIEPILOGO---', `Saldo Netto: ${summary.netBalance.toFixed(2)}${getCurrencySymbol()}`, `Entrate Totali: ${summary.totalIncomes.toFixed(2)}${getCurrencySymbol()}`, `Uscite Totali: ${summary.totalExpenses.toFixed(2)}${getCurrencySymbol()}`].map(esc).join(',');
       
       const headerTx = ['ID','Tipo','Scope','Data','Descrizione','Categoria','Tag','AliquotaIVA','Netto','IVA','Lordo','Entrata?','Sottotipo'].join(',');
       const rowsTx = tx.map(t => [
@@ -598,7 +678,8 @@
               const maxId = all.length>0 ? Math.max(...all.map(x=>x.id||0)) : 0;
               appData = { ...appData, ...imported, lastId: Math.max(maxId, appData.lastId) };
               appData.categories ||= DEFAULT_CATEGORIES.slice();
-              appData.pin ||= '1234'; // Ensure PIN is set if imported data is old
+              appData.pin ||= '1234'; 
+              appData.currencySymbol ||= '€'; 
               saveData(); showToast('Dati importati!'); renderPage(currentPage);
             });
           } else { showToast('Backup JSON non valido.','red'); }
@@ -730,8 +811,8 @@
       const gross=net+vatAmt;
       
       // I display sono solo per l'output, usiamo toFixed(2) qui.
-      vatAmountDisplay.textContent = vatAmt.toFixed(2)+' €';
-      grossAmountDisplay.textContent = gross.toFixed(2)+' €';
+      vatAmountDisplay.textContent = vatAmt.toFixed(2)+' '+getCurrencySymbol();
+      grossAmountDisplay.textContent = gross.toFixed(2)+' '+getCurrencySymbol();
     }
 
     // --- Rendering pages ---
@@ -752,6 +833,7 @@
     }
 
     function renderSummaryCard(summary,label){
+      const symbol = getCurrencySymbol();
       const ivaStatus = summary.ivaBalance>=0?'IVA da Versare':'IVA a Credito';
       const ivaColor = summary.ivaBalance>=0?'text-red-600':'text-blue-600';
       const balanceColor = summary.netBalance>=0?'text-emerald-600':'text-red-600';
@@ -759,19 +841,19 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center">
             <p class="text-sm text-gray-500">Entrate Totali (${label})</p>
-            <p class="text-xl font-bold text-emerald-600">${summary.totalIncomes.toFixed(2)} €</p>
+            <p class="text-xl font-bold text-emerald-600">${summary.totalIncomes.toFixed(2)} ${symbol}</p>
           </div>
           <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center">
             <p class="text-sm text-gray-500">Uscite Totali (${label})</p>
-            <p class="text-xl font-bold text-red-600">${summary.totalExpenses.toFixed(2)} €</p>
+            <p class="text-xl font-bold text-red-600">${summary.totalExpenses.toFixed(2)} ${symbol}</p>
           </div>
           <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center col-span-2 md:col-span-1">
             <p class="text-sm text-gray-500">Saldo Netto (${label})</p>
-            <p class="text-2xl font-extrabold ${balanceColor}">${summary.netBalance.toFixed(2)} €</p>
+            <p class="text-2xl font-extrabold ${balanceColor}">${summary.netBalance.toFixed(2)} ${symbol}</p>
           </div>
           <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center col-span-2 md:col-span-1">
             <p class="text-sm text-gray-500">${ivaStatus} (Attività)</p>
-            <p class="text-xl font-bold ${ivaColor}">${Math.abs(summary.ivaBalance).toFixed(2)} €</p>
+            <p class="text-xl font-bold ${ivaColor}">${Math.abs(summary.ivaBalance).toFixed(2)} ${symbol}</p>
             <p class="text-xs text-gray-400">Add: ${summary.ivaAddebito.toFixed(2)} | Cred: ${summary.ivaCredito.toFixed(2)}</p>
           </div>
         </div>
@@ -780,6 +862,7 @@
 
     function renderActivityOrPersonalPage(type){
       const isActivity = type==='activity';
+      const symbol = getCurrencySymbol();
       const title = isActivity?'Gestione Attività (Partita IVA)':'Gestione Personale (Casa)';
       const listTitle = isActivity?`Ultime ${MAX_RECENT_TRANSACTIONS} Transazioni Attività`:`Ultime ${MAX_RECENT_TRANSACTIONS} Transazioni Personali`;
       const year = new Date().getFullYear();
@@ -840,7 +923,7 @@
 
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label for="net-amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Importo Netto (€)</label>
+                  <label for="net-amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Importo Netto (${symbol})</label>
                   <input type="number" id="net-amount" name="net" step="0.01" min="0" required placeholder="100.00" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
                 </div>
                 <div>
@@ -852,8 +935,8 @@
               </div>
 
               <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg text-sm">
-                <p class="flex justify-between"><span>IVA Calcolata:</span> <span id="vat-amount-display" class="font-bold text-blue-600">0.00 €</span></p>
-                <p class="flex justify-between border-t mt-1 pt-1 font-bold"><span>Importo Lordo Totale:</span> <span id="gross-amount-display" class="text-lg text-emerald-600">0.00 €</span></p>
+                <p class="flex justify-between"><span>IVA Calcolata:</span> <span id="vat-amount-display" class="font-bold text-blue-600">0.00 ${symbol}</span></p>
+                <p class="flex justify-between border-t mt-1 pt-1 font-bold"><span>Importo Lordo Totale:</span> <span id="gross-amount-display" class="text-lg text-emerald-600">0.00 ${symbol}</span></p>
               </div>
 
               <button type="submit" class="cta-button w-full bg-emerald-500 text-white p-3 rounded-lg font-bold hover:bg-emerald-600">
@@ -872,17 +955,20 @@
                 return `
                   <div class="flex justify-between items-center p-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${colorClass} rounded-lg">
                     <div class="flex-grow">
-                      <p class="font-semibold text-sm">${t.description||''} ${incomeTag}</p>
+                      <p class="font-semibold text-sm">
+                        ${getCategoryIcon(t.category)} ${t.description||''} ${incomeTag}
+                      </p>
                       <p class="text-xs text-gray-500 dark:text-gray-400">
-                        ${new Date(t.date).toLocaleDateString('it-IT')} | IVA ${t.vatRate}% | Cat: ${t.category||'-'}
+                        ${new Date(t.date).toLocaleDateString('it-IT')} | Cat: ${t.category||'-'} 
                         ${(t.tags||[]).length > 0 ? '| Tag: '+(t.tags||[]).join(', ') : ''}
                       </p>
                     </div>
                     <div class="text-right ml-4 flex items-center space-x-3">
                       <div>
-                        <p class="font-bold ${isIncomeTx?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} €</p>
+                        <p class="font-bold ${isIncomeTx?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} ${symbol}</p>
                         <p class="text-xs text-gray-600 dark:text-gray-400">Netto: ${t.net.toFixed(2)}</p>
                       </div>
+                      <button onclick="duplicateTransaction(${isIncomeTx},${t.id},'${type}')" class="text-orange-500 hover:text-orange-700" title="Duplica Transazione">📋</button>
                       <button onclick="editTransaction(${isIncomeTx},${t.id},'${type}')" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200">✏️</button>
                       <button onclick="deleteTransaction(${isIncomeTx},${t.id})" class="text-red-400 hover:text-red-600">🗑️</button>
                     </div>
@@ -995,6 +1081,7 @@
     }
 
     function renderReportPage(){
+      const symbol = getCurrencySymbol();
       // default filters
       const currentType = document.getElementById('report-type')?.value || 'global';
       const filterType = document.getElementById('filter-type')?.value || 'year';
@@ -1069,7 +1156,7 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Categoria</label>
                 <select id="filter-category" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
                     <option value="all">Tutte le Categorie</option>
-                    ${allCategories.map(c => `<option value="${c}" ${categoryFilter === c ? 'selected' : ''}>${c}</option>`).join('')}
+                    ${allCategories.map(c => `<option value="${c}" ${categoryFilter === c ? 'selected' : ''}>${getCategoryIcon(c)} ${c}</option>`).join('')}
                 </select>
             </div>
             <div class="md:col-span-1">
@@ -1088,11 +1175,11 @@
             </div>
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center">
               <p class="text-sm text-gray-500">Media Mensile Entrate</p>
-              <p class="text-2xl font-extrabold text-emerald-600">${(KPIs.avgIncome||0).toFixed(2)} €</p>
+              <p class="text-2xl font-extrabold text-emerald-600">${(KPIs.avgIncome||0).toFixed(2)} ${symbol}</p>
             </div>
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center">
               <p class="text-sm text-gray-500">Media Mensile Uscite</p>
-              <p class="text-2xl font-extrabold text-red-600">${(KPIs.avgExpense||0).toFixed(2)} €</p>
+              <p class="text-2xl font-extrabold text-red-600">${(KPIs.avgExpense||0).toFixed(2)} ${symbol}</p>
             </div>
           </div>
 
@@ -1135,15 +1222,15 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card">
               <h4 class="font-semibold mb-2">Top 3 Clienti</h4>
-              <ul class="text-sm">${KPIs.topClients.map(c=>`<li class="flex justify-between"><span>${c.name}</span><span class="font-bold text-emerald-600 dark:text-emerald-300">${c.amount.toFixed(2)} €</span></li>`).join('') || '<li class="text-gray-500">-</li>'}</ul>
+              <ul class="text-sm">${KPIs.topClients.map(c=>`<li class="flex justify-between"><span>${c.name}</span><span class="font-bold text-emerald-600 dark:text-emerald-300">${c.amount.toFixed(2)} ${symbol}</span></li>`).join('') || '<li class="text-gray-500">-</li>'}</ul>
             </div>
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card">
               <h4 class="font-semibold mb-2">Top 3 Fornitori</h4>
-              <ul class="text-sm">${KPIs.topSuppliers.map(c=>`<li class="flex justify-between"><span>${c.name}</span><span class="font-bold text-red-600 dark:text-red-300">${c.amount.toFixed(2)} €</span></li>`).join('') || '<li class="text-gray-500">-</li>'}</ul>
+              <ul class="text-sm">${KPIs.topSuppliers.map(c=>`<li class="flex justify-between"><span>${c.name}</span><span class="font-bold text-red-600 dark:text-red-300">${c.amount.toFixed(2)} ${symbol}</span></li>`).join('') || '<li class="text-gray-500">-</li>'}</ul>
             </div>
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card">
               <h4 class="font-semibold mb-2">Top 3 Categorie (Uscite)</h4>
-              <ul class="text-sm">${KPIs.topCategories.map(c=>`<li class="flex justify-between"><span>${c.cat}</span><span class="font-bold text-red-600 dark:text-red-300">${c.amount.toFixed(2)} €</span></li>`).join('') || '<li class="text-gray-500">-</li>'}</ul>
+              <ul class="text-sm">${KPIs.topCategories.map(c=>`<li class="flex justify-between"><span>${getCategoryIcon(c.cat)} ${c.cat}</span><span class="font-bold text-red-600 dark:text-red-300">${c.amount.toFixed(2)} ${symbol}</span></li>`).join('') || '<li class="text-gray-500">-</li>'}</ul>
             </div>
           </div>
 
@@ -1156,14 +1243,14 @@
               ${transactionsList.map(t=>`
                 <div class="flex justify-between items-center p-3 border-l-4 ${t.isIncome?'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/50 dark:border-emerald-700':'bg-red-50 border-red-300 dark:bg-red-900/50 dark:border-red-700'} rounded-lg">
                   <div class="flex-grow">
-                    <p class="font-semibold text-sm">${new Date(t.date).toLocaleDateString('it-IT')}: ${t.description||''}</p>
+                    <p class="font-semibold text-sm">${getCategoryIcon(t.category)} ${new Date(t.date).toLocaleDateString('it-IT')}: ${t.description||''}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                       ${t.type==='activity'?'Attività':'Personale'} | IVA ${t.vatRate}% | Cat: ${t.category||'-'} 
                       ${(t.tags||[]).length > 0 ? '| Tag: '+(t.tags||[]).join(', ') : ''}
                     </p>
                   </div>
                   <div class="text-right ml-4">
-                    <p class="font-bold ${t.isIncome?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} €</p>
+                    <p class="font-bold ${t.isIncome?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} ${symbol}</p>
                   </div>
                 </div>
               `).join('') || '<p class="text-gray-500">Nessuna transazione nel periodo.</p>'}
@@ -1217,6 +1304,7 @@
     }
 
     function renderRemindersPage(){
+      const symbol = getCurrencySymbol();
       const list = appData.reminders||[];
       const today = new Date(); today.setHours(0,0,0,0);
       const sorted = list.slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
@@ -1243,7 +1331,7 @@
               <div class="flex-grow">
                 <span class="text-xs font-semibold px-2 py-1 rounded-full ${pill(r)}">${r.paid?'PAGATO':r.type}</span>
                 <p class="font-bold mt-1 ${r.paid?'line-through text-gray-500':'text-gray-800 dark:text-gray-200'}">${r.description}</p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Scadenza: ${new Date(r.date).toLocaleDateString('it-IT')} | Importo: ${r.amount.toFixed(2)} €</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Scadenza: ${new Date(r.date).toLocaleDateString('it-IT')} | Importo: ${r.amount.toFixed(2)} ${symbol}</p>
               </div>
               <div class="flex space-x-2">
                 <button onclick="toggleReminderPaid(${r.id})" class="text-sm px-3 py-1 rounded-lg ${r.paid?'bg-orange-500 hover:bg-orange-600':'bg-emerald-500 hover:bg-emerald-600'} text-white">${r.paid?'Annulla Pag.':'Paga'}</button>
@@ -1275,7 +1363,7 @@
                   <input type="date" id="reminder-date" name="date" value="${new Date().toISOString().slice(0,10)}" required class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Importo (€)</label>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Importo (${symbol})</label>
                   <input type="number" id="reminder-amount" name="amount" step="0.01" min="0" required placeholder="500.00" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
                 </div>
               </div>
@@ -1294,11 +1382,22 @@
       const years=[...new Set([...appData.invoices,...appData.expenses].map(t=> new Date(t.date).getFullYear()))].sort((a,b)=>b-a).filter(y=>y<currentYear);
       const allContacts = appData.contacts.slice().sort((a,b)=>a.name.localeCompare(b.name));
       const cats = (appData.categories||DEFAULT_CATEGORIES).slice().sort((a,b)=>a.localeCompare(b));
+      const symbol = getCurrencySymbol();
 
       return `
         <div class="space-y-6">
           <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700 dark:text-gray-300">Gestione e Manutenzione Dati</h2>
-
+          
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
+              <h3 class="text-xl font-medium text-blue-600">Configurazione Valuta</h3>
+              <p class="text-sm text-gray-700 dark:text-gray-300">Simbolo Valuta Attuale: <span class="font-bold text-lg">${symbol}</span></p>
+              <div>
+                  <label for="currency-symbol-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Imposta Simbolo Valuta (es. €, $, £)</label>
+                  <input type="text" id="currency-symbol-input" maxlength="2" value="${symbol}" placeholder="€" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"/>
+              </div>
+              <button onclick="changeCurrencySymbol()" class="cta-button w-full bg-blue-500 text-white p-3 rounded-lg font-bold hover:bg-blue-600">Salva Valuta</button>
+          </div>
+          
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
             <h3 class="text-xl font-medium text-emerald-600">Fornitori / Clienti Salvati (${allContacts.length})</h3>
             <div class="max-h-60 overflow-y-auto border dark:border-gray-700 p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
@@ -1322,9 +1421,9 @@
               <input id="new-cat" placeholder="Nuova categoria" class="p-2 border rounded-lg flex-1 dark:bg-gray-900 dark:border-gray-700">
               <button class="px-3 py-2 bg-emerald-500 text-white rounded-lg" onclick="(function(){const v=document.getElementById('new-cat').value.trim(); if(!v) return; ensureCategory(v); showToast('Categoria aggiunta!'); renderPage('settings');})()">Aggiungi</button>
             </div>
-            <div class="text-sm text-gray-500">Usate nell’autocomplete del form.</div>
+            <div class="text-sm text-gray-500">Usate nell’autocomplete del form. Icona: ${getCategoryIcon('Altro')}</div>
             <div class="flex flex-wrap gap-2 mt-2">
-              ${cats.map(c=>`<span class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200">${c}</span>`).join('')}
+              ${cats.map(c=>`<span class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200">${getCategoryIcon(c)} ${c}</span>`).join('')}
             </div>
           </div>
           
@@ -1366,6 +1465,24 @@
       `;
     }
     
+    // NUOVA FUNZIONE: Cambio Simbolo Valuta
+    function changeCurrencySymbol() {
+        const symbolInput = document.getElementById('currency-symbol-input');
+        const newSymbol = symbolInput?.value.trim() || '€';
+
+        if (newSymbol.length > 2) {
+            showToast('Il simbolo valuta dovrebbe essere al massimo di 2 caratteri.', 'red');
+            return;
+        }
+
+        showModal('Conferma Valuta', `Impostare il simbolo valuta su: ${newSymbol}?`, true, () => {
+            appData.currencySymbol = newSymbol;
+            saveData();
+            showToast('Simbolo Valuta aggiornato!');
+            renderPage('settings');
+        });
+    }
+
     // --- PIN Management (Settings Page) ---
     function changePin() {
       const currentPinInput = document.getElementById('current-pin');
@@ -1536,17 +1653,19 @@
                 results = filterTransactionsByCriteria(results, categoryFilter === 'all' ? null : categoryFilter, tagFilter === 'all' ? null : tagFilter);
                 results = filterTransactions(query, results);
                 
+                const symbol = getCurrencySymbol();
+                
                 document.getElementById('transactions-detail').innerHTML = results.map(t=>`
                   <div class="flex justify-between items-center p-3 border-l-4 ${t.isIncome?'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/50 dark:border-emerald-700':'bg-red-50 border-red-300 dark:bg-red-900/50 dark:border-red-700'} rounded-lg">
                     <div class="flex-grow">
-                      <p class="font-semibold text-sm">${new Date(t.date).toLocaleDateString('it-IT')}: ${t.description||''}</p>
+                      <p class="font-semibold text-sm">${getCategoryIcon(t.category)} ${new Date(t.date).toLocaleDateString('it-IT')}: ${t.description||''}</p>
                       <p class="text-xs text-gray-500 dark:text-gray-400">
                         ${t.type==='activity'?'Attività':'Personale'} | IVA ${t.vatRate}% | Cat: ${t.category||'-'} 
                         ${(t.tags||[]).length > 0 ? '| Tag: '+(t.tags||[]).join(', ') : ''}
                       </p>
                     </div>
                     <div class="text-right ml-4">
-                      <p class="font-bold ${t.isIncome?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} €</p>
+                      <p class="font-bold ${t.isIncome?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} ${symbol}</p>
                     </div>
                   </div>
                 `).join('') || '<p class="text-gray-500">Nessuna transazione trovata.</p>';
