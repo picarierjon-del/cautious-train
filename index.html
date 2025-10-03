@@ -356,6 +356,7 @@
       
       document.getElementById('date').value = item.date;
       document.getElementById('description').value = item.description || '';
+      // Usa toFixed(2) SOLO per pre-popolare il campo in edit mode
       document.getElementById('net-amount').value = item.net.toFixed(2);
       document.getElementById('vat-rate').value = item.vatRate;
       document.getElementById('category').value = item.category || 'Altro';
@@ -569,15 +570,15 @@
       const grossAmountDisplay=document.getElementById('gross-amount-display');
       
       // Robustezza: Assicura che sia un numero e non NaN
+      // IMPORTANTE FIX: Prendo il valore, ma NON lo formatto e riassegno a netInput.value, 
+      // altrimenti l'utente non riesce a digitare.
       let net = parseFloat(netInput.value)||0; 
       const rate=parseFloat(vatSelect.value)||0;
       
-      // Formatta l'input utente per coerenza visiva
-      netInput.value = net.toFixed(2); 
-
       const vatAmt=net*rate/100; 
       const gross=net+vatAmt;
       
+      // I display sono solo per l'output, usiamo toFixed(2) qui.
       vatAmountDisplay.textContent = vatAmt.toFixed(2)+' €';
       grossAmountDisplay.textContent = gross.toFixed(2)+' €';
     }
