@@ -173,22 +173,30 @@
         pinModal.style.display = 'flex';
         pinDigits.forEach((input, index) => {
           input.value = '';
-          // Rimuovi vecchi listener prima di aggiungere i nuovi
+          // Rimuovi vecchi listener (previeni duplicazioni in caso di re-render)
           input.removeEventListener('input', handlePinInputListener);
           input.removeEventListener('keydown', handlePinKeyDownListener);
           
           input.addEventListener('input', (e) => handlePinInput(e, index));
           input.addEventListener('keydown', (e) => handlePinKeyDown(e, index));
         });
-        document.getElementById('pin-1').focus();
+        
+        // FIX: Forzare il focus dopo che il DOM è stabile
+        setTimeout(() => {
+          document.getElementById('pin-1')?.focus();
+        }, 100); 
+
       } else {
         pinModal.style.display = 'none';
         const initialPage = appData.invoices.length>0 || appData.expenses.length>0 ? 'report':'activity';
         renderPage(initialPage);
       }
     }
+    
+    // Funzioni wrapper per i listener PIN (necessarie per la rimozione)
+    const handlePinInputListener = (e, index) => handlePinInput(e, index);
+    const handlePinKeyDownListener = (e, index) => handlePinKeyDown(e, index);
 
-    // Listeners temporanei per il PIN (per evitare problemi con i listener globali)
     function handlePinInput(e, index) {
       const pinDigits = document.querySelectorAll('.pin-digit');
       e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 1);
@@ -1548,6 +1556,8 @@
       
       // 3. Hotkeys (I=Income, E=Expense)
       document.addEventListener('keydown', (e) => {
+          if (document.getElementById('pin-lock-modal').style.display !== 'none') return;
+          
           if (currentPage === 'activity' || currentPage === 'personal') {
               // Ignore if focus is in an input field (to allow normal typing)
               if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
