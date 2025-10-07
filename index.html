@@ -148,7 +148,7 @@
     const MAX_RECENT_TRANSACTIONS = 10;
     const DEFAULT_CATEGORIES = ['Affitto','Bollette','Spesa','Marketing','Servizi','Stipendi','Carburante','Ristoranti','Abbonamenti','Altro'];
     const FISCAL_REMINDER_TYPES = ['IVA Trimestrale','IVA Saldo/Acconto','IMU','TARI','Tasse/Acconto','Assicurazione','Bollo Auto','Altri Costi Personali','Altri Costi Attività'];
-    const MAX_FORFETTARIO_REVENUE = 85000; // NUOVO: Massimale Forfettario
+    const MAX_FORFETTARIO_REVENUE = 85000; 
     
     // Parametri fiscali di DEFAULT (Ristorazione/Commercio Forfettario 40%)
     const DEFAULT_FISCAL_PARAMS = {
@@ -187,11 +187,12 @@
     
     // Mappa Widget per Dashboard (NUOVO)
     const DASHBOARD_WIDGETS = [
-        { id: 'fhs', title: 'Salute Finanziaria', component: 'renderFHSWidget', default: true },
-        { id: 'liquidity', title: 'Liquidità/Stress Test', component: 'renderLiquidityWidget', default: true },
-        { id: 'focus_today', title: 'Focus Oggi', component: 'renderFocusTodayWidget', default: true },
-        { id: 'weekly_chart', title: 'Grafico 7 Giorni', component: 'renderWeeklyChartWidget', default: true },
-        { id: 'advice', title: 'Consigli Intelligenti', component: 'renderAdviceWidget', default: true },
+        { id: 'fhs', title: 'Salute Finanziaria', component: 'renderFHSWidget', default: true, scope: 'global' },
+        { id: 'liquidity', title: 'Liquidità/Stress Test', component: 'renderLiquidityWidget', default: true, scope: 'global' },
+        { id: 'focus_today', title: 'Focus Oggi', component: 'renderFocusTodayWidget', default: true, scope: 'global' },
+        { id: 'weekly_chart', title: 'Grafico 7 Giorni', component: 'renderWeeklyChartWidget', default: true, scope: 'global' },
+        { id: 'advice', title: 'Consigli Intelligenti', component: 'renderAdviceWidget', default: true, scope: 'global' },
+        // Aggiungi qui altri widget se necessario, es. 'budget_monthly_status', ecc.
     ];
 
 
@@ -216,7 +217,7 @@
         categoryBudgets: {},
         fiscalParams: DEFAULT_FISCAL_PARAMS,
         currentBankBalance: 0, 
-        dashboardLayout: DASHBOARD_WIDGETS.filter(w => w.default).map(w => w.id) // NUOVO: Layout di default
+        dashboardLayout: DASHBOARD_WIDGETS.filter(w => w.default).map(w => w.id) 
     };
     let currentPage = 'activity';
     let reportFilters = { 
@@ -227,7 +228,7 @@
         tagFilter: 'all',
         sortKey: 'date',        
         sortDirection: 'desc',
-        searchQuery: '' // NUOVO: Campo ricerca testuale
+        searchQuery: '' 
     };
 
     let simulationState = {
@@ -255,7 +256,6 @@
             if (saved) {
                 const loadedFilters = JSON.parse(saved);
                 reportFilters = { ...reportFilters, ...loadedFilters };
-                // Correggi il bug del filtro searchQuery che non viene ripristinato correttamente
                 if (!loadedFilters.searchQuery) reportFilters.searchQuery = '';
             }
         } catch(e) { console.error('Errore caricamento filtri report', e); }
@@ -344,7 +344,7 @@
             appData.categoryBudgets ||= {}; 
             appData.fiscalParams = { ...DEFAULT_FISCAL_PARAMS, ...appData.fiscalParams };
             appData.currentBankBalance ||= 0; 
-            appData.dashboardLayout ||= DASHBOARD_WIDGETS.filter(w => w.default).map(w => w.id); // Inizializza Layout
+            appData.dashboardLayout ||= DASHBOARD_WIDGETS.filter(w => w.default).map(w => w.id);
             
             document.getElementById('header-subtitle').textContent = `Profilo: ${user.name}`;
         } catch(e){ 
@@ -999,8 +999,91 @@
         }
         return alerts;
     }
-    // --- Fine Core Calculations ---
+    
+    // NUOVO: Analisi Scostamento Mensile (MoM)
+    function calculateMonthlyVariance() {
+        const all = [...appData.invoices.map(t=>({...t,isIncome:true})), ...appData.expenses.map(t=>({...t,isIncome:false}))];
+        const monthlyData = {};
 
+        all.forEach(t => {
+            const ym = t.date.slice(0, 7);
+            monthlyData[ym] = monthlyData[ym] || { inc: 0, exp: 0 };
+            if (t.isIncome) { monthlyData[ym].inc += t.gross; }
+            else { monthlyData[ym].exp += t.gross; }
+        });
+
+        const months = Object.keys(monthlyData).sort();
+        if (months.length < 2) return { inc: 0, exp: 0, net: 0 };
+
+        const currentMonthData = monthlyData[months[months.length - 1]];
+        const previousMonthData = monthlyData[months[months.length - 2]];
+
+        const variance = (current, previous) => previous === 0 ? (current === 0 ? 0 : 100) : ((current - previous) / previous) * 100;
+        
+        const currentNet = currentMonthData.inc - currentMonthData.exp;
+        const previousNet = previousMonthData.inc - previousMonthData.exp;
+
+        return {
+            inc: +variance(currentMonthData.inc, previousMonthData.inc).toFixed(1),
+            exp: +variance(currentMonthData.exp, previousMonthData.exp).toFixed(1),
+            net: +variance(currentNet, previousNet).toFixed(1),
+            monthLabel: months[months.length - 1]
+        };
+    }
+    
+    // NUOVO: Funzione per rinominare Contatti/Categorie
+    function renameContact(id, newName) {
+        const contact = appData.contacts.find(c => c.id === id);
+        if (contact && newName.trim() !== contact.name) {
+            const oldName = contact.name;
+            contact.name = newName.trim();
+            
+            // Aggiorna le transazioni collegate (solo le descrizioni precise)
+            const oldLower = oldName.toLowerCase();
+            const list = [...appData.invoices, ...appData.expenses];
+            list.forEach(t => {
+                if (t.description && t.description.trim().toLowerCase() === oldLower) {
+                    t.description = newName.trim();
+                }
+            });
+            saveData();
+            showToast(`Contatto rinominato da "${oldName}" a "${newName}"!`);
+        }
+    }
+    
+    function renameCategory(oldName, newName) {
+        const oldLower = oldName.toLowerCase();
+        const newClean = newName.trim();
+        
+        if (newClean && oldName !== newClean) {
+            // Aggiorna array categorie
+            const index = appData.categories.findIndex(c => c.toLowerCase() === oldLower);
+            if (index > -1) {
+                appData.categories[index] = newClean;
+            } else {
+                 appData.categories.push(newClean); // Aggiunge se mancante (prevenzione bug)
+            }
+            appData.categories.sort((a,b)=>a.localeCompare(b));
+
+            // Aggiorna le transazioni
+            [...appData.invoices, ...appData.expenses].forEach(t => {
+                if (t.category && t.category.toLowerCase() === oldLower) {
+                    t.category = newClean;
+                }
+            });
+            
+            // Aggiorna i budget
+            const oldBudget = appData.categoryBudgets[oldName];
+            if (oldBudget !== undefined) {
+                delete appData.categoryBudgets[oldName];
+                appData.categoryBudgets[newClean] = oldBudget;
+            }
+
+            saveData();
+            showToast(`Categoria rinominata da "${oldName}" a "${newClean}"!`);
+            renderPage('settings');
+        }
+    }
 
     // --- Contacts / Categories helpers (omitted for brevity) ---
     function addContact(name, scope, relation){
@@ -2032,8 +2115,14 @@
         if (t.isIncome) byCat[cat].inc += gross; else byCat[cat].exp += gross;
       });
       const topCategories = Object.entries(byCat).sort((a,b)=>b[1].exp - a[1].exp).slice(0,3).map(([cat,v])=>({cat, amount:v.exp}));
+      
+      // NUOVO: Calcolo Ricavi Annuali (per massimale forfettario)
+      const currentYear = new Date().getFullYear();
+      const currentYearRevenue = all
+          .filter(t => t.isIncome && new Date(t.date).getFullYear() === currentYear)
+          .reduce((sum, t) => sum + t.gross, 0);
 
-      return {savingRate, avgExpense, avgIncome, topClients, topSuppliers, topCategories};
+      return {savingRate, avgExpense, avgIncome, topClients, topSuppliers, topCategories, currentYearRevenue};
     }
     
     function calculateCashFlowProjection() {
@@ -2139,6 +2228,69 @@
         
         return sortedGrouped;
     }
+    
+    // NUOVO: Grafico Dettaglio Categoria Annuale
+    function renderCategoryDetailChart(categoryName, type) {
+        const chartId = `categoryDetailChart`;
+        const ctx = document.getElementById(chartId)?.getContext('2d');
+        if (!ctx) return;
+        
+        const currentYear = String(new Date().getFullYear());
+        const categoryFilter = categoryName === 'all' ? null : categoryName;
+        
+        const allTransactions = [...appData.invoices.map(t=>({...t,isIncome:true})), ...appData.expenses.map(t=>({...t,isIncome:false}))];
+        
+        let relevantTransactions = allTransactions
+            .filter(t => t.type === type)
+            .filter(t => new Date(t.date).getFullYear() === parseInt(currentYear))
+            .filter(t => !categoryFilter || t.category === categoryFilter);
+
+        const monthlyTotals = {};
+        for (let i = 0; i < 12; i++) {
+            const date = new Date(currentYear, i, 1);
+            const monthLabel = date.toLocaleDateString('it-IT', { month: 'short' });
+            monthlyTotals[monthLabel] = 0;
+        }
+
+        relevantTransactions.forEach(t => {
+            const date = new Date(t.date);
+            const monthLabel = date.toLocaleDateString('it-IT', { month: 'short' });
+            const amount = t.gross * (t.isIncome ? 1 : -1);
+            monthlyTotals[monthLabel] += amount;
+        });
+
+        const labels = Object.keys(monthlyTotals);
+        const data = Object.values(monthlyTotals);
+        
+        if (ctx.chart) ctx.chart.destroy();
+
+        ctx.chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `Netto Mensile (${symbol})`,
+                    data: data,
+                    backgroundColor: data.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'),
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: `Andamento Netto Categoria: ${categoryName} (${currentYear})`, color: document.body.classList.contains('dark') ? '#f1f5f9' : '#1e293b' }
+                },
+                scales: {
+                    x: { ticks: { color: document.body.classList.contains('dark') ? '#9ca3af' : '#6b7280' } },
+                    y: { 
+                        beginAtZero: true,
+                        ticks: { color: document.body.classList.contains('dark') ? '#9ca3af' : '#6b7280' }
+                    }
+                }
+            }
+        });
+    }
 
     function renderReportPage(){
       const symbol = getCurrencySymbol();
@@ -2153,8 +2305,10 @@
       const tagFilter = document.getElementById('filter-tag')?.value || reportFilters.tagFilter;
       const sortKey = document.getElementById('sort-key')?.value || reportFilters.sortKey;
       const sortDirection = document.getElementById('sort-direction')?.value || reportFilters.sortDirection;
-      
-      reportFilters = { type: currentType, filterType, filterDateStr, categoryFilter, tagFilter, sortKey, sortDirection };
+      const searchQuery = document.getElementById('search')?.value || reportFilters.searchQuery; // NUOVO: Preleva Query
+
+      // Aggiorna reportFilters in base agli input attuali (inclusa search)
+      reportFilters = { type: currentType, filterType, filterDateStr, categoryFilter, tagFilter, sortKey, sortDirection, searchQuery };
       saveReportFilters(); 
 
       const summary = calculateFinancialSummary(currentType, filterType, filterDateStr);
@@ -2162,6 +2316,9 @@
       const ivaSummary = calculateFinancialSummary('activity', filterType, filterDateStr);
       
       let transactionsList = filterTransactionsByCriteria(summary.transactions, categoryFilter === 'all' ? null : categoryFilter, tagFilter === 'all' ? null : tagFilter);
+      
+      // Filtro per ricerca testuale (deve essere applicato prima dell'ordinamento per persistenza UX)
+      transactionsList = filterTransactions(searchQuery, transactionsList);
       
       // Applicazione Ordinamento
       transactionsList = sortTransactions(transactionsList);
@@ -2179,6 +2336,12 @@
 
       const KPIs = computeKPIs();
       
+      // NUOVO: Analisi Scostamento
+      const momVariance = calculateMonthlyVariance();
+      const momIncColor = momVariance.inc >= 0 ? 'text-emerald-500' : 'text-red-500';
+      const momExpColor = momVariance.exp <= 0 ? 'text-emerald-500' : 'text-red-500'; // Utile se le spese calano
+
+      
       // Previsione Saldo a 6 Mesi
       const sixMonthProjection = calculateSixMonthBalanceProjection();
       const proj6MColor = sixMonthProjection.projection >= 0 ? 'text-emerald-600' : 'text-red-600';
@@ -2194,6 +2357,9 @@
       const targetDelta = averageMonthlyNet - (appData.monthlySavingsTarget || 0);
       const targetColor = targetDelta >= 0 ? 'text-emerald-600' : 'text-red-600';
       const targetLabel = targetDelta >= 0 ? 'Obiettivo Raggiunto (Surplus)' : 'Obiettivo Mancato (Deficit)';
+          
+      const fhs = calculateFinancialHealthScore();
+      const FHSColor = fhs.score > 80 ? 'text-emerald-600' : (fhs.score > 60 ? 'text-orange-600' : 'text-red-600');
 
 
       let periodLabel='Periodo Selezionato';
@@ -2233,9 +2399,6 @@
               }
               return { cat, budget, spent, remaining, colorClass };
           }).sort((a, b) => b.spent - a.spent);
-          
-      const fhs = calculateFinancialHealthScore();
-      const FHSColor = fhs.score > 80 ? 'text-emerald-600' : (fhs.score > 60 ? 'text-orange-600' : 'text-red-600');
 
 
       return `
@@ -2306,6 +2469,25 @@
                   </p>
               </div>
           </div>
+          
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4 border-l-4 border-dashed border-gray-400">
+              <h3 class="text-xl font-medium mb-3 text-gray-800 dark:text-gray-200">Analisi Scostamento Mese (${momVariance.monthLabel})</h3>
+              <div class="grid grid-cols-3 text-center">
+                  <div>
+                      <p class="text-xs text-gray-500">Entrate (MoM)</p>
+                      <p class="text-xl font-bold ${momIncColor}">${momVariance.inc.toFixed(1)}%</p>
+                  </div>
+                   <div>
+                      <p class="text-xs text-gray-500">Uscite (MoM)</p>
+                      <p class="text-xl font-bold ${momExpColor}">${momVariance.exp.toFixed(1)}%</p>
+                  </div>
+                   <div>
+                      <p class="text-xs text-gray-500">Netto (MoM)</p>
+                      <p class="text-xl font-bold ${momVariance.net >= 0 ? 'text-emerald-500' : 'text-red-500'}">${momVariance.net.toFixed(1)}%</p>
+                  </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Confronto del totale netto/lordo con il mese precedente. Alto valore in Entrate/Netto è positivo.</p>
+          </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center">
@@ -2344,9 +2526,33 @@
                   `).join('') || '<p class="text-gray-500 text-center">Nessun budget definito o spesa nel mese.</p>'}
               </div>
           </div>`:''}
+          
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card">
+              <h3 class="text-xl font-medium mb-3 text-gray-800 dark:text-gray-200">Dettaglio Categoria ${type === 'activity' ? '(Attività)' : '(Personale)'}</h3>
+              <div class="flex space-x-3 mb-4 items-center">
+                  <label class="text-sm text-gray-500">Seleziona Categoria:</label>
+                  <select id="detail-category-select" onchange="renderCategoryDetailChart(this.value, '${type}')" class="p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+                      <option value="all">Tutte le Categorie</option>
+                      ${allCategories.map(c => `<option value="${c}">${getCategoryIcon(c)} ${c}</option>`).join('')}
+                  </select>
+              </div>
+              <div style="height: 280px;">
+                  <canvas id="categoryDetailChart"></canvas>
+              </div>
+          </div>
+          <script>
+            // Inizializza il grafico dettaglio categoria con il primo valore di default
+            document.addEventListener('DOMContentLoaded', () => {
+                const select = document.getElementById('detail-category-select');
+                if (select) {
+                     renderCategoryDetailChart(select.value, '${type}');
+                }
+            });
+          </script>
+
 
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card" style="height: 280px;">
-            <h3 class="text-xl font-medium mb-3 text-gray-800 dark:text-gray-200">Andamento Mensile Entrate/Uscite</h3>
+            <h3 class="text-xl font-medium mb-3 text-gray-800 dark:text-gray-200">Andamento Mensile Entrate/Uscite (Globale)</h3>
             <canvas id="trendChart"></canvas>
           </div>
 
@@ -2394,7 +2600,7 @@
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card mb-20">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-xl font-medium text-gray-800 dark:text-gray-200">Dettaglio Movimenti (${transactionsList.length})</h3>
-              <input type="text" id="search" placeholder="🔍 Cerca (descrizione, categoria, tag, importo)" class="w-64 p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+              <input type="text" id="search" placeholder="🔍 Cerca (descrizione, categoria, tag, importo)" class="w-64 p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" value="${reportFilters.searchQuery}">
             </div>
             
             <div class="flex space-x-4 mb-4">
@@ -2882,6 +3088,7 @@
                       ${c.scope==='activity'?'Attività':'Personale'}
                     </span>
                   </div>
+                  <button onclick="promptRenameContact(${c.id}, '${c.name.replace(/'/g, "\\'")}')" class="text-blue-400 hover:text-blue-600 mr-2">✏️</button>
                   <button onclick="deleteContact(${c.id})" class="text-red-400 hover:text-red-600">🗑️</button>
                 </div>
               `).join('') : '<p class="text-gray-500 text-sm">Nessun contatto salvato.</p>'}
@@ -2891,15 +3098,19 @@
 
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-3">
             <h3 class="text-lg font-semibold">Categorie (${cats.length})</h3>
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-2 mb-4">
               <input id="new-cat" placeholder="Nuova categoria" class="p-2 border rounded-lg flex-1 dark:bg-gray-900 dark:border-gray-700">
               <button class="px-3 py-2 bg-emerald-500 text-white rounded-lg" onclick="(function(){const v=document.getElementById('new-cat').value.trim(); if(!v) return; ensureCategory(v); showToast('Categoria aggiunta!'); renderPage('settings');})()">Aggiungi</button>
             </div>
-            <div class="text-sm text-gray-500">Usate nell’autocomplete del form. Icona: ${getCategoryIcon('Altro')}</div>
-            <div class="flex flex-wrap gap-2 mt-2">
-              ${cats.map(c=>`<span class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200">${getCategoryIcon(c)} ${c}</span>`).join('')}
+            <div class="flex flex-wrap gap-2 mt-2 max-h-40 overflow-y-auto p-2 border rounded-lg dark:border-gray-700">
+              ${cats.map(c=>`
+                <div class="flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200">
+                    <span>${getCategoryIcon(c)} ${c}</span>
+                    <button onclick="promptRenameCategory('${c.replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-700 text-xs ml-1">✏️</button>
+                </div>
+              `).join('')}
             </div>
-             <button onclick="deleteUnusedCategories()" class="cta-button w-full bg-gray-400 text-white p-3 rounded-lg font-bold hover:bg-gray-500">Pulisci Categorie Non Usate</button>
+             <button onclick="deleteUnusedCategories()" class="cta-button w-full bg-gray-400 text-white p-3 rounded-lg font-bold hover:bg-gray-500 mt-4">Pulisci Categorie Non Usate</button>
           </div>
           
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
@@ -2948,6 +3159,39 @@
       `;
     }
     
+    function promptRenameContact(id, currentName) {
+        showModal('Rinomina Contatto', 
+            `Rinomina Contatto: 
+            <input type="text" id="rename-input" value="${currentName}" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 mt-3" />`, 
+            true, 
+            () => {
+                const newName = document.getElementById('rename-input').value;
+                if (newName && newName.trim() !== currentName) {
+                    renameContact(id, newName.trim());
+                    renderPage('settings');
+                } else {
+                    showToast('Rinominazione annullata o nome non valido.', 'red');
+                }
+            }
+        );
+    }
+    
+    function promptRenameCategory(currentName) {
+        showModal('Rinomina Categoria', 
+            `Rinomina Categoria: 
+            <input type="text" id="rename-input" value="${currentName}" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 mt-3" />`, 
+            true, 
+            () => {
+                const newName = document.getElementById('rename-input').value;
+                if (newName && newName.trim() !== currentName) {
+                    renameCategory(currentName, newName.trim());
+                } else {
+                    showToast('Rinominazione annullata o nome non valido.', 'red');
+                }
+            }
+        );
+    }
+
     function saveMonthlyTarget() {
         const input = document.getElementById('monthly-target');
         const target = parseFloat(input?.value) || 0;
@@ -3217,7 +3461,7 @@
                 
                 reportFilters.sortKey = sortKey;
                 reportFilters.sortDirection = sortDirection;
-                reportFilters.searchQuery = query; // Salva la query di ricerca
+                reportFilters.searchQuery = query; 
                 
                 let results = calculateFinancialSummary(currentReportType, filterType, filterDate).transactions;
                 results = filterTransactionsByCriteria(results, categoryFilter === 'all' ? null : categoryFilter, tagFilter === 'all' ? null : tagFilter);
