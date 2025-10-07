@@ -13,7 +13,7 @@
     body { font-family:'Inter',sans-serif; background-color:#f7f9fc; color:#1e293b; }
     .card { box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.06); }
     .tab-active { border-bottom:3px solid #10b981; color:#10b981; }
-    .cta-button { transition:all .2s; box-shadow:0 4px 6px -1px rgba(16,185,129,.4), 0 2px 4px -2px rgba(16,185,129,.06); }
+    .cta-button { transition:all .2s; box-shadow:0 4px 6px -1px rgba(16,185,129,.4),0 2px 4px -2px rgba(16,185,129,.06); }
     .bar-container { height:20px; border-radius:9999px; overflow:hidden; display:flex; }
     .bar-income{background-color:#10b981}.bar-expense{background-color:#ef4444}
     .bar-addebito{background-color:#fb923c}.bar-credito{background-color:#3b82f6}
@@ -32,8 +32,8 @@
     #pin-lock-modal {
       position: fixed;
       inset: 0;
-      background-color: #0f172a; /* Dark background to cover everything */
-      z-index: 100; /* Ensure it's on top */
+      background-color: #0f172a; 
+      z-index: 100; 
       display: flex;
       justify-content: center;
       align-items: center;
@@ -55,7 +55,7 @@
       border-radius: 8px;
       background-color: #111827;
       color: #10b981;
-      caret-color: transparent; /* Hide cursor */
+      caret-color: transparent; 
     }
     
     /* Stili semaforo per Budgeting Pro */
@@ -65,6 +65,9 @@
     .dark .budget-green { background-color: #064e3b; border-left-color: #10b981; }
     .dark .budget-yellow { background-color: #78350f; border-left-color: #f59e0b; }
     .dark .budget-red { background-color: #7f1d1d; border-left-color: #ef4444; }
+    
+    /* Stili Raggruppamento (Nuovo) */
+    .group-header { cursor: pointer; }
   </style>
   <link id="dynamic-manifest" rel="manifest">
 </head>
@@ -74,7 +77,7 @@
     <header class="mb-6 flex items-center justify-between">
       <div class="flex-1 text-center">
         <h1 class="text-3xl font-bold text-gray-800">Finanza Smart PRO 🚀</h1>
-        <p class="text-center text-sm text-gray-500">Attività & Personale</p>
+        <p class="text-center text-sm text-gray-500" id="header-subtitle">Caricamento...</p>
       </div>
       <button id="theme-toggle"
         class="ml-4 px-3 py-2 rounded-lg border text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -117,19 +120,28 @@
   
   <div id="pin-lock-modal">
     <h2 class="text-3xl font-bold mb-3">Finanza Smart PRO</h2>
-    <p class="text-lg mb-6 text-gray-400">Inserisci il PIN per sbloccare</p>
-    <div class="pin-input">
-      <input type="password" maxlength="1" id="pin-1" class="pin-digit" pattern="[0-9]" inputmode="numeric" />
-      <input type="password" maxlength="1" id="pin-2" class="pin-digit" pattern="[0-9]" inputmode="numeric" />
-      <input type="password" maxlength="1" id="pin-3" class="pin-digit" pattern="[0-9]" inputmode="numeric" />
-      <input type="password" maxlength="1" id="pin-4" class="pin-digit" pattern="[0-9]" inputmode="numeric" />
+    <div id="login-form-wrapper">
+        <p class="text-lg mb-4 text-gray-400">Seleziona o crea il tuo Profilo</p>
+        
+        <select id="user-select" class="p-2 border rounded-lg w-64 text-gray-800 mb-4"></select>
+        <input type="text" id="new-user-input" placeholder="Nuovo Profilo (es. Nome)" class="p-2 border rounded-lg w-64 text-gray-800 mb-2 hidden">
+        <button id="new-user-btn" onclick="toggleNewUserMode()" class="px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm mb-6">Nuovo Utente</button>
+        <button id="confirm-new-user-btn" onclick="createNewUser()" class="px-3 py-1 bg-emerald-500 text-white rounded-lg text-sm mb-6 hidden">Crea e Accedi</button>
+
+        <p class="text-lg mb-6 text-gray-400" id="pin-prompt">Inserisci il PIN per sbloccare</p>
+        <div class="pin-input">
+          <input type="password" maxlength="1" id="pin-1" class="pin-digit" pattern="[0-9]" inputmode="numeric" />
+          <input type="password" maxlength="1" id="pin-2" class="pin-digit" pattern="[0-9]" inputmode="numeric" />
+          <input type="password" maxlength="1" id="pin-3" class="pin-digit" pattern="[0-9]" inputmode="numeric" />
+          <input type="password" maxlength="1" id="pin-4" class="pin-digit" pattern="[0-9]" inputmode="numeric" />
+        </div>
+        <p id="pin-error" class="text-red-500 mt-4 text-sm hidden">PIN errato. Riprova.</p>
+        <p class="text-sm text-gray-500 mt-8" id="default-pin-note">PIN di default: 1234</p>
     </div>
-    <p id="pin-error" class="text-red-500 mt-4 text-sm hidden">PIN errato. Riprova.</p>
-    <p class="text-sm text-gray-500 mt-8">PIN di default: 1234</p>
   </div>
   <script>
     // --- CONFIG/GLOBAL ---
-    const LOCAL_STORAGE_KEY = 'smartFinApp_v50';
+    const GLOBAL_KEY = 'smartFinApp_global_users_v5';
     const SESSION_STORAGE_PIN_KEY = 'smartFinApp_unlocked';
     const SESSION_STORAGE_REPORT_KEY = 'smartFinApp_report_filters'; 
     const IVA_RATES = [0,4,5,10,22];
@@ -139,11 +151,11 @@
     
     // Parametri fiscali di DEFAULT (Ristorazione/Commercio Forfettario 40%)
     const DEFAULT_FISCAL_PARAMS = {
-        profitRate: 0.40, // Coefficiente di redditività (es. 40% per ristorazione/commercio)
-        taxRate: 0.15,    // Tassa fissa (IRPEF/Imposta Sostitutiva)
-        inpsRate: 0.26    // Contributi INPS (circa)
+        profitRate: 0.40, 
+        taxRate: 0.15,    
+        inpsRate: 0.26    
     };
-
+    
     // Mappa Icone per Categorie (Usabilità)
     const CATEGORY_ICONS = {
         'Affitto': '🏠',
@@ -172,6 +184,12 @@
         'annuale': 'annual'
     };
 
+    // NUOVO: Stato globale per la gestione degli utenti e dei profili
+    let globalState = {
+        currentUser: null,
+        users: [] // [{ id: 1, name: 'Default', dataKey: '...', pinHash: '...' }]
+    };
+
     let appData = { 
         invoices:[], 
         expenses:[], 
@@ -181,7 +199,7 @@
         recurringExpenses: [], 
         lastId:0, 
         categories: DEFAULT_CATEGORIES.slice(), 
-        pin: '1234',
+        pinHash: '', // NON salviamo più il PIN in chiaro
         currencySymbol: '€',
         monthlySavingsTarget: 0,
         categoryBudgets: {},
@@ -193,9 +211,11 @@
         filterType: 'year',
         filterDateStr: String(new Date().getFullYear()),
         categoryFilter: 'all',
-        tagFilter: 'all'
+        tagFilter: 'all',
+        sortKey: 'date',        // NUOVO: Chiave per l'ordinamento
+        sortDirection: 'desc'   // NUOVO: Direzione per l'ordinamento
     };
-    // NUOVO: Stato del simulatore per il "What-If Analysis" PROFESSIONALE
+
     let simulationState = {
         additionalRevenue: 0, 
         additionalExpense: 0, 
@@ -209,17 +229,12 @@
     }
     function getCategoryIcon(category) {
         const cat = category || 'Altro';
-        // Match case-insensitive, return default if not found
         const key = Object.keys(CATEGORY_ICONS).find(k => k.toLowerCase() === cat.toLowerCase());
         return CATEGORY_ICONS[key] || CATEGORY_ICONS['Altro'];
     }
-
-    // NUOVO: Salva i filtri del report nella sessione
     function saveReportFilters() {
         sessionStorage.setItem(SESSION_STORAGE_REPORT_KEY, JSON.stringify(reportFilters));
     }
-
-    // NUOVO: Carica i filtri del report dalla sessione
     function loadReportFilters() {
         try {
             const saved = sessionStorage.getItem(SESSION_STORAGE_REPORT_KEY);
@@ -230,7 +245,20 @@
     }
 
 
-    // --- THEME (Dark Mode) (omitted for brevity) ---
+    // --- HASHING e SICUREZZA (NUOVO) ---
+    // Simulazione di Hashing veloce per non dipendere da librerie esterne
+    function hashPin(pin) {
+        let hash = 0;
+        if (pin.length === 0) return hash;
+        for (let i = 0; i < pin.length; i++) {
+            const char = pin.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0; // Convert to 32bit integer
+        }
+        return String(hash);
+    }
+    
+    // --- THEME ---
     function applySavedTheme() {
       const saved = localStorage.getItem('theme') || 'light';
       document.body.classList.toggle('dark', saved === 'dark');
@@ -244,62 +272,193 @@
       applySavedTheme();
     }
 
-    // --- STORAGE ---
-    function loadData() {
-      try {
-        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          appData = { ...appData, ...parsed };
-          // Ensure arrays exist
-          appData.invoices ||= []; appData.expenses ||= [];
-          appData.reminders ||= []; appData.contacts ||= [];
-          appData.birthdays ||= [];
-          appData.recurringExpenses ||= []; 
-          
-          // Ensure categories/lastId/pin/currency/target/budgets/fiscalParams exist
-          appData.categories ||= DEFAULT_CATEGORIES.slice();
-          appData.lastId ||= 0;
-          appData.pin ||= '1234';
-          appData.currencySymbol ||= '€';
-          appData.monthlySavingsTarget ||= 0;
-          appData.categoryBudgets ||= {}; 
-          appData.fiscalParams = { ...DEFAULT_FISCAL_PARAMS, ...appData.fiscalParams }; // Usa defaults se non salvati
+    // --- STORAGE (AGGIORNATO) ---
+    function loadGlobalState() {
+        try {
+            const raw = localStorage.getItem(GLOBAL_KEY);
+            if (raw) {
+                globalState = JSON.parse(raw);
+            }
+            if (globalState.users.length === 0) {
+                // Primo avvio: crea utente di default
+                const defaultPinHash = hashPin('1234');
+                globalState.users = [{
+                    id: 1,
+                    name: 'Principale',
+                    dataKey: 'smartFinApp_data_1',
+                    pinHash: defaultPinHash
+                }];
+                globalState.currentUser = globalState.users[0];
+                saveGlobalState();
+            } else if (!globalState.currentUser) {
+                globalState.currentUser = globalState.users[0];
+            }
+        } catch(e) { 
+            console.error('Errore nel caricamento stato globale', e); 
+            globalState = { currentUser: null, users: [] };
         }
-      } catch(e){ console.error(e); showToast('Errore nel caricamento dati','red'); }
     }
-    function saveData(){ try{ localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData)); }catch(e){ console.error(e); showToast('Errore salvataggio','red'); } }
-    function getNextId(){ appData.lastId++; saveData(); return appData.lastId; }
 
-    // --- PIN LOCK LOGIC (omitted for brevity) ---
-    function setupPinLock() {
-      const pinDigits = document.querySelectorAll('.pin-digit');
-      const pinModal = document.getElementById('pin-lock-modal');
-      const isUnlocked = sessionStorage.getItem(SESSION_STORAGE_PIN_KEY) === 'true';
+    function saveGlobalState() {
+        try {
+            localStorage.setItem(GLOBAL_KEY, JSON.stringify(globalState));
+        } catch(e) { console.error('Errore salvataggio stato globale', e); }
+    }
 
-      if (!isUnlocked) {
-        pinModal.style.display = 'flex';
-        pinDigits.forEach((input, index) => {
-          input.value = '';
-          input.removeEventListener('input', handlePinInputListener);
-          input.removeEventListener('keydown', handlePinKeyDownListener);
-          
-          input.addEventListener('input', (e) => handlePinInput(e, index));
-          input.addEventListener('keydown', (e) => handlePinKeyDown(e, index));
-        });
-        
-        setTimeout(() => {
-          document.getElementById('pin-1')?.focus();
-        }, 100); 
+    function loadData() {
+        loadGlobalState();
+        const user = globalState.currentUser;
+        if (!user) return; // Non caricare se non c'è utente selezionato
 
-      } else {
-        pinModal.style.display = 'none';
-        const initialPage = appData.invoices.length>0 || appData.expenses.length>0 ? 'report':'activity';
-        initializeFiscalReminders(); 
-        renderPage(initialPage);
-      }
+        try {
+            const raw = localStorage.getItem(user.dataKey);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                appData = { ...appData, ...parsed };
+            }
+            // Inizializza o correggi la struttura di appData
+            appData.invoices ||= []; appData.expenses ||= [];
+            appData.reminders ||= []; appData.contacts ||= [];
+            appData.birthdays ||= [];
+            appData.recurringExpenses ||= []; 
+            appData.categories ||= DEFAULT_CATEGORIES.slice();
+            appData.lastId ||= 0;
+            appData.pinHash = user.pinHash; // Sovrascrive il PIN in chiaro con l'hash
+            appData.currencySymbol ||= '€';
+            appData.monthlySavingsTarget ||= 0;
+            appData.categoryBudgets ||= {}; 
+            appData.fiscalParams = { ...DEFAULT_FISCAL_PARAMS, ...appData.fiscalParams };
+            
+            // Aggiorna sottotitolo Header
+            document.getElementById('header-subtitle').textContent = `Profilo: ${user.name}`;
+        } catch(e){ 
+            console.error(e); 
+            showToast('Errore nel caricamento dati utente','red'); 
+            // Inizializza appData per l'utente corrente in caso di fallimento
+            saveData();
+        }
     }
     
+    function saveData(){ 
+        const user = globalState.currentUser;
+        if (!user) return;
+        try{ 
+            // Aggiorna l'hash PIN nel globalState prima di salvare appData
+            const userIndex = globalState.users.findIndex(u => u.dataKey === user.dataKey);
+            if (userIndex > -1) {
+                globalState.users[userIndex].pinHash = appData.pinHash;
+                saveGlobalState();
+            }
+            
+            // Salva i dati specifici dell'utente
+            const dataToSave = { ...appData };
+            delete dataToSave.pinHash; // Rimuovi l'hash da appData prima del salvataggio nel suo localStorage
+            localStorage.setItem(user.dataKey, JSON.stringify(dataToSave)); 
+        }catch(e){ 
+            console.error(e); 
+            showToast('Errore salvataggio','red'); 
+        } 
+    }
+    function getNextId(){ appData.lastId++; saveData(); return appData.lastId; }
+
+    // --- PIN LOCK LOGIC (AGGIORNATO per Multi-Profilo) ---
+    function setupPinLock() {
+        loadGlobalState();
+        const pinDigits = document.querySelectorAll('.pin-digit');
+        const pinModal = document.getElementById('pin-lock-modal');
+        const isUnlocked = sessionStorage.getItem(SESSION_STORAGE_PIN_KEY) === 'true';
+
+        if (!isUnlocked) {
+            pinModal.style.display = 'flex';
+            setupUserSelector();
+            
+            pinDigits.forEach((input, index) => {
+                input.value = '';
+                input.removeEventListener('input', handlePinInputListener);
+                input.removeEventListener('keydown', handlePinKeyDownListener);
+                input.addEventListener('input', (e) => handlePinInput(e, index));
+                input.addEventListener('keydown', (e) => handlePinKeyDown(e, index));
+            });
+            document.getElementById('new-user-input').classList.add('hidden');
+            document.getElementById('new-user-btn').classList.remove('hidden');
+            document.getElementById('confirm-new-user-btn').classList.add('hidden');
+            document.getElementById('pin-prompt').textContent = `Inserisci il PIN per sbloccare il profilo: ${globalState.currentUser.name}`;
+            document.getElementById('default-pin-note').classList.toggle('hidden', globalState.users.length > 1);
+            
+            setTimeout(() => { document.getElementById('pin-1')?.focus(); }, 100); 
+        } else {
+            pinModal.style.display = 'none';
+            // Ricarica i dati dell'utente corrente (già fatto in loadData)
+            const initialPage = appData.invoices.length>0 || appData.expenses.length>0 ? 'report':'activity';
+            initializeFiscalReminders(); 
+            renderPage(initialPage);
+        }
+    }
+    
+    function setupUserSelector() {
+        const select = document.getElementById('user-select');
+        select.innerHTML = globalState.users.map(u => 
+            `<option value="${u.dataKey}" ${u.dataKey === globalState.currentUser.dataKey ? 'selected' : ''}>${u.name}</option>`
+        ).join('');
+        
+        select.onchange = () => {
+            const selectedKey = select.value;
+            globalState.currentUser = globalState.users.find(u => u.dataKey === selectedKey);
+            loadData(); // Carica i dati del nuovo utente
+            setupPinLock(); // Reimposta l'interfaccia PIN
+        };
+    }
+    
+    function toggleNewUserMode() {
+        const isNewUserMode = document.getElementById('new-user-input').classList.contains('hidden');
+        document.getElementById('user-select').classList.toggle('hidden', !isNewUserMode);
+        document.getElementById('new-user-input').classList.toggle('hidden', isNewUserMode);
+        document.getElementById('new-user-btn').classList.toggle('hidden', !isNewUserMode);
+        document.getElementById('confirm-new-user-btn').classList.toggle('hidden', isNewUserMode);
+        document.getElementById('pin-prompt').textContent = isNewUserMode ? "Imposta il PIN per il nuovo profilo (4 cifre)" : `Inserisci il PIN per sbloccare il profilo: ${globalState.currentUser.name}`;
+        document.getElementById('default-pin-note').classList.add('hidden');
+        if (isNewUserMode) document.getElementById('new-user-input').focus();
+    }
+    
+    function createNewUser() {
+        const newName = document.getElementById('new-user-input').value.trim();
+        const enteredPin = Array.from(document.querySelectorAll('.pin-digit')).map(input => input.value).join('');
+        
+        if (!newName) { showToast('Inserisci un nome per il nuovo profilo.', 'red'); return; }
+        if (globalState.users.some(u => u.name.toLowerCase() === newName.toLowerCase())) { showToast('Nome profilo già esistente.', 'red'); return; }
+        if (enteredPin.length !== 4 || isNaN(enteredPin)) { showToast('Il PIN deve essere di 4 cifre.', 'red'); return; }
+        
+        const newUserId = Math.max(...globalState.users.map(u => u.id)) + 1;
+        const newPinHash = hashPin(enteredPin);
+
+        const newUser = {
+            id: newUserId,
+            name: newName,
+            dataKey: `smartFinApp_data_${newUserId}`,
+            pinHash: newPinHash
+        };
+        
+        globalState.users.push(newUser);
+        globalState.currentUser = newUser;
+        
+        // Inizializza appData per il nuovo utente (con il nuovo pinHash) e salva
+        appData = { ...appData, ...{ // Reset dati per nuovo utente, mantenendo solo i defaults
+            invoices:[], expenses:[], reminders:[], contacts:[], birthdays: [],
+            recurringExpenses: [], lastId:0, categories: DEFAULT_CATEGORIES.slice(), 
+            pinHash: newPinHash, currencySymbol: '€', monthlySavingsTarget: 0,
+            categoryBudgets: {}, fiscalParams: DEFAULT_FISCAL_PARAMS
+        }};
+        saveData(); // Salva i dati di default per il nuovo utente
+        saveGlobalState(); 
+
+        // Accedi
+        sessionStorage.setItem(SESSION_STORAGE_PIN_KEY, 'true');
+        document.getElementById('pin-lock-modal').style.display = 'none';
+        initializeFiscalReminders(); 
+        renderPage('activity');
+        showToast(`Profilo "${newName}" creato e sbloccato!`);
+    }
+
     const handlePinInputListener = (e, index) => handlePinInput(e, index);
     const handlePinKeyDownListener = (e, index) => handlePinKeyDown(e, index);
 
@@ -329,22 +488,29 @@
       const pinError = document.getElementById('pin-error');
       
       if (enteredPin.length < 4) return;
-
-      if (enteredPin === appData.pin) {
+      
+      const expectedHash = globalState.currentUser ? globalState.currentUser.pinHash : appData.pinHash;
+      const enteredHash = hashPin(enteredPin);
+      
+      if (enteredHash === expectedHash) {
         pinError.classList.add('hidden');
         sessionStorage.setItem(SESSION_STORAGE_PIN_KEY, 'true');
         document.getElementById('pin-lock-modal').style.display = 'none';
+        
+        // Carica i dati dell'utente appena sbloccato (se non è stato fatto prima)
+        loadData(); 
+        
         const initialPage = appData.invoices.length>0 || appData.expenses.length>0 ? 'report':'activity';
         initializeFiscalReminders(); 
         renderPage(initialPage);
-        showToast('Accesso sbloccato!');
+        showToast(`Accesso sbloccato! Benvenuto, ${globalState.currentUser.name}!`);
       } else {
         pinError.classList.remove('hidden');
         pinDigits.forEach(input => input.value = '');
         document.getElementById('pin-1').focus();
       }
     }
-
+    
     // --- UI helpers (omitted for brevity) ---
     function showModal(title,message,isConfirmation,onConfirm,onCancel=null){
       const modal = document.getElementById('modal');
@@ -432,7 +598,34 @@
             return matchesCategory && matchesTag;
         });
     }
+    
+    // NUOVO: Funzione di ordinamento centralizzata
+    function sortTransactions(transactions) {
+        const { sortKey, sortDirection } = reportFilters;
+        if (!sortKey || sortKey === 'none') return transactions;
 
+        const dir = sortDirection === 'asc' ? 1 : -1;
+
+        return transactions.sort((a, b) => {
+            let valA, valB;
+
+            if (sortKey === 'date') {
+                valA = new Date(a.date).getTime();
+                valB = new Date(b.date).getTime();
+            } else if (sortKey === 'gross') {
+                valA = a.gross;
+                valB = b.gross;
+            } else {
+                valA = String(a[sortKey] || '').toLowerCase();
+                valB = String(b[sortKey] || '').toLowerCase();
+            }
+
+            if (valA < valB) return -1 * dir;
+            if (valA > valB) return 1 * dir;
+            return 0;
+        });
+    }
+    
     // --- Core calculations (omitted for brevity) ---
     function calculateDailyNetBalance(type) {
         const days = 7;
@@ -530,7 +723,7 @@
       };
     }
     
-    // NUOVO: Calcolo Proiezione Fiscale Annuale Dinamica (Baseline)
+    // Calcolo Proiezione Fiscale Annuale Dinamica (Baseline)
     function calculateAnnualFiscalProjection() {
         const today = new Date();
         const currentYear = today.getFullYear();
@@ -541,7 +734,7 @@
         const historicalMonths = Object.keys(yearSummary.transactions.reduce((acc, t) => {
             acc[t.date.slice(0, 7)] = true;
             return acc;
-        }, {})).length || 1; // Evita divisione per zero
+        }, {})).length || 1; 
 
         const avgMonthlyRevenue = yearSummary.totalIncomes / historicalMonths;
         const avgMonthlyExpenses = appData.expenses
@@ -555,7 +748,7 @@
         return { projectedRevenue, projectedExpenses };
     }
 
-    // AGGIORNATO: Calcolo Simulazione Fiscale (con input What-If PROFESSIONALE)
+    // Calcolo Simulazione Fiscale (con input What-If PROFESSIONALE)
     function calculateFiscalSimulation(currentYear) {
         const yearSummary = calculateFinancialSummary('activity', 'year', String(currentYear));
         const projection = calculateAnnualFiscalProjection();
@@ -566,21 +759,17 @@
             inpsRate: appData.fiscalParams.inpsRate 
         };
 
-        // 1. Calcolo Ricavi/Costi Simulati (Entrate e Uscite)
         const totalRicaviBase = projection.projectedRevenue;
         const totalCostiBase = projection.projectedExpenses;
         
         let totalRicaviSimulated = totalRicaviBase + simulationState.additionalRevenue;
         let totalCostiSimulated = totalCostiBase + simulationState.additionalExpense;
         
-        // 2. Base imponibile Forfettaria (Ricavi * Coeff. Redditività)
         const baseImponibileFiscale = totalRicaviSimulated * params.profitRate;
         
-        // 3. Calcolo Imposta e Contributi
         const impostaSostitutiva = baseImponibileFiscale * params.taxRate;
         const contributiINPS = baseImponibileFiscale * appData.fiscalParams.inpsRate; 
         
-        // 4. Liquidità Rimanente (Proiezione di Netto - Tasse/Contributi)
         const projectedNetBalance = totalRicaviSimulated - totalCostiSimulated;
         const nettaRimanente = projectedNetBalance - impostaSostitutiva - contributiINPS;
 
@@ -633,6 +822,61 @@
         const ivaBalance = ivaAddebito - ivaCredito;
         return { ivaAddebito, ivaCredito, ivaBalance: +ivaBalance.toFixed(2) };
     }
+    
+    // NUOVO: Calcolo Proiezione Saldo Conto a 6 Mesi
+    function calculateSixMonthBalanceProjection() {
+        const monthsToProject = 6;
+        const today = new Date();
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        let currentBalance = calculateFinancialSummary('global', 'all', 'all').netBalance;
+        const monthlyProjection = [];
+
+        // 1. Calcola media mensile Netta (per stimare il trend di crescita/decrescita)
+        const kpis = computeKPIs();
+        const avgMonthlyNet = kpis.avgIncome - kpis.avgExpense;
+        
+        for (let m = 0; m < monthsToProject; m++) {
+            const date = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth() + m, 1);
+            const monthLabel = date.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' });
+            
+            let monthFlow = avgMonthlyNet; // Inizia con la media storica
+
+            // 2. Aggiusta con Ricorrenze e Promemoria noti nel mese
+            
+            // A. Ricorrenze (già tracciate)
+            appData.recurringExpenses.forEach(r => {
+                const nextDateStr = calculateNextRecurrence(r.lastDate, r.frequency, date);
+                if (nextDateStr && new Date(nextDateStr).getMonth() === date.getMonth()) {
+                    const isIncome = appData.invoices.some(i => i.description === r.description);
+                    monthFlow += isIncome ? r.lastAmount : -r.lastAmount;
+                }
+            });
+
+            // B. Promemoria/Scadenze (Pagamenti)
+            appData.reminders.forEach(r => {
+                const rDate = new Date(r.date);
+                if (!r.paid && rDate.getFullYear() === date.getFullYear() && rDate.getMonth() === date.getMonth()) {
+                    monthFlow -= r.amount;
+                }
+            });
+            
+            currentBalance += monthFlow;
+            
+            monthlyProjection.push({
+                label: monthLabel,
+                flow: monthFlow,
+                balance: +currentBalance.toFixed(2)
+            });
+        }
+
+        return {
+            projection: monthlyProjection[monthsToProject - 1]?.balance || currentBalance,
+            details: monthlyProjection
+        };
+    }
+    // --- Fine Core Calculations ---
+
 
     // --- Contacts / Categories helpers (omitted for brevity) ---
     function addContact(name, scope, relation){
@@ -826,7 +1070,7 @@
         document.getElementById('isIncome').value = isIncome ? 'true' : 'false';
         document.getElementById('isIncome').dispatchEvent(new Event('change'));
 
-        if (type === 'activity' && isIncome) {
+        if (type === 'activity' && isIncome && document.getElementById('incomeType')) {
             document.getElementById('incomeType').value = transaction.incomeType || 'Fattura (Cliente)';
             document.getElementById('incomeType').dispatchEvent(new Event('change'));
         }
@@ -986,13 +1230,11 @@
       const dataStr = JSON.stringify(appData,null,2);
       const blob = new Blob([dataStr], {type:'application/json'});
       const url = URL.createObjectURL(blob);
-      const a=document.createElement('a'); a.href=url; a.download=`finanza_backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      const a=document.createElement('a'); a.href=url; a.download=`finanza_backup_${globalState.currentUser.name}_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       showToast('Backup JSON esportato!');
     }
 
-    // MODIFICATA: Aggiunto filtro per tipo di transazione
     function exportCSV(typeFilter = 'all'){
-      // typeFilter può essere 'all', 'income', 'expense'
       const tx = [...appData.invoices.map(t=>({...t,isIncome:true})), ...appData.expenses.map(t=>({...t,isIncome:false}))].sort((a,b)=> new Date(a.date)-new Date(b.date));
       
       const filteredTx = tx.filter(t => {
@@ -1003,7 +1245,6 @@
       
       const esc = (s)=> `"${String(s??'').replace(/"/g,'""')}"`;
       
-      // Riepilogo Basato sul Filtro
       const sumInc = filteredTx.filter(t => t.isIncome).reduce((s,t)=>s+t.gross,0);
       const sumExp = filteredTx.filter(t => !t.isIncome).reduce((s,t)=>s+t.gross,0);
       const netBalance = sumInc - sumExp;
@@ -1011,7 +1252,6 @@
       
       const summaryRow = ['---RIEPILOGO TRANS.---', `Filtro: ${filterLabel}`, `Saldo Netto: ${netBalance.toFixed(2)}${getCurrencySymbol()}`, `Entrate Totali: ${sumInc.toFixed(2)}${getCurrencySymbol()}`, `Uscite Totali: ${sumExp.toFixed(2)}${getCurrencySymbol()}`].map(esc).join(',');
       
-      // Transazioni CSV
       const headerTx = ['ID','Tipo','Scope','Data','Descrizione','Categoria','Tag','AliquotaIVA','Netto','IVA','Lordo','Entrata?','Sottotipo'].join(',');
       const rowsTx = filteredTx.map(t => [
         t.id, (t.isIncome?'Entrata':'Uscita'), t.type, t.date, t.description||'', t.category||'',
@@ -1019,12 +1259,10 @@
       ].map(esc).join(','));
       const csvTx = `\n[TRANSAZIONI - ${filterLabel}]\n${summaryRow}\n${headerTx}\n${rowsTx.join('\n')}`;
       
-      // Reminders CSV (sempre completi)
       const headerRm = ['ID','Tipo','Descrizione','Data','Importo','Pagato?'].join(',');
       const rowsRm = (appData.reminders||[]).map(r => [r.id,r.type,r.description,r.date,r.amount,r.paid].map(esc).join(','));
       const csvRm = `\n\n[PROMEMORIA SCADENZE]\n${headerRm}\n${rowsRm.join('\n')}`;
       
-      // Birthdays CSV (sempre completi)
       const headerBd = ['ID','Nome','DataNascita','RicorrenzaMD'].join(',');
       const rowsBd = (appData.birthdays||[]).map(r => [r.id,r.name,r.date,r.recurringDate].map(esc).join(','));
       const csvBd = `\n\n[COMPLEANNI]\n${headerBd}\n${rowsBd.join('\n')}`;
@@ -1043,13 +1281,22 @@
         try{
           const imported = JSON.parse(e.target.result);
           if (imported.invoices && imported.expenses && imported.reminders){
-            showModal('Conferma Importazione', 'Sovrascrivere i dati attuali? (Consigliato backup prima)', true, ()=>{
+            showModal('Conferma Importazione', `Sovrascrivere i dati attuali del profilo "${globalState.currentUser.name}"? (Consigliato backup prima)`, true, ()=>{
               const all = [...imported.invoices, ...imported.expenses, ...imported.reminders, ...(imported.contacts||[]), ...(imported.birthdays||[])];
               const maxId = all.length>0 ? Math.max(...all.map(x=>x.id||0)) : 0;
-              appData = { ...appData, ...imported, lastId: Math.max(maxId, appData.lastId) };
+              
+              // Mantieni solo l'hash PIN corrente e i dati globali dell'utente
+              const currentPinHash = appData.pinHash; 
+              
+              appData = { 
+                  ...appData, 
+                  ...imported, 
+                  lastId: Math.max(maxId, appData.lastId),
+                  pinHash: currentPinHash // Conserva il PIN HASH dell'utente loggato
+              };
+              
+              // Assicurati che le strutture essenziali siano presenti/corrette
               appData.categories ||= DEFAULT_CATEGORIES.slice();
-              appData.pin ||= '1234'; 
-              appData.currencySymbol ||= '€'; 
               appData.birthdays ||= []; 
               appData.recurringExpenses ||= []; 
               appData.categoryBudgets ||= {}; 
@@ -1060,7 +1307,9 @@
                   recurringDate: (bd.date || bd.recurringDate).slice(5) 
               }));
               appData.monthlySavingsTarget ||= 0;
-              saveData(); showToast('Dati importati!'); renderPage(currentPage);
+              saveData(); 
+              showToast('Dati importati!'); 
+              renderPage(currentPage);
             });
           } else { showToast('Backup JSON non valido.','red'); }
         } catch(err){ console.error(err); showToast('Errore lettura file JSON.','red'); }
@@ -1328,7 +1577,7 @@
                 <h3 class="text-xl font-bold ${fiscalSim.projectionIsActive ? 'text-indigo-600' : 'text-red-600'}">
                     Simulazione Fiscale (Proiezione ${year}) ${fiscalSim.projectionIsActive ? '✨ WHAT-IF' : ''}
                 </h3>
-                ${fiscalSim.projectionIsActive ? `<button onclick="resetSimulationState()" class="text-sm text-red-500 hover:text-red-700">Reset Simulatore</button>` : ''}
+                ${fiscalSim.projectionIsActive ? `<button onclick="resetSimulationState()" class="text-sm px-2 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300">Reset Simulatore</button>` : ''}
             </div>
 
             <div class="grid grid-cols-2 gap-4 pb-3 border-b dark:border-gray-700">
@@ -1634,7 +1883,6 @@
         };
     }
 
-    // MODIFICATA: Non accetta più 'transactions' come argomento, usa tutte le transazioni internamente
     function renderTrendChart(){
       const canvas = document.getElementById('trendChart');
       if (!canvas) return;
@@ -1680,6 +1928,18 @@
         }
       });
     }
+    
+    // NUOVO: Raggruppamento per Mese
+    function groupTransactionsByMonth(transactions) {
+        const grouped = {};
+        transactions.forEach(t => {
+            const date = new Date(t.date);
+            const monthYear = date.toLocaleDateString('it-IT', { year: 'numeric', month: 'long' });
+            grouped[monthYear] = grouped[monthYear] || [];
+            grouped[monthYear].push(t);
+        });
+        return grouped;
+    }
 
     function renderReportPage(){
       const symbol = getCurrencySymbol();
@@ -1692,8 +1952,10 @@
       const filterDateStr = filterDateInput?.value || reportFilters.filterDateStr;
       const categoryFilter = document.getElementById('filter-category')?.value || reportFilters.categoryFilter;
       const tagFilter = document.getElementById('filter-tag')?.value || reportFilters.tagFilter;
+      const sortKey = document.getElementById('sort-key')?.value || reportFilters.sortKey;
+      const sortDirection = document.getElementById('sort-direction')?.value || reportFilters.sortDirection;
       
-      reportFilters = { type: currentType, filterType, filterDateStr, categoryFilter, tagFilter };
+      reportFilters = { type: currentType, filterType, filterDateStr, categoryFilter, tagFilter, sortKey, sortDirection };
       saveReportFilters(); 
 
       const summary = calculateFinancialSummary(currentType, filterType, filterDateStr);
@@ -1701,6 +1963,12 @@
       const ivaSummary = calculateFinancialSummary('activity', filterType, filterDateStr);
       
       let transactionsList = filterTransactionsByCriteria(summary.transactions, categoryFilter === 'all' ? null : categoryFilter, tagFilter === 'all' ? null : tagFilter);
+      
+      // NUOVO: Applicazione Ordinamento
+      transactionsList = sortTransactions(transactionsList);
+      
+      // NUOVO: Raggruppamento per Mese (per il dettaglio)
+      const groupedTransactions = groupTransactionsByMonth(transactionsList);
 
       const totalCash = cashSummary.totalIncomes + cashSummary.totalExpenses;
       const cashIncomePercent = totalCash>0 ? (cashSummary.totalIncomes/totalCash)*100 : 50;
@@ -1712,8 +1980,9 @@
 
       const KPIs = computeKPIs();
       
-      const cashFlowProj = calculateCashFlowProjection();
-      const projColor = cashFlowProj.projection >= 0 ? 'text-emerald-600' : 'text-red-600';
+      // NUOVO: Previsione Saldo a 6 Mesi
+      const sixMonthProjection = calculateSixMonthBalanceProjection();
+      const proj6MColor = sixMonthProjection.projection >= 0 ? 'text-emerald-600' : 'text-red-600';
 
       const averageMonthlyNet = (KPIs.avgIncome || 0) - (KPIs.avgExpense || 0);
       const targetDelta = averageMonthlyNet - (appData.monthlySavingsTarget || 0);
@@ -1804,7 +2073,7 @@
             </div>
           </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-dashed border-purple-500">
                   <p class="text-sm text-gray-500">Obiettivo Saldo Netto Mensile: ${appData.monthlySavingsTarget.toFixed(2)} ${symbol}</p>
                   <p class="text-xl font-bold ${targetColor}">
@@ -1814,9 +2083,16 @@
               </div>
               <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-dashed border-indigo-500">
                   <p class="text-sm text-gray-500">Proiezione Saldo cassa (90 Giorni)</p>
-                  <p class="text-xl font-bold ${projColor}">
-                      ${cashFlowProj.projection.toFixed(2)} ${symbol}
-                      <span class="text-xs text-gray-500">(Stimato)</span>
+                  <p class="text-xl font-bold ${proj6MColor}">
+                      ${calculateCashFlowProjection().projection.toFixed(2)} ${symbol}
+                      <span class="text-xs text-gray-500">(Stimato Prossimi 90gg)</span>
+                  </p>
+              </div>
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-dashed border-pink-500">
+                  <p class="text-sm text-gray-500">Proiezione Saldo Conto a 6 Mesi</p>
+                  <p class="text-xl font-bold ${proj6MColor}">
+                      ${sixMonthProjection.projection.toFixed(2)} ${symbol}
+                      <span class="text-xs text-gray-500">(Stimato alla fine di ${sixMonthProjection.details[5].label})</span>
                   </p>
               </div>
           </div>
@@ -1910,21 +2186,56 @@
               <h3 class="text-xl font-medium text-gray-800 dark:text-gray-200">Dettaglio Movimenti (${transactionsList.length})</h3>
               <input type="text" id="search" placeholder="🔍 Cerca (descrizione, categoria, tag, importo)" class="w-64 p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
             </div>
-            <div id="transactions-detail" class="space-y-3">
-              ${transactionsList.map(t=>`
-                <div class="flex justify-between items-center p-3 border-l-4 ${t.isIncome?'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/50 dark:border-emerald-700':'bg-red-50 border-red-300 dark:bg-red-900/50 dark:border-red-700'} rounded-lg">
-                  <div class="flex-grow">
-                    <p class="font-semibold text-sm">${getCategoryIcon(t.category)} ${new Date(t.date).toLocaleDateString('it-IT')}: ${t.description||''}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                      ${t.type==='activity'?'Attività':'Personale'} | IVA ${t.vatRate}% | Cat: ${t.category||'-'} 
-                      ${(t.tags||[]).length > 0 ? '| Tag: '+(t.tags||[]).join(', ') : ''}
-                    </p>
-                  </div>
-                  <div class="text-right ml-4">
-                    <p class="font-bold ${t.isIncome?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} ${symbol}</p>
-                  </div>
+            
+            <div class="flex space-x-4 mb-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ordina per</label>
+                    <select id="sort-key" onchange="renderPage('report')" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+                        <option value="date" ${sortKey === 'date' ? 'selected' : ''}>Data</option>
+                        <option value="gross" ${sortKey === 'gross' ? 'selected' : ''}>Importo</option>
+                        <option value="category" ${sortKey === 'category' ? 'selected' : ''}>Categoria</option>
+                    </select>
                 </div>
-              `).join('') || '<p class="text-gray-500">Nessuna transazione nel periodo.</p>'}
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Direzione</label>
+                    <select id="sort-direction" onchange="renderPage('report')" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+                        <option value="desc" ${sortDirection === 'desc' ? 'selected' : ''}>Decrescente</option>
+                        <option value="asc" ${sortDirection === 'asc' ? 'selected' : ''}>Crescente</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="transactions-detail" class="space-y-4">
+              ${Object.keys(groupedTransactions).length > 0 ? Object.keys(groupedTransactions).map(month => {
+                  const monthlyTx = groupedTransactions[month];
+                  const totalMonth = monthlyTx.reduce((sum, t) => sum + (t.gross * (t.isIncome ? 1 : -1)), 0);
+                  const monthColor = totalMonth >= 0 ? 'text-emerald-500' : 'text-red-500';
+
+                  return `
+                      <details class="bg-gray-50 dark:bg-gray-900 rounded-lg shadow-sm" open>
+                          <summary class="p-3 font-bold group-header flex justify-between items-center bg-gray-100 dark:bg-gray-700 rounded-lg">
+                              <span>${month} (${monthlyTx.length} movimenti)</span>
+                              <span class="${monthColor}">${totalMonth.toFixed(2)} ${symbol}</span>
+                          </summary>
+                          <div class="space-y-3 p-3">
+                              ${monthlyTx.map(t=>`
+                                <div class="flex justify-between items-center p-3 border-l-4 ${t.isIncome?'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/50 dark:border-emerald-700':'bg-red-50 border-red-300 dark:bg-red-900/50 dark:border-red-700'} rounded-lg">
+                                  <div class="flex-grow">
+                                    <p class="font-semibold text-sm">${getCategoryIcon(t.category)} ${new Date(t.date).toLocaleDateString('it-IT')}: ${t.description||''}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                      ${t.type==='activity'?'Attività':'Personale'} | IVA ${t.vatRate}% | Cat: ${t.category||'-'} 
+                                      ${(t.tags||[]).length > 0 ? '| Tag: '+(t.tags||[]).join(', ') : ''}
+                                    </p>
+                                  </div>
+                                  <div class="text-right ml-4">
+                                    <p class="font-bold ${t.isIncome?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} ${symbol}</p>
+                                  </div>
+                                </div>
+                              `).join('')}
+                          </div>
+                      </details>
+                  `;
+              }).join('') : '<p class="text-gray-500">Nessuna transazione nel periodo.</p>'}
             </div>
           </div>
         </div>
@@ -1972,25 +2283,30 @@
       renderPage('report');
     }
     
-    function calculateNextRecurrence(lastDateStr, frequency) {
+    function calculateNextRecurrence(lastDateStr, frequency, targetDate = new Date()) {
         let nextDate = new Date(lastDateStr);
-        nextDate.setDate(nextDate.getDate() + 1); 
-
-        if (frequency === 'monthly') {
-            const currentMonth = nextDate.getMonth();
-            nextDate.setMonth(currentMonth + 1);
-            if (nextDate.getMonth() !== (currentMonth + 1) % 12) {
-                nextDate.setDate(0); 
+        // Avanza la data finché non supera il targetDate
+        while (nextDate <= targetDate) {
+            if (frequency === 'monthly') {
+                const currentMonth = nextDate.getMonth();
+                nextDate.setMonth(currentMonth + 1);
+                if (nextDate.getMonth() !== (currentMonth + 1) % 12 && nextDate.getDate() > 28) {
+                    nextDate = new Date(nextDate.getFullYear(), nextDate.getMonth(), 0); 
+                }
+            } else if (frequency === 'quarterly') {
+                nextDate.setMonth(nextDate.getMonth() + 3);
+            } else if (frequency === 'annual') {
+                nextDate.setFullYear(nextDate.getFullYear() + 1);
+            } else {
+                return null;
             }
-        } else if (frequency === 'quarterly') {
-            nextDate.setMonth(nextDate.getMonth() + 3);
-        } else if (frequency === 'annual') {
-            nextDate.setFullYear(nextDate.getFullYear() + 1);
-        } else {
-            return null;
         }
-
-        return nextDate.toISOString().slice(0, 10);
+        
+        // Se la prossima ricorrenza è nel futuro, restituiscila.
+        if (nextDate.getTime() > new Date().getTime()) {
+            return nextDate.toISOString().slice(0, 10);
+        }
+        return null;
     }
 
 
@@ -2041,7 +2357,7 @@
         }
         
         let age = currentYear - bdDate.getFullYear();
-        if (new Date(bd.recurringDate).setFullYear(currentYear) > today) {
+        if (new Date(`${currentYear}-${bd.recurringDate}`).getTime() > today.getTime()) {
             age -= 1; 
         }
         
@@ -2195,6 +2511,41 @@
             }
         );
     }
+    
+    // NUOVO: Funzione per eliminare il profilo utente
+    function deleteCurrentUserProfile() {
+        const currentName = globalState.currentUser.name;
+        showModal('ELIMINA PROFILO UTENTE', 
+            `Sei sicuro di voler ELIMINARE PERMANENTEMENTE il profilo "${currentName}" e tutti i suoi dati?`, 
+            true, 
+            () => {
+                const userKey = globalState.currentUser.dataKey;
+                
+                // 1. Elimina i dati dal localStorage
+                localStorage.removeItem(userKey);
+                
+                // 2. Rimuovi l'utente dal globalState
+                globalState.users = globalState.users.filter(u => u.dataKey !== userKey);
+                
+                // 3. Seleziona l'utente di fallback (o esci se non ci sono utenti)
+                if (globalState.users.length > 0) {
+                    globalState.currentUser = globalState.users[0];
+                    sessionStorage.removeItem(SESSION_STORAGE_PIN_KEY); 
+                    saveGlobalState();
+                    // Ricarica e mostra la lock screen per il nuovo utente predefinito
+                    loadData();
+                    setupPinLock();
+                    showToast(`Profilo "${currentName}" eliminato. Accedi come ${globalState.currentUser.name}.`, 'red');
+                } else {
+                    // Non ci sono più utenti, resetta completamente
+                    localStorage.removeItem(GLOBAL_KEY);
+                    sessionStorage.removeItem(SESSION_STORAGE_PIN_KEY); 
+                    window.location.reload();
+                }
+            },
+            () => showToast('Eliminazione profilo annullata.')
+        );
+    }
 
 
     function renderSettingsPage(){
@@ -2208,7 +2559,7 @@
 
       return `
         <div class="space-y-6">
-          <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700 dark:text-gray-300">Gestione e Manutenzione Dati</h2>
+          <h2 class="text-2xl font-semibold border-b pb-2 text-gray-700 dark:text-gray-300">Gestione e Manutenzione Dati (${globalState.currentUser.name})</h2>
           
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
             <h3 class="text-xl font-medium text-orange-600">Parametri Fiscali (Simulazione)</h3>
@@ -2255,7 +2606,7 @@
                             <input type="number" id="budget-${cat.replace(/\s/g, '_')}" step="0.01" min="0" placeholder="0.00" value="${currentBudget}"
                                    class="p-2 border rounded-lg flex-1 dark:bg-gray-900 dark:border-gray-700 text-right" inputmode="decimal"/>
                             <button class="px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm" 
-                                    onclick="saveCategoryBudget('${cat}', document.getElementById('budget-${cat.replace(/\s/g, '_')}).value)">
+                                    onclick="saveCategoryBudget('${cat}', document.getElementById('budget-${cat.replace(/\s/g, '_')}').value)">
                                 Imposta
                             </button>
                         </div>
@@ -2307,7 +2658,7 @@
           
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
             <h3 class="text-xl font-medium text-purple-600">Gestione Sicurezza (PIN)</h3>
-            <p class="text-sm text-gray-700 dark:text-gray-300">PIN Attuale: <span class="font-bold">${appData.pin.replace(/./g, '•')}</span></p>
+            <p class="text-sm text-gray-700 dark:text-gray-300">PIN Attuale HASH: <span class="font-bold">${appData.pinHash.slice(0, 8)}...</span></p>
             <div>
               <label for="current-pin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PIN Attuale (Conferma)</label>
               <input type="password" id="current-pin" maxlength="4" placeholder="Inserisci PIN Attuale" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 mb-2"/>
@@ -2340,6 +2691,12 @@
               ${years.map(y=>`<option value="${y+1}">1 Gennaio ${y+1} (Elimina ${y} e precedenti)</option>`).join('')}
             </select>
             <button id="clean-btn" class="cta-button w-full bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600">Conferma Pulizia</button>
+          </div>
+
+          <div class="bg-red-50 dark:bg-red-900/50 p-5 rounded-xl card space-y-4 border-l-4 border-red-600">
+            <h3 class="text-xl font-medium text-red-600">Gestione Profilo Corrente</h3>
+            <p class="text-sm text-red-700 dark:text-red-300">ATTENZIONE: Questa azione eliminerà permanentemente l'intero profilo "${globalState.currentUser.name}" e i suoi dati dal dispositivo.</p>
+            <button onclick="deleteCurrentUserProfile()" class="cta-button w-full bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600">Elimina Profilo "${globalState.currentUser.name}"</button>
           </div>
         </div>
       `;
@@ -2381,7 +2738,10 @@
       const currentPin = currentPinInput?.value.trim();
       const newPin = newPinInput?.value.trim();
       
-      if (currentPin !== appData.pin) {
+      const expectedHash = appData.pinHash;
+      const enteredHash = hashPin(currentPin);
+      
+      if (enteredHash !== expectedHash) {
         showToast('Il PIN attuale non è corretto.','red');
         currentPinInput.value = '';
         return;
@@ -2391,9 +2751,11 @@
         showToast('Il nuovo PIN deve essere esattamente di 4 cifre.','red');
         return;
       }
+      
+      const newPinHash = hashPin(newPin);
 
-      showModal('Conferma Cambio PIN', `Sei sicuro di voler cambiare il PIN a: ${newPin}?`, true, () => {
-        appData.pin = newPin;
+      showModal('Conferma Cambio PIN', `Sei sicuro di voler cambiare il PIN?`, true, () => {
+        appData.pinHash = newPinHash;
         saveData();
         currentPinInput.value = '';
         newPinInput.value = '';
@@ -2446,6 +2808,12 @@
       else { qa.classList.add('hidden'); qa.classList.remove('flex','justify-center'); }
 
       document.getElementById('transaction-form')?.removeAttribute('data-transaction-id');
+      
+      // Assicurati che l'utente sia loggato prima di renderizzare
+      if (!sessionStorage.getItem(SESSION_STORAGE_PIN_KEY)) {
+          setupPinLock();
+          return;
+      }
 
       switch(pageId){
         case 'activity':
@@ -2462,7 +2830,7 @@
           area.innerHTML = renderReportPage();
           updateReportDateInput(); 
           
-          renderTrendChart(); // CHIAMATA AGGIORNATA
+          renderTrendChart(); 
           break;
         case 'reminders':
           area.innerHTML = renderRemindersPage();
@@ -2497,7 +2865,7 @@
     async function installServiceWorker(){
       if (!('serviceWorker' in navigator)) return;
       const swCode = `
-        const CACHE = 'finanza-smart-v5-pro'; // Cache version updated to v5
+        const CACHE = 'finanza-smart-v5-pro-multi'; 
         self.addEventListener('install', e=>{
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./'])));
           self.skipWaiting();
@@ -2536,21 +2904,10 @@
       document.getElementById('app')?.addEventListener('input', (e)=>{
         if (e.target && (e.target.id==='net-amount' || e.target.id==='vat-rate') && (currentPage==='activity'||currentPage==='personal')) calculateGross();
         
-        // NUOVO: Aggiorna la simulazione What-If in tempo reale
-        if (e.target && (e.target.id === 'additional-revenue' || e.target.id === 'additional-expense' || e.target.id === 'tax-rate-override' || e.target.id === 'profit-rate-override') && currentPage === 'activity') {
-             // La logica è gestita direttamente negli oninput, ma un renderPage aggiuntivo qui copre la navigazione/altri eventi.
-             // Rimuovendo l'input qui e lasciando solo negli oninput HTML si evita un doppio render.
-             // Lasciamo qui solo la logica di fallback per gli input generici.
-        }
+        // La logica What-If è gestita dagli oninput nel codice HTML per performance
       });
       document.getElementById('app')?.addEventListener('change', (e)=>{
         if (e.target && e.target.id==='vat-rate' && (currentPage==='activity'||currentPage==='personal')) calculateGross();
-        if (e.target && (e.target.id === 'tax-rate-override' || e.target.id === 'profit-rate-override') && currentPage === 'activity') {
-            // Assicurati che il valore sia null se il campo è vuoto
-            if (e.target.id === 'tax-rate-override') simulationState.taxRateOverride = e.target.value ? parseFloat(e.target.value) / 100 : null;
-            if (e.target.id === 'profit-rate-override') simulationState.profitRateOverride = e.target.value ? parseFloat(e.target.value) / 100 : null;
-            renderPage('activity');
-        }
       });
 
       const appContainer = document.getElementById('app');
@@ -2566,6 +2923,10 @@
               }
               if (e.target.id === 'filter-tag') {
                   reportFilters.tagFilter = e.target.value;
+                  renderPage('report');
+              }
+              // Listener per l'ordinamento dinamico
+              if (e.target.id === 'sort-key' || e.target.id === 'sort-direction') {
                   renderPage('report');
               }
           }
@@ -2584,27 +2945,61 @@
                 const currentReportType = document.getElementById('report-type').value;
                 const categoryFilter = document.getElementById('filter-category').value || 'all';
                 const tagFilter = document.getElementById('filter-tag').value || 'all';
+                const sortKey = document.getElementById('sort-key').value;
+                const sortDirection = document.getElementById('sort-direction').value;
+                
+                // Aggiorna filtri in memoria per la ricerca
+                reportFilters.sortKey = sortKey;
+                reportFilters.sortDirection = sortDirection;
                 
                 let results = calculateFinancialSummary(currentReportType, filterType, filterDate).transactions;
                 results = filterTransactionsByCriteria(results, categoryFilter === 'all' ? null : categoryFilter, tagFilter === 'all' ? null : tagFilter);
                 results = filterTransactions(query, results);
                 
+                results = sortTransactions(results); // Applica l'ordinamento
+                
                 const symbol = getCurrencySymbol();
                 
-                document.getElementById('transactions-detail').innerHTML = results.map(t=>`
-                  <div class="flex justify-between items-center p-3 border-l-4 ${t.isIncome?'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/50 dark:border-emerald-700':'bg-red-50 border-red-300 dark:bg-red-900/50 dark:border-red-700'} rounded-lg">
-                    <div class="flex-grow">
-                      <p class="font-semibold text-sm">${getCategoryIcon(t.category)} ${new Date(t.date).toLocaleDateString('it-IT')}: ${t.description||''}</p>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">
-                        ${t.type==='activity'?'Attività':'Personale'} | IVA ${t.vatRate}% | Cat: ${t.category||'-'} 
-                        ${(t.tags||[]).length > 0 ? '| Tag: '+(t.tags||[]).join(', ') : ''}
-                      </p>
-                    </div>
-                    <div class="text-right ml-4">
-                      <p class="font-bold ${t.isIncome?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} ${symbol}</p>
-                    </div>
-                  </div>
-                `).join('') || '<p class="text-gray-500">Nessuna transazione trovata.</p>';
+                // Applica il raggruppamento
+                const searchGrouped = groupTransactionsByMonth(results);
+                
+                let searchHtml = '';
+                if (Object.keys(searchGrouped).length > 0) {
+                    searchHtml = Object.keys(searchGrouped).map(month => {
+                        const monthlyTx = searchGrouped[month];
+                        const totalMonth = monthlyTx.reduce((sum, t) => sum + (t.gross * (t.isIncome ? 1 : -1)), 0);
+                        const monthColor = totalMonth >= 0 ? 'text-emerald-500' : 'text-red-500';
+                        
+                        return `
+                            <details class="bg-gray-50 dark:bg-gray-900 rounded-lg shadow-sm" open>
+                                <summary class="p-3 font-bold group-header flex justify-between items-center bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                    <span>${month} (${monthlyTx.length} movimenti)</span>
+                                    <span class="${monthColor}">${totalMonth.toFixed(2)} ${symbol}</span>
+                                </summary>
+                                <div class="space-y-3 p-3">
+                                    ${monthlyTx.map(t=>`
+                                        <div class="flex justify-between items-center p-3 border-l-4 ${t.isIncome?'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/50 dark:border-emerald-700':'bg-red-50 border-red-300 dark:bg-red-900/50 dark:border-red-700'} rounded-lg">
+                                          <div class="flex-grow">
+                                            <p class="font-semibold text-sm">${getCategoryIcon(t.category)} ${new Date(t.date).toLocaleDateString('it-IT')}: ${t.description||''}</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                              ${t.type==='activity'?'Attività':'Personale'} | IVA ${t.vatRate}% | Cat: ${t.category||'-'} 
+                                              ${(t.tags||[]).length > 0 ? '| Tag: '+(t.tags||[]).join(', ') : ''}
+                                            </p>
+                                          </div>
+                                          <div class="text-right ml-4">
+                                            <p class="font-bold ${t.isIncome?'text-emerald-700 dark:text-emerald-300':'text-red-700 dark:text-red-300'}">${t.gross.toFixed(2)} ${symbol}</p>
+                                          </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
+                        `;
+                    }).join('');
+                } else {
+                    searchHtml = '<p class="text-gray-500">Nessuna transazione trovata.</p>';
+                }
+                
+                document.getElementById('transactions-detail').innerHTML = searchHtml;
               }
           }
       });
