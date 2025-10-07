@@ -526,15 +526,19 @@
       setTimeout(()=>{ toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 2500);
     }
 
-    // --- QUICK register (omitted for brevity) ---
+    // --- QUICK register (CORRETTO per tipo Entrata/Uscita) ---
     function quickRegister(isIncomeString) {
       const isIncome = isIncomeString === 'true';
       document.getElementById('transaction-form-anchor')?.scrollIntoView({behavior:'smooth'});
+      
       const isIncomeSelect = document.getElementById('isIncome');
       if (isIncomeSelect){
         isIncomeSelect.value = isIncomeString;
+        // La correzione più importante: forzare il dispatch di 'change' sull'elemento principale
+        // per attivare setupIncomeTypeControl e updateVisibility nella pagina corrente.
         isIncomeSelect.dispatchEvent(new Event('change'));
       }
+      
       const form = document.getElementById('transaction-form');
       if (form){
         form.removeAttribute('data-transaction-id'); form.reset();
@@ -546,8 +550,15 @@
         document.getElementById('net-amount').value = '0.00';
         calculateGross();
       }
+      
+      // Se è un'entrata Attività, forza su Fattura (o mantieni il controllo attivo)
       const incomeTypeSelect = document.getElementById('incomeType');
-      if (incomeTypeSelect && isIncome){ incomeTypeSelect.value='Fattura (Cliente)'; incomeTypeSelect.dispatchEvent(new Event('change')); }
+      const currentScope = currentPage;
+      if (incomeTypeSelect && isIncome && currentScope === 'activity'){ 
+          incomeTypeSelect.value='Fattura (Cliente)'; 
+          incomeTypeSelect.dispatchEvent(new Event('change')); 
+      }
+      
       showToast(isIncome?'Modulo pronto per Entrata!':'Modulo pronto per Uscita!','green');
     }
 
@@ -1073,6 +1084,7 @@
       }
       
       // CORREZIONE FORNITORE: Includi esplicitamente le Uscite (Fornitore) indipendentemente dal sottotipo Entrata
+      // Se è un'uscita (Attività o Personale) o un'entrata Attività (Fattura)
       const isActivityExpense = !isIncome && data.dataType === 'activity';
       const isPersonalTx = data.dataType === 'personal';
       const isActivityIncomeFattura = isIncome && data.dataType === 'activity' && data.incomeType !== 'Incasso/Corrispettivo';
@@ -1524,6 +1536,7 @@
       function setupIncomeTypeControl() {
         const isIncome=isIncomeSelect.value==='true';
         const ctl=document.getElementById('income-type-control');
+        // Mostra/Nascondi il controllo del Sottotipo solo se siamo in modalità Attività
         if (scope==='activity' && ctl){ ctl.classList.toggle('hidden', !isIncome); }
         updateVisibility();
       }
@@ -2465,30 +2478,42 @@
     function calculateNextRecurrence(lastDateStr, frequency, targetDate = new Date()) {
         let dateToStartFrom = new Date();
         const originalDay = new Date(lastDateStr).getDate();
-        
+        const today = new Date(); // Definisci oggi per i confronti
+
         let currentMonth = dateToStartFrom.getMonth();
         let currentYear = dateToStartFrom.getFullYear();
         let nextRecurrence = new Date(currentYear, currentMonth, originalDay); 
 
+        // 1. Trova la prima ricorrenza FUTURA/ODIERNA
         if (nextRecurrence < today) {
+            // Se la ricorrenza di questo mese è già passata, o se la ricorrenza originale è nel passato, avanza di un ciclo
             if (frequency === 'monthly') currentMonth += 1;
             else if (frequency === 'quarterly') currentMonth += 3;
             else if (frequency === 'annual') currentYear += 1;
-        }
-
-        nextRecurrence = new Date(currentYear, currentMonth, originalDay);
+        } 
         
+        // Calcola la prima ricorrenza futura
+        nextRecurrence = new Date(currentYear, currentMonth, originalDay);
+        // Gestisce il caso di giorni che non esistono nel mese (es. 31 su Aprile)
+        if (nextRecurrence.getDate() !== originalDay) {
+            nextRecurrence = new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth() + 1, 0); // Vai all'ultimo giorno del mese
+        }
+        
+        // 2. Avanza finché non raggiunge o supera il Target Date (per proiezioni a 6 mesi)
         while (nextRecurrence < targetDate) {
             if (frequency === 'monthly') currentMonth += 1;
             else if (frequency === 'quarterly') currentMonth += 3;
             else if (frequency === 'annual') currentYear += 1;
+            
             nextRecurrence = new Date(currentYear, currentMonth, originalDay);
+            // Gestisce la fine del mese
             if (nextRecurrence.getDate() !== originalDay) {
-                 nextRecurrence = new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth(), 0);
+                 nextRecurrence = new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth() + 1, 0);
             }
         }
         
-        if (nextRecurrence.getTime() >= new Date().getTime()) {
+        // Restituisci solo se la data è >= oggi (utile per la logica recurringExpenses)
+        if (nextRecurrence.getTime() >= today.getTime()) {
             return nextRecurrence.toISOString().slice(0, 10);
         }
         return null;
