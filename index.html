@@ -204,7 +204,7 @@
         monthlySavingsTarget: 0,
         categoryBudgets: {},
         fiscalParams: DEFAULT_FISCAL_PARAMS,
-        currentBankBalance: 0 // NUOVO: Saldo iniziale di cassa
+        currentBankBalance: 0 
     };
     let currentPage = 'activity';
     let reportFilters = { 
@@ -327,7 +327,7 @@
             appData.monthlySavingsTarget ||= 0;
             appData.categoryBudgets ||= {}; 
             appData.fiscalParams = { ...DEFAULT_FISCAL_PARAMS, ...appData.fiscalParams };
-            appData.currentBankBalance ||= 0; // Nuovo campo
+            appData.currentBankBalance ||= 0; 
             
             document.getElementById('header-subtitle').textContent = `Profilo: ${user.name}`;
         } catch(e){ 
@@ -835,7 +835,6 @@
             let monthFlow = avgMonthlyNet; 
 
             appData.recurringExpenses.forEach(r => {
-                // Modifica per usare la data di inizio mese come target
                 const nextDateStr = calculateNextRecurrence(r.lastDate, r.frequency, date);
                 if (nextDateStr && new Date(nextDateStr).getMonth() === date.getMonth() && new Date(nextDateStr).getFullYear() === date.getFullYear()) {
                     const isIncome = appData.invoices.some(i => i.description === r.description);
@@ -866,17 +865,16 @@
         };
     }
     
-    // NUOVO: Calcolo Punteggio di Salute Finanziaria (FHS)
+    // Calcolo Punteggio di Salute Finanziaria (FHS)
     function calculateFinancialHealthScore() {
         const kpis = computeKPIs();
-        const summary = calculateFinancialSummary('global', 'all', 'all');
         const monthsAutonomy = calculateLiquidityBuffer();
         
         let score = 0;
         let maxScore = 100;
         
         // 1. Tasso di Risparmio (Max 30 punti)
-        const savingsRateScore = Math.min(kpis.savingRate, 30); // Max 30% per il punteggio
+        const savingsRateScore = Math.min(kpis.savingRate, 30); 
         score += savingsRateScore;
         
         // 2. Liquidità / Autonomia (Max 30 punti)
@@ -896,7 +894,7 @@
             const budget = appData.categoryBudgets[cat] || 0;
             const spent = monthSummary.transactions.filter(t => !t.isIncome && t.type === 'personal' && t.category === cat).reduce((s, t) => s + t.gross, 0);
             if (budget > 0 && spent > budget) {
-                budgetScore -= 5; // Penalità per ogni budget sforato
+                budgetScore -= 5; 
             }
         });
         score += Math.max(0, budgetScore);
@@ -915,21 +913,21 @@
         };
     }
     
-    // NUOVO: Calcolo Buffer Liquidità (Mesi di autonomia)
+    // Calcolo Buffer Liquidità (Mesi di autonomia)
     function calculateLiquidityBuffer() {
         const kpis = computeKPIs();
-        const avgMonthlyExpense = kpis.avgExpense; // Usa l'uscita media globale
+        const avgMonthlyExpense = kpis.avgExpense; 
         
-        const summary = calculateFinancialSummary('global', 'all', 'all');
-        const currentLiquidita = (parseFloat(appData.currentBankBalance) || 0) + summary.netBalance;
+        const summarySinceStart = calculateFinancialSummary('global', 'all', 'all');
+        const currentLiquidita = (parseFloat(appData.currentBankBalance) || 0) + summarySinceStart.netBalance;
         
-        if (avgMonthlyExpense <= 0) return 99; // Se le spese sono 0, l'autonomia è infinita
+        if (avgMonthlyExpense <= 0) return 99; 
         
         const months = currentLiquidita / avgMonthlyExpense;
         return +months.toFixed(1);
     }
     
-    // NUOVO: Analisi Picchi di Spesa (Media Mobile)
+    // Analisi Picchi di Spesa (Media Mobile)
     function analyzeExpenseSpikes() {
         const expenses = appData.expenses.filter(e => e.type === 'personal');
         const monthlyExpenses = {};
@@ -945,14 +943,13 @@
         const currentMonth = new Date().toISOString().slice(0, 7);
         const alerts = [];
 
-        if (months.length < 3) return []; // Necessaria almeno una media a 3 mesi
+        if (months.length < 3) return []; 
 
         for (const cat of appData.categories) {
-            if (!monthlyExpenses[currentMonth]?.[cat]) continue; // Nessuna spesa questo mese per la categoria
+            if (!monthlyExpenses[currentMonth]?.[cat]) continue; 
             
             const currentSpent = monthlyExpenses[currentMonth][cat];
             
-            // Trova gli ultimi 3 mesi con dati per la media mobile
             const pastMonths = months.filter(m => m < currentMonth).slice(-3);
             if (pastMonths.length < 3) continue; 
 
@@ -1074,9 +1071,16 @@
       if (!isIncome && data.dataType === 'personal' && updatedItem.description) {
           trackRecurringExpense(updatedItem.description, updatedItem.gross, updatedItem.date);
       }
+      
+      // CORREZIONE FORNITORE: Includi esplicitamente le Uscite (Fornitore) indipendentemente dal sottotipo Entrata
+      const isActivityExpense = !isIncome && data.dataType === 'activity';
+      const isPersonalTx = data.dataType === 'personal';
+      const isActivityIncomeFattura = isIncome && data.dataType === 'activity' && data.incomeType !== 'Incasso/Corrispettivo';
 
-      const isFatturaOrPersonal = (isIncome && data.dataType==='activity' && data.incomeType==='Fattura (Cliente)') || data.dataType==='personal';
-      const shouldSaveContact = isFatturaOrPersonal && updatedItem.description?.trim() && updatedItem.description.trim() !== 'Corrispettivi/Incasso Giornaliero';
+      const shouldSaveContact = (isActivityExpense || isPersonalTx || isActivityIncomeFattura) && 
+                                updatedItem.description?.trim() && 
+                                updatedItem.description.trim() !== 'Corrispettivi/Incasso Giornaliero';
+
 
       if (shouldSaveContact){
         const contactName = updatedItem.description.trim(); 
@@ -1587,7 +1591,7 @@
             return bdRecurrence.toISOString().slice(0, 10) === todayStr;
         });
         
-        // NUOVO: Aggiungi gli alert di spesa anomala
+        // Aggiungi gli alert di spesa anomala
         const expenseSpikes = type === 'personal' ? analyzeExpenseSpikes() : [];
         
         return { summary, upcomingReminders, upcomingBirthdays, expenseSpikes };
@@ -1616,7 +1620,6 @@
       const symbol = getCurrencySymbol();
       const ivaStatus = summary.ivaBalance>=0?'IVA da Versare':'IVA a Credito';
       const ivaColor = summary.ivaBalance>=0?'text-red-600':'text-blue-600';
-      const balanceColor = summary.netBalance>=0?'text-emerald-600':'text-red-600';
       
       const summarySinceStart = calculateFinancialSummary('global', 'all', 'all');
       const totalBalance = (parseFloat(appData.currentBankBalance) || 0) + summarySinceStart.netBalance;
@@ -1687,14 +1690,12 @@
       // NUOVO: Consigli Fiscali Intelligenti
       let fiscalAdvice = '';
       if (isActivity && fiscalSim) {
-          const expectedTaxable = fiscalSim.totalRicavi * appData.fiscalParams.profitRate;
-          const currentTotalExpenses = calculateFinancialSummary('activity', 'all', 'all').totalExpenses;
           const projection = calculateAnnualFiscalProjection();
-
+          
           if (fiscalSim.totalCosti > projection.projectedRevenue * 0.95) {
-              fiscalAdvice = '<p class="text-sm text-red-500 font-semibold mt-2">🚨 Allerta: La tua spesa proiettata è molto alta (oltre 95% del ricavo). Se sei Forfettario, verifica la congruità con il tuo commercialista.</p>';
-          } else if (fiscalSim.totaleTasse > 0 && currentTotalExpenses > fiscalSim.totalRicavi * (1 - appData.fiscalParams.profitRate) * 1.25) {
-               fiscalAdvice = '<p class="text-sm text-orange-500 font-semibold mt-2">💡 Suggerimento Fiscale: Le tue spese deducibili/detraibili sembrano molto alte per il tuo Coeff. di Redditività. Valuta il Regime Ordinario per l\'anno prossimo.</p>';
+              fiscalAdvice = '<p class="p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg text-sm border-l-4 border-yellow-500 mt-3"><span class="font-bold">🚨 Allerta Costi:</span> La tua spesa Attività proiettata è molto alta (oltre 95% del ricavo). Se sei Forfettario, verifica la congruità con il commercialista.</p>';
+          } else if (fiscalSim.totalRicavi > 0 && fiscalSim.totalCosti > fiscalSim.totalRicavi * (1 - appData.fiscalParams.profitRate) * 1.25) {
+               fiscalAdvice = '<p class="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg text-sm border-l-4 border-indigo-500 mt-3"><span class="font-bold">💡 Suggerimento Fiscale:</span> Le tue spese (non inerenti al coefficiente) sembrano molto alte. Valuta il Regime Ordinario per l\'anno prossimo, potresti risparmiare sulle tasse.</p>';
           }
       }
       
@@ -1710,6 +1711,14 @@
               `).join('');
           }
       }
+      
+      const adviceSection = (fiscalAdvice || personalAdvice) ? `
+          <div class="space-y-4">
+              <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300">Consigli Intelligenti</h3>
+              ${fiscalAdvice}
+              ${personalAdvice}
+          </div>
+      ` : '';
 
 
       const fiscalSection = isActivity && fiscalSim ? `
@@ -1790,7 +1799,6 @@
                 </div>
             </div>
             <p class="text-xs text-gray-500 mt-2">${fiscalSim.note}</p>
-            ${fiscalAdvice}
         </div>
       ` : '';
 
@@ -1802,6 +1810,8 @@
           
           ${fiscalSection}
           
+          ${adviceSection}
+
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-indigo-500">
                 <p class="text-sm text-gray-500">Punteggio Salute Finanziaria</p>
@@ -1825,7 +1835,6 @@
                     ${todayData.upcomingBirthdays.length > 0 ? `🎂 ${todayData.upcomingBirthdays.length} compleanno/i oggi!` : ''}
                     ${todayData.upcomingReminders.length === 0 && todayData.upcomingBirthdays.length === 0 ? 'Nessun evento o scadenza urgente.' : ''}
                 </p>
-                ${personalAdvice}
             </div>
           </div>
           
@@ -2454,41 +2463,6 @@
     }
     
     function calculateNextRecurrence(lastDateStr, frequency, targetDate = new Date()) {
-        let nextDate = new Date(lastDateStr);
-        // Avanza la data finché non supera il targetDate, ma solo al mese successivo
-        // Questo è per la logica di previsione a 6 mesi, se la data di ricorrenza è passata
-        
-        let initialPass = true;
-        
-        // Simula la ricorrenza
-        while (initialPass || nextDate <= targetDate) {
-            if (!initialPass) {
-                if (frequency === 'monthly') {
-                    const currentMonth = nextDate.getMonth();
-                    nextDate.setMonth(currentMonth + 1);
-                    if (nextDate.getMonth() !== (currentMonth + 1) % 12 && nextDate.getDate() > 28) {
-                        nextDate = new Date(nextDate.getFullYear(), nextDate.getMonth(), 0); 
-                    }
-                } else if (frequency === 'quarterly') {
-                    nextDate.setMonth(nextDate.getMonth() + 3);
-                } else if (frequency === 'annual') {
-                    nextDate.setFullYear(nextDate.getFullYear() + 1);
-                } else {
-                    return null;
-                }
-            }
-            initialPass = false;
-            
-            // Fissa il giorno di ricorrenza al giorno della data originale, a meno di fine mese
-            const originalDay = new Date(lastDateStr).getDate();
-            if (nextDate.getDate() !== originalDay) {
-                 nextDate.setDate(originalDay);
-            }
-        }
-        
-        // La logica sopra è complicata per via della ricorsività su se stesso.
-        // Semplicemente, calcoliamo la prossima data FUTURA rispetto a OGGI, che poi usiamo come base per le proiezioni.
-        
         let dateToStartFrom = new Date();
         const originalDay = new Date(lastDateStr).getDate();
         
@@ -2496,31 +2470,24 @@
         let currentYear = dateToStartFrom.getFullYear();
         let nextRecurrence = new Date(currentYear, currentMonth, originalDay); 
 
-        // Se la ricorrenza di questo mese è già passata, o se la ricorrenza originale è nel passato
         if (nextRecurrence < today) {
             if (frequency === 'monthly') currentMonth += 1;
             else if (frequency === 'quarterly') currentMonth += 3;
             else if (frequency === 'annual') currentYear += 1;
-        } else {
-            // E' nel futuro di questo mese (o oggi). Questa è la prima ricorrenza.
         }
-        
-        // Ricalcola la prima ricorrenza FUTURA
+
         nextRecurrence = new Date(currentYear, currentMonth, originalDay);
         
-        // Avanza finché non supera il Target Date per la previsione a 6 mesi
         while (nextRecurrence < targetDate) {
             if (frequency === 'monthly') currentMonth += 1;
             else if (frequency === 'quarterly') currentMonth += 3;
             else if (frequency === 'annual') currentYear += 1;
             nextRecurrence = new Date(currentYear, currentMonth, originalDay);
-            // gestisce la fine del mese:
             if (nextRecurrence.getDate() !== originalDay) {
                  nextRecurrence = new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth(), 0);
             }
         }
         
-        // Se la prossima ricorrenza è nel futuro, restituiscila.
         if (nextRecurrence.getTime() >= new Date().getTime()) {
             return nextRecurrence.toISOString().slice(0, 10);
         }
@@ -2709,7 +2676,7 @@
         const newBalance = parseFloat(input?.value) || 0;
 
         showModal('Aggiorna Saldo Iniziale', 
-            `Impostare il Saldo Iniziale del tuo conto su: ${newBalance.toFixed(2)} ${getCurrencySymbol()}?`, 
+            `Impostare il Saldo Conto Base su: ${newBalance.toFixed(2)} ${getCurrencySymbol()}? (Il saldo totale sarà ricalcolato)`, 
             true, 
             () => {
                 appData.currentBankBalance = newBalance;
@@ -3167,6 +3134,8 @@
 
       document.getElementById('app')?.addEventListener('input', (e)=>{
         if (e.target && (e.target.id==='net-amount' || e.target.id==='vat-rate') && (currentPage==='activity'||currentPage==='personal')) calculateGross();
+        
+        // La logica What-If è gestita dagli oninput nel codice HTML per performance
       });
       document.getElementById('app')?.addEventListener('change', (e)=>{
         if (e.target && e.target.id==='vat-rate' && (currentPage==='activity'||currentPage==='personal')) calculateGross();
@@ -3298,7 +3267,7 @@
       installManifest();
       installServiceWorker();
       
-      // NUOVO: Gestione Shortcut PWA
+      // Gestione Shortcut PWA
       const urlParams = new URLSearchParams(window.location.search);
       const shortcut = urlParams.get('shortcut');
       if (shortcut) {
