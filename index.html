@@ -184,10 +184,10 @@
         'annuale': 'annual'
     };
 
-    // NUOVO: Stato globale per la gestione degli utenti e dei profili
+    // Stato globale per la gestione degli utenti e dei profili
     let globalState = {
         currentUser: null,
-        users: [] // [{ id: 1, name: 'Default', dataKey: '...', pinHash: '...' }]
+        users: [] 
     };
 
     let appData = { 
@@ -199,11 +199,12 @@
         recurringExpenses: [], 
         lastId:0, 
         categories: DEFAULT_CATEGORIES.slice(), 
-        pinHash: '', // NON salviamo più il PIN in chiaro
+        pinHash: '', 
         currencySymbol: '€',
         monthlySavingsTarget: 0,
         categoryBudgets: {},
-        fiscalParams: DEFAULT_FISCAL_PARAMS
+        fiscalParams: DEFAULT_FISCAL_PARAMS,
+        currentBankBalance: 0 // NUOVO: Saldo iniziale di cassa
     };
     let currentPage = 'activity';
     let reportFilters = { 
@@ -212,8 +213,8 @@
         filterDateStr: String(new Date().getFullYear()),
         categoryFilter: 'all',
         tagFilter: 'all',
-        sortKey: 'date',        // NUOVO: Chiave per l'ordinamento
-        sortDirection: 'desc'   // NUOVO: Direzione per l'ordinamento
+        sortKey: 'date',        
+        sortDirection: 'desc'   
     };
 
     let simulationState = {
@@ -245,15 +246,14 @@
     }
 
 
-    // --- HASHING e SICUREZZA (NUOVO) ---
-    // Simulazione di Hashing veloce per non dipendere da librerie esterne
+    // --- HASHING e SICUREZZA ---
     function hashPin(pin) {
         let hash = 0;
         if (pin.length === 0) return hash;
         for (let i = 0; i < pin.length; i++) {
             const char = pin.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
-            hash |= 0; // Convert to 32bit integer
+            hash |= 0; 
         }
         return String(hash);
     }
@@ -280,7 +280,6 @@
                 globalState = JSON.parse(raw);
             }
             if (globalState.users.length === 0) {
-                // Primo avvio: crea utente di default
                 const defaultPinHash = hashPin('1234');
                 globalState.users = [{
                     id: 1,
@@ -308,7 +307,7 @@
     function loadData() {
         loadGlobalState();
         const user = globalState.currentUser;
-        if (!user) return; // Non caricare se non c'è utente selezionato
+        if (!user) return; 
 
         try {
             const raw = localStorage.getItem(user.dataKey);
@@ -323,18 +322,17 @@
             appData.recurringExpenses ||= []; 
             appData.categories ||= DEFAULT_CATEGORIES.slice();
             appData.lastId ||= 0;
-            appData.pinHash = user.pinHash; // Sovrascrive il PIN in chiaro con l'hash
+            appData.pinHash = user.pinHash; 
             appData.currencySymbol ||= '€';
             appData.monthlySavingsTarget ||= 0;
             appData.categoryBudgets ||= {}; 
             appData.fiscalParams = { ...DEFAULT_FISCAL_PARAMS, ...appData.fiscalParams };
+            appData.currentBankBalance ||= 0; // Nuovo campo
             
-            // Aggiorna sottotitolo Header
             document.getElementById('header-subtitle').textContent = `Profilo: ${user.name}`;
         } catch(e){ 
             console.error(e); 
             showToast('Errore nel caricamento dati utente','red'); 
-            // Inizializza appData per l'utente corrente in caso di fallimento
             saveData();
         }
     }
@@ -343,16 +341,14 @@
         const user = globalState.currentUser;
         if (!user) return;
         try{ 
-            // Aggiorna l'hash PIN nel globalState prima di salvare appData
             const userIndex = globalState.users.findIndex(u => u.dataKey === user.dataKey);
             if (userIndex > -1) {
                 globalState.users[userIndex].pinHash = appData.pinHash;
                 saveGlobalState();
             }
             
-            // Salva i dati specifici dell'utente
             const dataToSave = { ...appData };
-            delete dataToSave.pinHash; // Rimuovi l'hash da appData prima del salvataggio nel suo localStorage
+            delete dataToSave.pinHash; 
             localStorage.setItem(user.dataKey, JSON.stringify(dataToSave)); 
         }catch(e){ 
             console.error(e); 
@@ -388,7 +384,6 @@
             setTimeout(() => { document.getElementById('pin-1')?.focus(); }, 100); 
         } else {
             pinModal.style.display = 'none';
-            // Ricarica i dati dell'utente corrente (già fatto in loadData)
             const initialPage = appData.invoices.length>0 || appData.expenses.length>0 ? 'report':'activity';
             initializeFiscalReminders(); 
             renderPage(initialPage);
@@ -404,8 +399,8 @@
         select.onchange = () => {
             const selectedKey = select.value;
             globalState.currentUser = globalState.users.find(u => u.dataKey === selectedKey);
-            loadData(); // Carica i dati del nuovo utente
-            setupPinLock(); // Reimposta l'interfaccia PIN
+            loadData(); 
+            setupPinLock(); 
         };
     }
     
@@ -441,17 +436,15 @@
         globalState.users.push(newUser);
         globalState.currentUser = newUser;
         
-        // Inizializza appData per il nuovo utente (con il nuovo pinHash) e salva
-        appData = { ...appData, ...{ // Reset dati per nuovo utente, mantenendo solo i defaults
+        appData = { ...appData, ...{ 
             invoices:[], expenses:[], reminders:[], contacts:[], birthdays: [],
             recurringExpenses: [], lastId:0, categories: DEFAULT_CATEGORIES.slice(), 
             pinHash: newPinHash, currencySymbol: '€', monthlySavingsTarget: 0,
-            categoryBudgets: {}, fiscalParams: DEFAULT_FISCAL_PARAMS
+            categoryBudgets: {}, fiscalParams: DEFAULT_FISCAL_PARAMS, currentBankBalance: 0
         }};
-        saveData(); // Salva i dati di default per il nuovo utente
+        saveData(); 
         saveGlobalState(); 
 
-        // Accedi
         sessionStorage.setItem(SESSION_STORAGE_PIN_KEY, 'true');
         document.getElementById('pin-lock-modal').style.display = 'none';
         initializeFiscalReminders(); 
@@ -497,7 +490,6 @@
         sessionStorage.setItem(SESSION_STORAGE_PIN_KEY, 'true');
         document.getElementById('pin-lock-modal').style.display = 'none';
         
-        // Carica i dati dell'utente appena sbloccato (se non è stato fatto prima)
         loadData(); 
         
         const initialPage = appData.invoices.length>0 || appData.expenses.length>0 ? 'report':'activity';
@@ -599,7 +591,7 @@
         });
     }
     
-    // NUOVO: Funzione di ordinamento centralizzata
+    // Funzione di ordinamento centralizzata
     function sortTransactions(transactions) {
         const { sortKey, sortDirection } = reportFilters;
         if (!sortKey || sortKey === 'none') return transactions;
@@ -626,7 +618,7 @@
         });
     }
     
-    // --- Core calculations (omitted for brevity) ---
+    // --- Core calculations (START) ---
     function calculateDailyNetBalance(type) {
         const days = 7;
         const today = new Date();
@@ -741,7 +733,6 @@
             .filter(e => e.type === 'activity' && new Date(e.date).getFullYear() === currentYear)
             .reduce((sum, e) => sum + (e.gross || 0), 0) / historicalMonths;
 
-        // Proiezione Ricavi e Costi a Fine Anno
         const projectedRevenue = yearSummary.totalIncomes + (avgMonthlyRevenue * monthsRemaining);
         const projectedExpenses = yearSummary.totalExpenses + (avgMonthlyExpenses * monthsRemaining);
 
@@ -793,7 +784,6 @@
         };
     }
 
-
     function calculateIvaQuarterly(year, quarter) {
         // Mesi inclusi nel trimestre (0-11)
         const startMonth = (quarter - 1) * 3;
@@ -823,16 +813,18 @@
         return { ivaAddebito, ivaCredito, ivaBalance: +ivaBalance.toFixed(2) };
     }
     
-    // NUOVO: Calcolo Proiezione Saldo Conto a 6 Mesi
+    // Calcolo Proiezione Saldo Conto a 6 Mesi
     function calculateSixMonthBalanceProjection() {
         const monthsToProject = 6;
         const today = new Date();
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         
-        let currentBalance = calculateFinancialSummary('global', 'all', 'all').netBalance;
+        // Calcola il saldo corrente aggiungendo il Saldo Netto delle transazioni al Saldo iniziale.
+        const summarySinceStart = calculateFinancialSummary('global', 'all', 'all');
+        let currentBalance = (parseFloat(appData.currentBankBalance) || 0) + summarySinceStart.netBalance;
+        
         const monthlyProjection = [];
 
-        // 1. Calcola media mensile Netta (per stimare il trend di crescita/decrescita)
         const kpis = computeKPIs();
         const avgMonthlyNet = kpis.avgIncome - kpis.avgExpense;
         
@@ -840,20 +832,17 @@
             const date = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth() + m, 1);
             const monthLabel = date.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' });
             
-            let monthFlow = avgMonthlyNet; // Inizia con la media storica
+            let monthFlow = avgMonthlyNet; 
 
-            // 2. Aggiusta con Ricorrenze e Promemoria noti nel mese
-            
-            // A. Ricorrenze (già tracciate)
             appData.recurringExpenses.forEach(r => {
+                // Modifica per usare la data di inizio mese come target
                 const nextDateStr = calculateNextRecurrence(r.lastDate, r.frequency, date);
-                if (nextDateStr && new Date(nextDateStr).getMonth() === date.getMonth()) {
+                if (nextDateStr && new Date(nextDateStr).getMonth() === date.getMonth() && new Date(nextDateStr).getFullYear() === date.getFullYear()) {
                     const isIncome = appData.invoices.some(i => i.description === r.description);
                     monthFlow += isIncome ? r.lastAmount : -r.lastAmount;
                 }
             });
 
-            // B. Promemoria/Scadenze (Pagamenti)
             appData.reminders.forEach(r => {
                 const rDate = new Date(r.date);
                 if (!r.paid && rDate.getFullYear() === date.getFullYear() && rDate.getMonth() === date.getMonth()) {
@@ -861,6 +850,7 @@
                 }
             });
             
+            // Applica il flusso netto al saldo
             currentBalance += monthFlow;
             
             monthlyProjection.push({
@@ -874,6 +864,117 @@
             projection: monthlyProjection[monthsToProject - 1]?.balance || currentBalance,
             details: monthlyProjection
         };
+    }
+    
+    // NUOVO: Calcolo Punteggio di Salute Finanziaria (FHS)
+    function calculateFinancialHealthScore() {
+        const kpis = computeKPIs();
+        const summary = calculateFinancialSummary('global', 'all', 'all');
+        const monthsAutonomy = calculateLiquidityBuffer();
+        
+        let score = 0;
+        let maxScore = 100;
+        
+        // 1. Tasso di Risparmio (Max 30 punti)
+        const savingsRateScore = Math.min(kpis.savingRate, 30); // Max 30% per il punteggio
+        score += savingsRateScore;
+        
+        // 2. Liquidità / Autonomia (Max 30 punti)
+        let liquidityScore = 0;
+        if (monthsAutonomy >= 6) liquidityScore = 30;
+        else if (monthsAutonomy >= 3) liquidityScore = 20;
+        else if (monthsAutonomy >= 1) liquidityScore = 10;
+        score += liquidityScore;
+        
+        // 3. Copertura Budget (Max 20 punti)
+        let budgetScore = 20;
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const monthSummary = calculateFinancialSummary('personal', 'month', currentMonth);
+        const budgetItems = Object.keys(appData.categoryBudgets);
+        
+        budgetItems.forEach(cat => {
+            const budget = appData.categoryBudgets[cat] || 0;
+            const spent = monthSummary.transactions.filter(t => !t.isIncome && t.type === 'personal' && t.category === cat).reduce((s, t) => s + t.gross, 0);
+            if (budget > 0 && spent > budget) {
+                budgetScore -= 5; // Penalità per ogni budget sforato
+            }
+        });
+        score += Math.max(0, budgetScore);
+        
+        // 4. Saldo Proiettato (Max 20 punti)
+        const sixMonthProj = calculateSixMonthBalanceProjection().projection;
+        let projScore = 0;
+        if (sixMonthProj >= 1000) projScore = 20;
+        else if (sixMonthProj >= 0) projScore = 10;
+        else projScore = 0;
+        score += projScore;
+
+        return {
+            score: Math.round(Math.min(score, maxScore)),
+            max: maxScore
+        };
+    }
+    
+    // NUOVO: Calcolo Buffer Liquidità (Mesi di autonomia)
+    function calculateLiquidityBuffer() {
+        const kpis = computeKPIs();
+        const avgMonthlyExpense = kpis.avgExpense; // Usa l'uscita media globale
+        
+        const summary = calculateFinancialSummary('global', 'all', 'all');
+        const currentLiquidita = (parseFloat(appData.currentBankBalance) || 0) + summary.netBalance;
+        
+        if (avgMonthlyExpense <= 0) return 99; // Se le spese sono 0, l'autonomia è infinita
+        
+        const months = currentLiquidita / avgMonthlyExpense;
+        return +months.toFixed(1);
+    }
+    
+    // NUOVO: Analisi Picchi di Spesa (Media Mobile)
+    function analyzeExpenseSpikes() {
+        const expenses = appData.expenses.filter(e => e.type === 'personal');
+        const monthlyExpenses = {};
+        
+        expenses.forEach(e => {
+            const ym = e.date.slice(0, 7);
+            const cat = e.category || 'Altro';
+            monthlyExpenses[ym] = monthlyExpenses[ym] || {};
+            monthlyExpenses[ym][cat] = (monthlyExpenses[ym][cat] || 0) + e.gross;
+        });
+
+        const months = Object.keys(monthlyExpenses).sort();
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const alerts = [];
+
+        if (months.length < 3) return []; // Necessaria almeno una media a 3 mesi
+
+        for (const cat of appData.categories) {
+            if (!monthlyExpenses[currentMonth]?.[cat]) continue; // Nessuna spesa questo mese per la categoria
+            
+            const currentSpent = monthlyExpenses[currentMonth][cat];
+            
+            // Trova gli ultimi 3 mesi con dati per la media mobile
+            const pastMonths = months.filter(m => m < currentMonth).slice(-3);
+            if (pastMonths.length < 3) continue; 
+
+            let sumPastExpenses = 0;
+            pastMonths.forEach(m => {
+                sumPastExpenses += monthlyExpenses[m][cat] || 0;
+            });
+
+            const avgMobile3M = sumPastExpenses / pastMonths.length;
+            
+            // Condizione: spesa attuale è > 1.25 volte la media mobile
+            if (avgMobile3M > 0 && currentSpent > avgMobile3M * 1.25) {
+                const diff = (currentSpent - avgMobile3M).toFixed(2);
+                alerts.push({
+                    category: cat,
+                    currentSpent: currentSpent.toFixed(2),
+                    avg: avgMobile3M.toFixed(2),
+                    message: `Spesa in ${cat} (+${diff} ${getCurrencySymbol()}) è il ${(currentSpent / avgMobile3M * 100).toFixed(0)}% della media mobile. Rivedi il budget!`
+                });
+            }
+        }
+        return alerts;
     }
     // --- Fine Core Calculations ---
 
@@ -1285,22 +1386,21 @@
               const all = [...imported.invoices, ...imported.expenses, ...imported.reminders, ...(imported.contacts||[]), ...(imported.birthdays||[])];
               const maxId = all.length>0 ? Math.max(...all.map(x=>x.id||0)) : 0;
               
-              // Mantieni solo l'hash PIN corrente e i dati globali dell'utente
               const currentPinHash = appData.pinHash; 
               
               appData = { 
                   ...appData, 
                   ...imported, 
                   lastId: Math.max(maxId, appData.lastId),
-                  pinHash: currentPinHash // Conserva il PIN HASH dell'utente loggato
+                  pinHash: currentPinHash 
               };
               
-              // Assicurati che le strutture essenziali siano presenti/corrette
               appData.categories ||= DEFAULT_CATEGORIES.slice();
               appData.birthdays ||= []; 
               appData.recurringExpenses ||= []; 
               appData.categoryBudgets ||= {}; 
               appData.fiscalParams = { ...DEFAULT_FISCAL_PARAMS, ...appData.fiscalParams }; 
+              appData.currentBankBalance ||= 0;
 
               appData.birthdays = appData.birthdays.map(bd => ({
                   ...bd,
@@ -1487,7 +1587,10 @@
             return bdRecurrence.toISOString().slice(0, 10) === todayStr;
         });
         
-        return { summary, upcomingReminders, upcomingBirthdays };
+        // NUOVO: Aggiungi gli alert di spesa anomala
+        const expenseSpikes = type === 'personal' ? analyzeExpenseSpikes() : [];
+        
+        return { summary, upcomingReminders, upcomingBirthdays, expenseSpikes };
     }
 
 
@@ -1514,6 +1617,10 @@
       const ivaStatus = summary.ivaBalance>=0?'IVA da Versare':'IVA a Credito';
       const ivaColor = summary.ivaBalance>=0?'text-red-600':'text-blue-600';
       const balanceColor = summary.netBalance>=0?'text-emerald-600':'text-red-600';
+      
+      const summarySinceStart = calculateFinancialSummary('global', 'all', 'all');
+      const totalBalance = (parseFloat(appData.currentBankBalance) || 0) + summarySinceStart.netBalance;
+
       return `
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center">
@@ -1525,8 +1632,9 @@
             <p class="text-xl font-bold text-red-600">${summary.totalExpenses.toFixed(2)} ${symbol}</p>
           </div>
           <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center col-span-2 md:col-span-1">
-            <p class="text-sm text-gray-500">Saldo Netto (${label})</p>
-            <p class="text-2xl font-extrabold ${balanceColor}">${summary.netBalance.toFixed(2)} ${symbol}</p>
+            <p class="text-sm text-gray-500">Saldo Netto Totale</p>
+            <p class="text-2xl font-extrabold ${totalBalance>=0?'text-emerald-600':'text-red-600'}">${totalBalance.toFixed(2)} ${symbol}</p>
+             <p class="text-xs text-gray-400">Transazioni: ${summary.netBalance.toFixed(2)}</p>
           </div>
           <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center col-span-2 md:col-span-1">
             <p class="text-sm text-gray-500">${ivaStatus} (Attività)</p>
@@ -1561,6 +1669,11 @@
       const todayBalanceColor = todayData.summary.netBalance >= 0 ? 'text-emerald-500' : 'text-red-500';
       const todaySummaryMessage = todayData.summary.netBalance.toFixed(2) + ' ' + symbol;
       
+      // Calcolo KPI Avanzati
+      const liquidityBuffer = calculateLiquidityBuffer();
+      const fhs = calculateFinancialHealthScore();
+      const FHSColor = fhs.score > 80 ? 'text-emerald-600' : (fhs.score > 60 ? 'text-orange-600' : 'text-red-600');
+      
       // Valori del simulatore What-If
       const whatIfRevenue = simulationState.additionalRevenue;
       const whatIfExpense = simulationState.additionalExpense;
@@ -1570,6 +1683,34 @@
       // Calcolo Simulazione Fiscale per l'anno in corso
       const fiscalSim = isActivity ? calculateFiscalSimulation(year) : null;
       const currentFiscal = fiscalSim?.fiscalParamsUsed || appData.fiscalParams;
+
+      // NUOVO: Consigli Fiscali Intelligenti
+      let fiscalAdvice = '';
+      if (isActivity && fiscalSim) {
+          const expectedTaxable = fiscalSim.totalRicavi * appData.fiscalParams.profitRate;
+          const currentTotalExpenses = calculateFinancialSummary('activity', 'all', 'all').totalExpenses;
+          const projection = calculateAnnualFiscalProjection();
+
+          if (fiscalSim.totalCosti > projection.projectedRevenue * 0.95) {
+              fiscalAdvice = '<p class="text-sm text-red-500 font-semibold mt-2">🚨 Allerta: La tua spesa proiettata è molto alta (oltre 95% del ricavo). Se sei Forfettario, verifica la congruità con il tuo commercialista.</p>';
+          } else if (fiscalSim.totaleTasse > 0 && currentTotalExpenses > fiscalSim.totalRicavi * (1 - appData.fiscalParams.profitRate) * 1.25) {
+               fiscalAdvice = '<p class="text-sm text-orange-500 font-semibold mt-2">💡 Suggerimento Fiscale: Le tue spese deducibili/detraibili sembrano molto alte per il tuo Coeff. di Redditività. Valuta il Regime Ordinario per l\'anno prossimo.</p>';
+          }
+      }
+      
+      // NUOVO: Consigli Spesa Personale (Spike Analysis)
+      let personalAdvice = '';
+      if (type === 'personal') {
+          const spikes = todayData.expenseSpikes;
+          if (spikes.length > 0) {
+              personalAdvice = spikes.map(s => `
+                  <div class="p-3 bg-red-100 dark:bg-red-900/50 rounded-lg text-sm border-l-4 border-red-500 mt-2">
+                      <span class="font-bold">⚠️ Picco Spesa:</span> ${s.message}
+                  </div>
+              `).join('');
+          }
+      }
+
 
       const fiscalSection = isActivity && fiscalSim ? `
         <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card border-l-4 ${fiscalSim.projectionIsActive ? 'border-indigo-500' : 'border-red-500'} space-y-2">
@@ -1649,6 +1790,7 @@
                 </div>
             </div>
             <p class="text-xs text-gray-500 mt-2">${fiscalSim.note}</p>
+            ${fiscalAdvice}
         </div>
       ` : '';
 
@@ -1659,24 +1801,37 @@
           ${renderSummaryCard(summary,year)}
           
           ${fiscalSection}
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-indigo-500">
+                <p class="text-sm text-gray-500">Punteggio Salute Finanziaria</p>
+                <p class="text-2xl font-extrabold ${FHSColor}">${fhs.score}/${fhs.max}</p>
+                <p class="text-xs text-gray-400">Basato su Risparmio, Liquidità & Budget</p>
+            </div>
+             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-purple-500">
+                <p class="text-sm text-gray-500">Liquidità (Stress Test)</p>
+                <p class="text-2xl font-extrabold ${liquidityBuffer >= 3 ? 'text-emerald-600' : (liquidityBuffer >= 1 ? 'text-orange-600' : 'text-red-600')}">
+                    ${liquidityBuffer > 0 ? liquidityBuffer.toFixed(1) : '0.0'} Mesi
+                </p>
+                <p class="text-xs text-gray-400">Autonomia con spese medie attuali</p>
+            </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card border-l-4 border-blue-500">
                 <h3 class="text-xl font-bold mb-2">Focus Oggi (${new Date().toLocaleDateString('it-IT')})</h3>
-                <p class="text-sm text-gray-500">Saldo Netto del Giorno:</p>
-                <p class="text-2xl font-extrabold ${todayBalanceColor} mb-2">${todaySummaryMessage}</p>
+                <p class="text-sm text-gray-500">Saldo Netto del Giorno: <span class="font-extrabold ${todayBalanceColor}">${todaySummaryMessage}</span></p>
                 
                 <p class="text-xs text-gray-500">
                     ${todayData.upcomingReminders.length > 0 ? `🔔 ${todayData.upcomingReminders.length} scadenza/e oggi. ` : ''}
                     ${todayData.upcomingBirthdays.length > 0 ? `🎂 ${todayData.upcomingBirthdays.length} compleanno/i oggi!` : ''}
                     ${todayData.upcomingReminders.length === 0 && todayData.upcomingBirthdays.length === 0 ? 'Nessun evento o scadenza urgente.' : ''}
                 </p>
-            </div>
-            
-            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card" style="height: 200px;">
-                <canvas id="weeklyBalanceChart-${type}"></canvas>
+                ${personalAdvice}
             </div>
           </div>
+          
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card" style="height: 200px;">
+                <canvas id="weeklyBalanceChart-${type}"></canvas>
+            </div>
           
           <div id="transaction-form-anchor" class="pt-4"></div>
 
@@ -1846,26 +2001,17 @@
         const futureDate = new Date();
         futureDate.setDate(today.getDate() + 90);
         
-        let netProjection = 0;
-        
-        const summary = calculateFinancialSummary('global', 'all', 'all');
-        netProjection += summary.netBalance;
+        // Inizia dalla liquidità effettiva calcolata
+        const summarySinceStart = calculateFinancialSummary('global', 'all', 'all');
+        let netProjection = (parseFloat(appData.currentBankBalance) || 0) + summarySinceStart.netBalance;
 
         appData.recurringExpenses.forEach(r => {
             const nextDateStr = calculateNextRecurrence(r.lastDate, r.frequency);
             if (nextDateStr) {
                 const nextDate = new Date(nextDateStr);
-                if (nextDate <= futureDate) {
-                    let numCycles = 1; 
-                    if (r.frequency === 'monthly') numCycles = 3;
-                    if (r.frequency === 'quarterly') numCycles = 1;
-                    if (r.frequency === 'annual') numCycles = 0.25; 
-
+                if (nextDate >= today && nextDate <= futureDate) {
                     const isIncome = appData.invoices.some(i => i.description === r.description);
-                    
-                    if (!isIncome) { 
-                        netProjection -= (r.lastAmount * numCycles);
-                    }
+                    netProjection += isIncome ? r.lastAmount : -r.lastAmount;
                 }
             }
         });
@@ -1929,7 +2075,7 @@
       });
     }
     
-    // NUOVO: Raggruppamento per Mese
+    // Raggruppamento per Mese
     function groupTransactionsByMonth(transactions) {
         const grouped = {};
         transactions.forEach(t => {
@@ -1938,7 +2084,20 @@
             grouped[monthYear] = grouped[monthYear] || [];
             grouped[monthYear].push(t);
         });
-        return grouped;
+        
+        // Ordina i mesi (decrescente)
+        const sortedKeys = Object.keys(grouped).sort((a, b) => {
+            const dateA = new Date(a.replace(/[^0-9]/g, '-').slice(0, 7) + '-01');
+            const dateB = new Date(b.replace(/[^0-9]/g, '-').slice(0, 7) + '-01');
+            return dateB.getTime() - dateA.getTime();
+        });
+        
+        const sortedGrouped = {};
+        sortedKeys.forEach(key => {
+            sortedGrouped[key] = grouped[key];
+        });
+        
+        return sortedGrouped;
     }
 
     function renderReportPage(){
@@ -1964,10 +2123,10 @@
       
       let transactionsList = filterTransactionsByCriteria(summary.transactions, categoryFilter === 'all' ? null : categoryFilter, tagFilter === 'all' ? null : tagFilter);
       
-      // NUOVO: Applicazione Ordinamento
+      // Applicazione Ordinamento
       transactionsList = sortTransactions(transactionsList);
       
-      // NUOVO: Raggruppamento per Mese (per il dettaglio)
+      // Raggruppamento per Mese (per il dettaglio)
       const groupedTransactions = groupTransactionsByMonth(transactionsList);
 
       const totalCash = cashSummary.totalIncomes + cashSummary.totalExpenses;
@@ -1980,9 +2139,16 @@
 
       const KPIs = computeKPIs();
       
-      // NUOVO: Previsione Saldo a 6 Mesi
+      // Previsione Saldo a 6 Mesi
       const sixMonthProjection = calculateSixMonthBalanceProjection();
       const proj6MColor = sixMonthProjection.projection >= 0 ? 'text-emerald-600' : 'text-red-600';
+      
+      // Stress Test
+      const liquidityBuffer = calculateLiquidityBuffer();
+      
+      // Saldo Conto
+      const summarySinceStart = calculateFinancialSummary('global', 'all', 'all');
+      const totalBalance = (parseFloat(appData.currentBankBalance) || 0) + summarySinceStart.netBalance;
 
       const averageMonthlyNet = (KPIs.avgIncome || 0) - (KPIs.avgExpense || 0);
       const targetDelta = averageMonthlyNet - (appData.monthlySavingsTarget || 0);
@@ -2027,6 +2193,9 @@
               }
               return { cat, budget, spent, remaining, colorClass };
           }).sort((a, b) => b.spent - a.spent);
+          
+      const fhs = calculateFinancialHealthScore();
+      const FHSColor = fhs.score > 80 ? 'text-emerald-600' : (fhs.score > 60 ? 'text-orange-600' : 'text-red-600');
 
 
       return `
@@ -2073,26 +2242,27 @@
             </div>
           </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-indigo-500">
+                  <p class="text-sm text-gray-500">Punteggio Salute Finanziaria</p>
+                  <p class="text-xl font-bold ${FHSColor}">${fhs.score}/${fhs.max}</p>
+              </div>
               <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-dashed border-purple-500">
                   <p class="text-sm text-gray-500">Obiettivo Saldo Netto Mensile: ${appData.monthlySavingsTarget.toFixed(2)} ${symbol}</p>
                   <p class="text-xl font-bold ${targetColor}">
                       Proiezione Media Mensile: ${targetDelta.toFixed(2)} ${symbol} 
-                      <span class="text-xs text-gray-500">(${targetLabel})</span>
                   </p>
               </div>
               <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-dashed border-indigo-500">
                   <p class="text-sm text-gray-500">Proiezione Saldo cassa (90 Giorni)</p>
-                  <p class="text-xl font-bold ${proj6MColor}">
+                  <p class="text-xl font-bold ${calculateCashFlowProjection().projection >= 0 ? 'text-emerald-600' : 'text-red-600'}">
                       ${calculateCashFlowProjection().projection.toFixed(2)} ${symbol}
-                      <span class="text-xs text-gray-500">(Stimato Prossimi 90gg)</span>
                   </p>
               </div>
               <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-dashed border-pink-500">
-                  <p class="text-sm text-gray-500">Proiezione Saldo Conto a 6 Mesi</p>
-                  <p class="text-xl font-bold ${proj6MColor}">
-                      ${sixMonthProjection.projection.toFixed(2)} ${symbol}
-                      <span class="text-xs text-gray-500">(Stimato alla fine di ${sixMonthProjection.details[5].label})</span>
+                  <p class="text-sm text-gray-500">Stress Test Liquidità</p>
+                  <p class="text-xl font-bold ${liquidityBuffer >= 3 ? 'text-emerald-600' : (liquidityBuffer >= 1 ? 'text-orange-600' : 'text-red-600')}">
+                      ${liquidityBuffer.toFixed(1)} Mesi
                   </p>
               </div>
           </div>
@@ -2285,26 +2455,74 @@
     
     function calculateNextRecurrence(lastDateStr, frequency, targetDate = new Date()) {
         let nextDate = new Date(lastDateStr);
-        // Avanza la data finché non supera il targetDate
-        while (nextDate <= targetDate) {
-            if (frequency === 'monthly') {
-                const currentMonth = nextDate.getMonth();
-                nextDate.setMonth(currentMonth + 1);
-                if (nextDate.getMonth() !== (currentMonth + 1) % 12 && nextDate.getDate() > 28) {
-                    nextDate = new Date(nextDate.getFullYear(), nextDate.getMonth(), 0); 
+        // Avanza la data finché non supera il targetDate, ma solo al mese successivo
+        // Questo è per la logica di previsione a 6 mesi, se la data di ricorrenza è passata
+        
+        let initialPass = true;
+        
+        // Simula la ricorrenza
+        while (initialPass || nextDate <= targetDate) {
+            if (!initialPass) {
+                if (frequency === 'monthly') {
+                    const currentMonth = nextDate.getMonth();
+                    nextDate.setMonth(currentMonth + 1);
+                    if (nextDate.getMonth() !== (currentMonth + 1) % 12 && nextDate.getDate() > 28) {
+                        nextDate = new Date(nextDate.getFullYear(), nextDate.getMonth(), 0); 
+                    }
+                } else if (frequency === 'quarterly') {
+                    nextDate.setMonth(nextDate.getMonth() + 3);
+                } else if (frequency === 'annual') {
+                    nextDate.setFullYear(nextDate.getFullYear() + 1);
+                } else {
+                    return null;
                 }
-            } else if (frequency === 'quarterly') {
-                nextDate.setMonth(nextDate.getMonth() + 3);
-            } else if (frequency === 'annual') {
-                nextDate.setFullYear(nextDate.getFullYear() + 1);
-            } else {
-                return null;
+            }
+            initialPass = false;
+            
+            // Fissa il giorno di ricorrenza al giorno della data originale, a meno di fine mese
+            const originalDay = new Date(lastDateStr).getDate();
+            if (nextDate.getDate() !== originalDay) {
+                 nextDate.setDate(originalDay);
+            }
+        }
+        
+        // La logica sopra è complicata per via della ricorsività su se stesso.
+        // Semplicemente, calcoliamo la prossima data FUTURA rispetto a OGGI, che poi usiamo come base per le proiezioni.
+        
+        let dateToStartFrom = new Date();
+        const originalDay = new Date(lastDateStr).getDate();
+        
+        let currentMonth = dateToStartFrom.getMonth();
+        let currentYear = dateToStartFrom.getFullYear();
+        let nextRecurrence = new Date(currentYear, currentMonth, originalDay); 
+
+        // Se la ricorrenza di questo mese è già passata, o se la ricorrenza originale è nel passato
+        if (nextRecurrence < today) {
+            if (frequency === 'monthly') currentMonth += 1;
+            else if (frequency === 'quarterly') currentMonth += 3;
+            else if (frequency === 'annual') currentYear += 1;
+        } else {
+            // E' nel futuro di questo mese (o oggi). Questa è la prima ricorrenza.
+        }
+        
+        // Ricalcola la prima ricorrenza FUTURA
+        nextRecurrence = new Date(currentYear, currentMonth, originalDay);
+        
+        // Avanza finché non supera il Target Date per la previsione a 6 mesi
+        while (nextRecurrence < targetDate) {
+            if (frequency === 'monthly') currentMonth += 1;
+            else if (frequency === 'quarterly') currentMonth += 3;
+            else if (frequency === 'annual') currentYear += 1;
+            nextRecurrence = new Date(currentYear, currentMonth, originalDay);
+            // gestisce la fine del mese:
+            if (nextRecurrence.getDate() !== originalDay) {
+                 nextRecurrence = new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth(), 0);
             }
         }
         
         // Se la prossima ricorrenza è nel futuro, restituiscila.
-        if (nextDate.getTime() > new Date().getTime()) {
-            return nextDate.toISOString().slice(0, 10);
+        if (nextRecurrence.getTime() >= new Date().getTime()) {
+            return nextRecurrence.toISOString().slice(0, 10);
         }
         return null;
     }
@@ -2485,7 +2703,24 @@
         }
     }
     
-    // NUOVO: Funzione per salvare i parametri fiscali
+    // NUOVO: Funzione per salvare il Saldo Iniziale
+    function saveBankBalance() {
+        const input = document.getElementById('current-bank-balance');
+        const newBalance = parseFloat(input?.value) || 0;
+
+        showModal('Aggiorna Saldo Iniziale', 
+            `Impostare il Saldo Iniziale del tuo conto su: ${newBalance.toFixed(2)} ${getCurrencySymbol()}?`, 
+            true, 
+            () => {
+                appData.currentBankBalance = newBalance;
+                saveData();
+                showToast('Saldo iniziale aggiornato!');
+                renderPage('settings');
+            }
+        );
+    }
+    
+    // Funzione per salvare i parametri fiscali
     function saveFiscalParams() {
         const profitRateInput = document.getElementById('fiscal-profit-rate');
         const taxRateInput = document.getElementById('fiscal-tax-rate');
@@ -2512,7 +2747,7 @@
         );
     }
     
-    // NUOVO: Funzione per eliminare il profilo utente
+    // Funzione per eliminare il profilo utente
     function deleteCurrentUserProfile() {
         const currentName = globalState.currentUser.name;
         showModal('ELIMINA PROFILO UTENTE', 
@@ -2521,23 +2756,18 @@
             () => {
                 const userKey = globalState.currentUser.dataKey;
                 
-                // 1. Elimina i dati dal localStorage
                 localStorage.removeItem(userKey);
                 
-                // 2. Rimuovi l'utente dal globalState
                 globalState.users = globalState.users.filter(u => u.dataKey !== userKey);
                 
-                // 3. Seleziona l'utente di fallback (o esci se non ci sono utenti)
                 if (globalState.users.length > 0) {
                     globalState.currentUser = globalState.users[0];
                     sessionStorage.removeItem(SESSION_STORAGE_PIN_KEY); 
                     saveGlobalState();
-                    // Ricarica e mostra la lock screen per il nuovo utente predefinito
                     loadData();
                     setupPinLock();
                     showToast(`Profilo "${currentName}" eliminato. Accedi come ${globalState.currentUser.name}.`, 'red');
                 } else {
-                    // Non ci sono più utenti, resetta completamente
                     localStorage.removeItem(GLOBAL_KEY);
                     sessionStorage.removeItem(SESSION_STORAGE_PIN_KEY); 
                     window.location.reload();
@@ -2555,6 +2785,7 @@
       const cats = (appData.categories||DEFAULT_CATEGORIES).slice().sort((a,b)=>a.localeCompare(b));
       const symbol = getCurrencySymbol();
       const currentFiscal = appData.fiscalParams;
+      const currentBankBalance = appData.currentBankBalance || 0;
 
 
       return `
@@ -2586,6 +2817,28 @@
           </div>
 
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
+              <h3 class="text-xl font-medium text-blue-600">Configurazione Liquidità & Valuta</h3>
+              
+              <div class="border-b pb-4 mb-4">
+                  <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">Simbolo Valuta Attuale: <span class="font-bold text-lg">${symbol}</span></p>
+                  <div>
+                      <label for="currency-symbol-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Imposta Simbolo Valuta (es. €, $, £)</label>
+                      <input type="text" id="currency-symbol-input" maxlength="2" value="${symbol}" placeholder="€" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"/>
+                  </div>
+                  <button onclick="changeCurrencySymbol()" class="cta-button w-full bg-blue-500 text-white p-3 rounded-lg font-bold hover:bg-blue-600 mt-3">Salva Valuta</button>
+              </div>
+
+              <div>
+                  <label for="current-bank-balance" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Saldo Conto Iniziale (Bank Balance Base, ${symbol})</label>
+                  <p class="text-xs text-gray-500 mb-1">Questo è il saldo base all'inizio delle registrazioni. Le transazioni si sommano a questo.</p>
+                  <input type="number" id="current-bank-balance" step="0.01" value="${currentBankBalance.toFixed(2)}"
+                         class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" 
+                         inputmode="decimal"/>
+              </div>
+              <button onclick="saveBankBalance()" class="cta-button w-full bg-blue-500 text-white p-3 rounded-lg font-bold hover:bg-blue-600">Aggiorna Saldo Base</button>
+          </div>
+          
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
             <h3 class="text-xl font-medium text-purple-600">Pianificazione (Obiettivi/Budgeting)</h3>
             
             <div>
@@ -2613,16 +2866,6 @@
                     `;
                 }).join('')}
             </div>
-          </div>
-          
-          <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
-              <h3 class="text-xl font-medium text-blue-600">Configurazione Valuta</h3>
-              <p class="text-sm text-gray-700 dark:text-gray-300">Simbolo Valuta Attuale: <span class="font-bold text-lg">${symbol}</span></p>
-              <div>
-                  <label for="currency-symbol-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Imposta Simbolo Valuta (es. €, $, £)</label>
-                  <input type="text" id="currency-symbol-input" maxlength="2" value="${symbol}" placeholder="€" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"/>
-              </div>
-              <button onclick="changeCurrencySymbol()" class="cta-button w-full bg-blue-500 text-white p-3 rounded-lg font-bold hover:bg-blue-600">Salva Valuta</button>
           </div>
           
           <div class="bg-white dark:bg-gray-800 p-5 rounded-xl card space-y-4">
@@ -2855,6 +3098,27 @@
         icons: [
           { src:"https://fav.farm/✅", sizes:"192x192", type:"image/png" },
           { src:"https://fav.farm/💶", sizes:"512x512", type:"image/png" }
+        ],
+        // Shortcut per la PWA
+        shortcuts: [
+            {
+                name: "Registra Entrata",
+                short_name: "Entrata",
+                description: "Apri il modulo rapido per registrare un'entrata.",
+                url: "/?shortcut=income"
+            },
+            {
+                name: "Registra Uscita",
+                short_name: "Uscita",
+                description: "Apri il modulo rapido per registrare un'uscita.",
+                url: "/?shortcut=expense"
+            },
+            {
+                name: "Riepilogo",
+                short_name: "Riepilogo",
+                description: "Visualizza il report finanziario.",
+                url: "/?shortcut=report"
+            }
         ]
       };
       const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
@@ -2865,7 +3129,7 @@
     async function installServiceWorker(){
       if (!('serviceWorker' in navigator)) return;
       const swCode = `
-        const CACHE = 'finanza-smart-v5-pro-multi'; 
+        const CACHE = 'finanza-smart-v6-super-pro'; 
         self.addEventListener('install', e=>{
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./'])));
           self.skipWaiting();
@@ -2903,8 +3167,6 @@
 
       document.getElementById('app')?.addEventListener('input', (e)=>{
         if (e.target && (e.target.id==='net-amount' || e.target.id==='vat-rate') && (currentPage==='activity'||currentPage==='personal')) calculateGross();
-        
-        // La logica What-If è gestita dagli oninput nel codice HTML per performance
       });
       document.getElementById('app')?.addEventListener('change', (e)=>{
         if (e.target && e.target.id==='vat-rate' && (currentPage==='activity'||currentPage==='personal')) calculateGross();
@@ -2948,7 +3210,6 @@
                 const sortKey = document.getElementById('sort-key').value;
                 const sortDirection = document.getElementById('sort-direction').value;
                 
-                // Aggiorna filtri in memoria per la ricerca
                 reportFilters.sortKey = sortKey;
                 reportFilters.sortDirection = sortDirection;
                 
@@ -2956,11 +3217,10 @@
                 results = filterTransactionsByCriteria(results, categoryFilter === 'all' ? null : categoryFilter, tagFilter === 'all' ? null : tagFilter);
                 results = filterTransactions(query, results);
                 
-                results = sortTransactions(results); // Applica l'ordinamento
+                results = sortTransactions(results); 
                 
                 const symbol = getCurrencySymbol();
                 
-                // Applica il raggruppamento
                 const searchGrouped = groupTransactionsByMonth(results);
                 
                 let searchHtml = '';
@@ -3037,6 +3297,15 @@
       
       installManifest();
       installServiceWorker();
+      
+      // NUOVO: Gestione Shortcut PWA
+      const urlParams = new URLSearchParams(window.location.search);
+      const shortcut = urlParams.get('shortcut');
+      if (shortcut) {
+          if (shortcut === 'income') quickRegister('true');
+          else if (shortcut === 'expense') quickRegister('false');
+          else if (shortcut === 'report') renderPage('report');
+      }
     };
   </script>
 </body>
