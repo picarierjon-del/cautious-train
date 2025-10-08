@@ -1128,6 +1128,7 @@
         
         // Calcola il saldo corrente aggiungendo il Saldo Netto delle transazioni al Saldo iniziale.
         const summarySinceStart = calculateFinancialSummary('global', 'all', 'all');
+        // NOTA: CurrentBankBalance è ora gestito solo dagli Adjustment e le transazioni nette
         let currentBalance = (parseFloat(appData.currentBankBalance) || 0) + summarySinceStart.netBalance;
         
         const monthlyProjection = [];
@@ -1490,7 +1491,7 @@
               appData.auditLog.push({
                   date: new Date().toISOString(),
                   transactionId: data.id,
-                  action: 'UPDATE',
+                  action: 'TX_UPDATE',
                   oldValue: oldItem,
                   newValue: updatedItem,
                   user: globalState.currentUser.name // ID utente per tracciamento
@@ -1551,28 +1552,657 @@
       const data = new FormData(form);
       const isIncome = data.get('isIncome')==='true';
       const transactionId = form.getAttribute('data-transaction-id');
+
+      const isCorrisp = type==='activity' && isIncome && data.get('incomeType')==='Incasso/Corrispettivo';
       
-      // LOGICA RICONCILIAZIONE (Data Governance)
-      const isAdjustment = data.get('incomeType') === 'Initial Balance' || data.get('incomeType') === 'Adjustment';
-      if (isAdjustment) {
-          const amount = parseFloat(data.get('net')) || 0;
-          const oldBalance = appData.currentBankBalance;
+      // Verifica campi minimi
+      if (!data.get('net') || !data.get('date') || (!isCorrisp && !data.get('description')?.trim())) {
+        showToast('Compila tutti i campi richiesti.', 'red');
+        return;
+      }
+      
+      const payload = {
+        id: transactionId ? parseInt(transactionId) : null,
+        dataType: type,
+        isIncome,
+        date: data.get('date'),
+        description: data.get('description'),
+        net: data.get('net'),
+        vatRate: data.get('vatRate'),
+        incomeType: data.get('incomeType'),
+        category: data.get('category') || 'Altro',
+        tags: data.get('tags') || ''
+      };
+
+
+      const grossAmount = parseFloat(payload.net) * (1 + (parseFloat(payload.vatRate) / 100)) || 0;
           
-          appData.currentBankBalance += (isIncome ? amount : -amount);
+      if (!payload.id && !isIncome && type === 'personal') {
+          const monthlyAvg = getAverageMonthlyExpense(payload.category);
+          if (monthlyAvg > 0 && grossAmount > monthlyAvg * 1.20) {
+              const percentDifference = ((grossAmount / monthlyAvg) * 100).toFixed(0);
+              showModal(
+                  '🚨 Allerta Spesa Anomala',
+                  `Questa spesa (${grossAmount.toFixed(2)}${getCurrencySymbol()}) è circa ${percentDifference}% superiore alla tua media mensile (${monthlyAvg.toFixed(2)}${getCurrencySymbol()}) per la categoria "${payload.category}". Continuare?`,
+                  true,
+                  () => saveTransaction(isIncome, payload), 
+                  () => showToast('Registrazione annullata.','red') 
+              );
+              return; 
+          }
+      }
+      
+      saveTransaction(isIncome, payload);
+    }
+    
+    function deleteTransaction(isIncome,id){
+      const listName = isIncome ? 'invoices':'expenses';
+      const idx = appData[listName].findIndex(i=>i.id===id);
+      if (idx>-1){
+        showModal('Conferma Eliminazione','Eliminare definitivamente questa transazione?',true,()=>{
           
+          // Log Audit (Traccia eliminazione)
           appData.auditLog.push({
               date: new Date().toISOString(),
-              action: 'BALANCE_ADJ',
-              oldValue: oldBalance,
-              newValue: appData.currentBankBalance,
-              adjustmentAmount: (isIncome ? amount : -amount),
-              description: data.get('description'),
+              transactionId: id,
+              action: 'TX_DELETE',
+              deletedItem: appData[listName][idx],
               user: globalState.currentUser.name
           });
           
-          saveData();
-          closeTransactionForm();
-          showToast(`Saldo Base ric
+          appData[listName].splice(idx,1); 
+          saveData(); 
+          showToast('Transazione eliminata.','red'); 
+          renderPage(currentPage);
+        });
+      }
+    }
+    
+    // Il parametro `inModal` indica se siamo chiamati dalla UI a schermo intero (modale)
+    function editTransaction(isIncome, id, type, inModal = false) {
+        const transaction = getTransactionById(isIncome, id);
+        if (!transaction) { showToast('Transazione non trovata.', 'red'); return; }
+
+        if (!inModal) {
+            openTransactionForm(isIncome ? 'true' : 'false', id, type);
+            return;
+        }
+
+        const form = document.getElementById('transaction-form');
+        form.reset(); 
+        form.setAttribute('data-transaction-id', transaction.id);
+        
+        document.getElementById('isIncome').value = isIncome ? 'true' : 'false';
+        document.getElementById('isIncome').dispatchEvent(new Event('change'));
+
+        if (type === 'activity' && isIncome && document.getElementById('incomeType')) {
+            document.getElementById('incomeType').value = transaction.incomeType || 'Fattura (Cliente)';
+            document.getElementById('incomeType').dispatchEvent(new Event('change'));
+        }
+
+        document.getElementById('date').value = transaction.date;
+        document.getElementById('description').value = transaction.description || '';
+        document.getElementById('category').value = transaction.category || 'Altro';
+        document.getElementById('tags').value = (transaction.tags || []).join(', ');
+        document.getElementById('net-amount').value = transaction.net.toFixed(2);
+        document.getElementById('vat-rate').value = transaction.vatRate.toFixed(0);
+        
+        // NUOVO: Ricarica i suggerimenti smart in base alla descrizione originale
+        autoFillSmartData(transaction.description || '');
+
+        calculateGross();
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Aggiorna Transazione';
+            submitBtn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
+            submitBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+        }
+        showToast(`Modalità Modifica (ID: ${id})`);
+    }
+
+    function duplicateTransaction(isIncome, id, type) {
+        const transaction = getTransactionById(isIncome, id);
+        if (!transaction) { showToast('Transazione non trovata.', 'red'); return; }
+
+        openTransactionForm(isIncome ? 'true' : 'false', null, type); 
+        
+        // Simula la modifica per caricare i dati
+        editTransaction(isIncome, id, type, true); 
+        
+        const form = document.getElementById('transaction-form');
+        form.removeAttribute('data-transaction-id'); // Rimuovi ID per duplicare
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Registra Movimento (Duplicato)';
+            submitBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            submitBtn.classList.add('bg-emerald-500', 'hover:bg-emerald-600');
+        }
+        showToast(`Dati caricati per Duplicazione (Modifica data e importo).`);
+    }
+    // --- Transactions CRUD (END) ---
+
+    // NUOVO: Resetta la cassa accantonamenti e registra il promemoria come pagato
+    function markTaxPaid(reminderId, amountPaid) {
+        const symbol = getCurrencySymbol();
+        
+        if (appData.fiscalParams.regime !== 'forfettario') {
+            showToast('Funzione accantonamenti attiva solo per Forfettario.', 'red');
+            return;
+        }
+
+        // Se reminderId è null, usiamo la cassa totale per la Quick Action
+        const actualAmountPaid = reminderId ? amountPaid : appData.taxCashReserve;
+        const confirmationMessage = reminderId ? 
+            `Confermi di aver pagato la scadenza? Il saldo accantonato sarà ridotto di ${actualAmountPaid.toFixed(2)}${symbol}.` :
+            `Confermi di voler registrare un pagamento fiscale pari al saldo accantonato (${actualAmountPaid.toFixed(2)}${symbol})? Il saldo della cassa tasse sarà azzerato.`;
+        
+        if (actualAmountPaid <= 0) {
+             showToast('Nessun importo da pagare o accantonare.', 'red');
+             return;
+        }
+
+
+        showModal('Registra Pagamento Fiscale', 
+            confirmationMessage, 
+            true, 
+            () => {
+                const oldReserve = appData.taxCashReserve;
+                appData.taxCashReserve -= actualAmountPaid;
+                
+                if (reminderId) {
+                    const reminder = appData.reminders.find(r => r.id === reminderId);
+                    if (reminder) reminder.paid = true;
+                }
+                
+                // Log Audit (Traccia Pagamento Fiscale)
+                appData.auditLog.push({
+                    date: new Date().toISOString(),
+                    action: 'TAX_PAID',
+                    amount: actualAmountPaid.toFixed(2),
+                    oldReserve: oldReserve.toFixed(2),
+                    newReserve: appData.taxCashReserve.toFixed(2),
+                    description: reminderId ? `Pagamento Scadenza ID ${reminderId}` : `Quick Pay Tasse (Saldo Accantonato)`,
+                    user: globalState.currentUser.name
+                });
+                
+                saveData();
+                showToast(`Pagamento fiscale registrato. Saldo cassa: ${appData.taxCashReserve.toFixed(2)} ${symbol}.`);
+                renderPage(currentPage);
+            },
+            () => showToast('Pagamento annullato.')
+        );
+    }
+
+
+    // --- Fiscal Reminders (omitted for brevity) ---
+    function initializeFiscalReminders() {
+        const currentYear = new Date().getFullYear();
+        const fiscalReminders = [
+            { type: 'IVA Trimestrale', description: `IVA 1T ${currentYear} (Gen-Mar)`, month: 5, day: 16, year: currentYear, quarter: 1 },
+            { type: 'IVA Trimestrale', description: `IVA 2T ${currentYear} (Apr-Giu)`, month: 8, day: 20, year: currentYear, quarter: 2 },
+            { type: 'IVA Trimestrale', description: `IVA 3T ${currentYear} (Lug-Set)`, month: 11, day: 16, year: currentYear, quarter: 3 },
+            { type: 'IVA Trimestrale', description: `IVA 4T ${currentYear} (Ott-Dic)`, month: 3, day: 16, year: currentYear + 1, quarter: 4 },
+            { type: 'IVA Saldo/Acconto', description: `Saldo IVA ${currentYear - 1}`, month: 3, day: 16, year: currentYear, quarter: null },
+            { type: 'IVA Saldo/Acconto', description: `Acconto IVA ${currentYear}`, month: 12, day: 27, year: currentYear, quarter: null }
+        ];
+
+        appData.reminders = appData.reminders.filter(r => 
+            !r.type.startsWith('IVA') || new Date(r.date).getFullYear() < currentYear
+        );
+
+        fiscalReminders.forEach(fr => {
+            const date = new Date(fr.year, fr.month - 1, fr.day);
+            const dateStr = date.toISOString().slice(0, 10);
+            
+            const exists = appData.reminders.some(r => r.description === fr.description && r.date === dateStr);
+            
+            if (!exists) {
+                let estimatedAmount = 0;
+                if (fr.quarter && fr.year <= currentYear) {
+                    const result = calculateIvaQuarterly(fr.year, fr.quarter);
+                    estimatedAmount = result.ivaBalance; 
+                }
+                
+                appData.reminders.push({
+                    id: getNextId(),
+                    type: fr.type,
+                    description: fr.description,
+                    date: dateStr,
+                    amount: estimatedAmount, 
+                    paid: false,
+                    isFiscal: true
+                });
+            }
+        });
+        saveData(); 
+    }
+
+    // --- Reminders CRUD (omitted for brevity) ---
+    function saveReminder(data){
+      appData.reminders ||= [];
+      if (data.id){ const i=appData.reminders.findIndex(r=>r.id===data.id); if(i>-1){ appData.reminders[i]={...appData.reminders[i],...data}; } }
+      else { appData.reminders.push({ id:getNextId(), ...data, paid:false }); }
+      saveData(); showToast('Promemoria salvato!'); renderPage('reminders');
+    }
+    function toggleReminderPaid(id){ const r=appData.reminders.find(x=>x.id===id); if(r){ r.paid=!r.paid; saveData(); showToast(r.paid?'Pagamento registrato!':'Pagamento annullato.'); renderPage('reminders'); } }
+    function deleteReminder(id){
+      const i=(appData.reminders||[]).findIndex(r=>r.id===id);
+      if (i>-1){
+        showModal('Eliminare promemoria?','Operazione irreversibile.',true,()=>{
+          appData.reminders.splice(i,1); saveData(); showToast('Promemoria eliminato.','red'); renderPage('reminders');
+        });
+      }
+    }
+    function handleReminderSubmit(){
+      const f=document.getElementById('reminder-form'); const d=new FormData(f);
+      const payload={ type:d.get('type'), description:d.get('description'), date:d.get('date'), amount: parseFloat(d.get('amount'))||0 };
+      if (payload.description && payload.date && payload.amount>0){ 
+        saveReminder(payload); 
+        f.reset(); 
+        document.getElementById('reminder-date').value = new Date().toISOString().slice(0,10); 
+      }
+      else showToast('Compila tutti i campi validi.','red');
+    }
+    
+    // --- Compleanni CRUD (omitted for brevity) ---
+    function saveBirthday(data){
+      appData.birthdays ||= [];
+      
+      const dateStr = data.date;
+      const recurringDate = dateStr.slice(5); 
+
+      if (data.id){ 
+          const i=appData.birthdays.findIndex(r=>r.id===data.id); 
+          if(i>-1){ appData.birthdays[i]={...appData.birthdays[i],...data, recurringDate}; } 
+      }
+      else { 
+          appData.birthdays.push({ id:getNextId(), ...data, recurringDate }); 
+      }
+      saveData(); showToast('Compleanno salvato!'); renderPage('reminders');
+    }
+    function deleteBirthday(id){
+      const i=(appData.birthdays||[]).findIndex(r=>r.id===id);
+      if (i>-1){
+        showModal('Eliminare compleanno?','Operazione irreversibile.',true,()=>{
+          appData.birthdays.splice(i,1); saveData(); showToast('Compleanno eliminato.','red'); renderPage('reminders');
+        });
+      }
+    }
+    function handleBirthdaySubmit(){
+        const f=document.getElementById('birthday-form'); const d=new FormData(f);
+        const dateStr = d.get('date');
+        
+        const payload={ 
+            name: d.get('name').trim(), 
+            date: dateStr, 
+        };
+        
+        if (payload.name && payload.date){ 
+            saveBirthday(payload); 
+            f.reset(); 
+            document.getElementById('birthday-date').value = new Date().toISOString().slice(0,10); 
+        }
+        else showToast('Compila tutti i campi validi.','red');
+    }
+
+
+    // --- Import/Export/Clean (omitted for brevity) ---
+    function exportDataJSON(){
+      const dataStr = JSON.stringify(appData,null,2);
+      const blob = new Blob([dataStr], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=`finanza_backup_${globalState.currentUser.name}_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      showToast('Backup JSON esportato!');
+    }
+
+    function exportCSV(typeFilter = 'all'){
+      const tx = [...appData.invoices.map(t=>({...t,isIncome:true})), ...appData.expenses.map(t=>({...t,isIncome:false}))].sort((a,b)=> new Date(a.date)-new Date(b.date));
+      
+      const filteredTx = tx.filter(t => {
+          if (typeFilter === 'income') return t.isIncome;
+          if (typeFilter === 'expense') return !t.isIncome;
+          return true;
+      });
+      
+      const esc = (s)=> `"${String(s??'').replace(/"/g,'""')}"`;
+      
+      const sumInc = filteredTx.filter(t => t.isIncome).reduce((s,t)=>s+t.gross,0);
+      const sumExp = filteredTx.filter(t => !t.isIncome).reduce((s,t)=>s+t.gross,0);
+      const netBalance = sumInc - sumExp;
+      const filterLabel = typeFilter === 'income' ? 'SOLO ENTRATE' : (typeFilter === 'expense' ? 'SOLO USCITE' : 'ENTRATE & USCITE');
+      
+      const summaryRow = ['---RIEPILOGO TRANS.---', `Filtro: ${filterLabel}`, `Saldo Netto: ${netBalance.toFixed(2)}${getCurrencySymbol()}`, `Entrate Totali: ${sumInc.toFixed(2)}${getCurrencySymbol()}`, `Uscite Totali: ${sumExp.toFixed(2)}${getCurrencySymbol()}`].map(esc).join(',');
+      
+      const headerTx = ['ID','Tipo','Scope','Data','Descrizione','Categoria','Tag','AliquotaIVA','Netto','IVA','Lordo','Entrata?','Sottotipo'].join(',');
+      const rowsTx = filteredTx.map(t => [
+        t.id, (t.isIncome?'Entrata':'Uscita'), t.type, t.date, t.description||'', t.category||'',
+        (t.tags||[]).join('|'), t.vatRate, t.net, t.vatAmount, t.gross, t.isIncome, t.incomeType||''
+      ].map(esc).join(','));
+      const csvTx = `\n[TRANSAZIONI - ${filterLabel}]\n${summaryRow}\n${headerTx}\n${rowsTx.join('\n')}`;
+      
+      const headerRm = ['ID','Tipo','Descrizione','Data','Importo','Pagato?'].join(',');
+      const rowsRm = (appData.reminders||[]).map(r => [r.id,r.type,r.description,r.date,r.amount,r.paid].map(esc).join(','));
+      const csvRm = `\n\n[PROMEMORIA SCADENZE]\n${headerRm}\n${rowsRm.join('\n')}`;
+      
+      const headerBd = ['ID','Nome','DataNascita','RicorrenzaMD'].join(',');
+      const rowsBd = (appData.birthdays||[]).map(r => [r.id,r.name,r.date,r.recurringDate].map(esc).join(','));
+      const csvBd = `\n\n[COMPLEANNI]\n${headerBd}\n${rowsBd.join('\n')}`;
+
+      const zipContent = `${csvTx}${csvRm}${csvBd}\n\n### Creato con Finanza Smart PRO`;
+      const blob = new Blob([zipContent], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=`finanza_export_${typeFilter}_${new Date().toISOString().slice(0,10)}.txt`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      showToast('Export CSV pronto (testo con 3 sezioni).');
+    }
+
+    function importDataFile(ev){
+      const file = ev.target.files[0]; if(!file) return;
+      const r = new FileReader();
+      r.onload = (e)=>{
+        try{
+          const imported = JSON.parse(e.target.result);
+          if (imported.invoices && imported.expenses && imported.reminders){
+            showModal('Conferma Importazione', `Sovrascrivere i dati attuali del profilo "${globalState.currentUser.name}"? (Consigliato backup prima)`, true, ()=>{
+              const all = [...imported.invoices, ...imported.expenses, ...imported.reminders, ...(imported.contacts||[]), ...(imported.birthdays||[])];
+              const maxId = all.length>0 ? Math.max(...all.map(x=>x.id||0)) : 0;
+              
+              const currentPinHash = appData.pinHash; 
+              
+              appData = { 
+                  ...appData, 
+                  ...imported, 
+                  lastId: Math.max(maxId, appData.lastId),
+                  pinHash: currentPinHash 
+              };
+              
+              appData.categories ||= DEFAULT_CATEGORIES.slice();
+              appData.birthdays ||= []; 
+              appData.recurringExpenses ||= []; 
+              appData.categoryBudgets ||= {}; 
+              appData.fiscalParams = { ...DEFAULT_FISCAL_PARAMS, ...appData.fiscalParams }; 
+              appData.currentBankBalance ||= 0;
+              appData.taxCashReserve ||= 0; // Inizializzazione per l'import
+              appData.auditLog ||= []; // Inizializzazione Audit Log per l'import
+
+              appData.birthdays = appData.birthdays.map(bd => ({
+                  ...bd,
+                  recurringDate: (bd.date || bd.recurringDate).slice(5) 
+              }));
+              appData.monthlySavingsTarget ||= 0;
+              saveData(); 
+              showToast('Dati importati!'); 
+              renderPage(currentPage);
+            });
+          } else { showToast('Backup JSON non valido.','red'); }
+        } catch(err){ console.error(err); showToast('Errore lettura file JSON.','red'); }
+      };
+      r.readAsText(file);
+    }
+
+    function cleanDataByYear(year){
+      const target = parseInt(year); if (isNaN(target)||target===0){ showToast('Seleziona un anno valido.','red'); return; }
+      showModal('Conferma Pulizia Dati', `Eliminare TUTTO prima del 1 Gennaio ${target}?`, true, ()=>{
+        const before = (it)=> new Date(it.date).getFullYear() < target;
+        const i0=appData.invoices.length, e0=appData.expenses.length, r0=appData.reminders.length;
+        
+        appData.invoices = appData.invoices.filter(x=>!before(x));
+        appData.expenses = appData.expenses.filter(x=>!before(x));
+        appData.reminders = appData.reminders.filter(x=>!before(x));
+        appData.auditLog = appData.auditLog.filter(x=> new Date(x.date).getFullYear() >= target); // Pulisci Audit Log
+        
+        if (appData.invoices.length === 0 && appData.expenses.length === 0 && appData.reminders.length === 0) {
+            appData.lastId = 0;
+        }
+        
+        saveData();
+        showToast(`Pulizia ok. Rimossi ${(i0 - appData.invoices.length)+(e0 - appData.expenses.length)} movimenti e ${(r0 - appData.reminders.length)} promemoria.`);
+        renderPage('settings');
+      });
+    }
+    
+    function deleteContact(id){
+      const i=appData.contacts.findIndex(c=>c.id===id);
+      if (i>-1){
+        showModal('Conferma Eliminazione Contatto','Le transazioni non verranno cancellate.',true,()=>{
+          appData.contacts.splice(i,1); saveData(); showToast('Contatto eliminato.','red'); renderPage('settings');
+        });
+      }
+    }
+    
+    function deleteUnusedContacts() {
+        const usedDescriptions = new Set();
+        [...appData.invoices, ...appData.expenses].forEach(t => {
+            if (t.description && t.description.trim() !== 'Corrispettivi/Incasso Giornaliero') {
+                usedDescriptions.add(t.description.trim().toLowerCase());
+            }
+        });
+
+        const initialLength = appData.contacts.length;
+        appData.contacts = appData.contacts.filter(c => usedDescriptions.has(c.name.toLowerCase()));
+        const removedCount = initialLength - appData.contacts.length;
+
+        saveData();
+        showToast(`${removedCount} contatti non usati eliminati.`);
+        renderPage('settings');
+    }
+    
+    function deleteUnusedCategories() {
+        const usedCategories = new Set(DEFAULT_CATEGORIES.map(c => c.toLowerCase()));
+        [...appData.invoices, ...appData.expenses].forEach(t => {
+            if (t.category) {
+                usedCategories.add(t.category.trim().toLowerCase());
+            }
+        });
+        
+        const initialLength = appData.categories.length;
+        appData.categories = appData.categories.filter(c => usedCategories.has(c.toLowerCase()));
+        appData.categories.sort((a,b)=>a.localeCompare(b));
+        const removedCount = initialLength - appData.categories.length;
+
+        saveData();
+        showToast(`${removedCount} categorie non usate (non di default) eliminate.`);
+        renderPage('settings');
+    }
+    // --- Import/Export/Clean (END) ---
+
+
+    // --- UI wiring (NUOVO MODULO TRANSAZIONE) ---
+    function renderTransactionForm(isIncome, type) {
+        const isActivity = type === 'activity';
+        const isIncomeString = isIncome ? 'true' : 'false';
+        const symbol = getCurrencySymbol();
+
+        return `
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-medium ${isIncome ? 'text-emerald-600' : 'text-red-600'}">
+                    Registra ${isIncome ? 'Entrata' : 'Uscita'} (${isActivity ? 'Attività' : 'Personale'})
+                </h3>
+                <button onclick="closeTransactionForm()" class="text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 font-bold text-2xl">
+                    &times;
+                </button>
+            </div>
+            <form id="transaction-form" onsubmit="event.preventDefault(); handleTransactionSubmit('${type}');" class="space-y-4">
+              <input type="hidden" id="transaction-type-hidden" name="dataType" value="${type}">
+              <input type="hidden" id="isIncome" name="isIncome" value="${isIncomeString}">
+
+              <div class="grid grid-cols-1 ${isActivity?'md:grid-cols-2':''} gap-4">
+                <div>
+                  <label for="date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data</label>
+                  <input type="date" id="date" name="date" required class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+                </div>
+                ${isActivity?`
+                <div id="income-type-control" class="${isIncome ? '' : 'hidden'}">
+                  <label for="incomeType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sottotipo Entrata</label>
+                  <select id="incomeType" name="incomeType" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+                    <option value="Fattura (Cliente)">Fattura (Cliente)</option>
+                    <option value="Incasso/Corrispettivo">Incasso/Corrispettivo (POS/Contanti)</option>
+                  </select>
+                </div>`:''}
+              </div>
+
+              <div id="description-div">
+                <label id="description-label" for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">${isIncome ? 'Cliente / Descrizione' : 'Fornitore / Descrizione'}</label>
+                <input type="text" id="description" name="description" required placeholder="Seleziona o digita" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+                <datalist id="contact-list"></datalist>
+                <p class="text-xs text-gray-500 mt-1">Suggerimento: i nomi digitati vengono salvati nei contatti. <span class="text-indigo-500 font-semibold">⚡ Smart-fill attivo.</span></p>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Categoria</label>
+                  <input id="category" name="category" list="category-list" required placeholder="Es. Affitto / Marketing" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"/>
+                  <datalist id="category-list"></datalist>
+                </div>
+                <div>
+                  <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tag (separati da virgola)</label>
+                  <input id="tags" name="tags" placeholder="es. Q3, fattura-ricorrente" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"/>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label for="net-amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Importo Netto (${symbol})</label>
+                  <input type="number" id="net-amount" name="net" step="0.01" min="0" required placeholder="100.00" 
+                         class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" 
+                         inputmode="decimal">
+                </div>
+                <div>
+                  <label for="vat-rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aliquota IVA (%)</label>
+                  <select id="vat-rate" name="vatRate" class="w-full p-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700">
+                    ${IVA_RATES.map(r=>`<option value="${r}">${r}%</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+
+              <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg text-sm">
+                <p class="flex justify-between"><span>IVA Calcolata:</span> <span id="vat-amount-display" class="font-bold text-blue-600">0.00 ${symbol}</span></p>
+                <p class="flex justify-between border-t mt-1 pt-1 font-bold"><span>Importo Lordo Totale:</span> <span id="gross-amount-display" class="text-lg ${isIncome ? 'text-emerald-600' : 'text-red-600'}">0.00 ${symbol}</span></p>
+              </div>
+
+              <button type="submit" class="cta-button w-full ${isIncome ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'} text-white p-3 rounded-lg font-bold">
+                Registra Movimento
+              </button>
+            </form>
+        `;
+    }
+    
+    function setupActivityIncomeTypeListeners(scope){
+      if (scope!=='activity') return;
+      const incomeTypeSelect = document.getElementById('incomeType');
+      const isIncomeSelect = document.getElementById('isIncome');
+      const descriptionDiv = document.getElementById('description-div');
+
+      const updateVisibility = ()=>{
+        const isIncome = isIncomeSelect.value==='true';
+        const incomeType = incomeTypeSelect?.value || 'Fattura (Cliente)';
+        if (isIncome && incomeType==='Incasso/Corrispettivo'){
+          descriptionDiv.classList.add('hidden');
+          const desc = document.getElementById('description');
+          desc.removeAttribute('required'); 
+          if (document.getElementById('transaction-form').getAttribute('data-transaction-id')===null) {
+             desc.value = 'Corrispettivi/Incasso Giornaliero';
+          }
+          document.getElementById('description-label').textContent = 'Descrizione Incasso (Opzionale)';
+        } else {
+          descriptionDiv.classList.remove('hidden');
+          const desc = document.getElementById('description');
+          desc.setAttribute('required','required');
+          if (document.getElementById('transaction-form').getAttribute('data-transaction-id')===null){ desc.value=''; }
+          document.getElementById('description-label').textContent = isIncome ? 'Cliente / Descrizione' : 'Fornitore / Descrizione';
+          setupContactAutocomplete(scope);
+        }
+      };
+
+      incomeTypeSelect?.removeEventListener('change', updateVisibility);
+      incomeTypeSelect?.addEventListener('change', updateVisibility);
+      
+      // Call updateVisibility once to set initial state
+      updateVisibility();
+    }
+
+    function setupContactAutocomplete(scope){
+      const isIncome = document.getElementById('isIncome').value==='true';
+      const incomeType = document.getElementById('incomeType')?.value;
+      const input = document.getElementById('description');
+      const datalist = document.getElementById('contact-list');
+      if (!input || !datalist) return;
+
+      if (scope==='activity' && isIncome && incomeType==='Incasso/Corrispettivo'){ datalist.innerHTML=''; return; }
+      const relation = isIncome ? 'client':'supplier';
+      const contacts = appData.contacts
+        .filter(c=> c.scope===scope && (c.relation===relation || c.relation==='both'))
+        .sort((a,b)=> a.name.localeCompare(b.name));
+      datalist.innerHTML = contacts.map(c=> `<option value="${c.name}"></option>`).join('');
+      input.setAttribute('list','contact-list');
+      
+      // Aggiunge listener per il suggerimento smart quando la descrizione cambia
+      input.removeEventListener('input', handleDescriptionChange);
+      input.addEventListener('input', handleDescriptionChange);
+    }
+    
+    function handleDescriptionChange() {
+        const desc = document.getElementById('description').value;
+        // Chiama la funzione di auto-suggerimento solo in fase di inserimento (non modifica/duplicazione)
+        if (!document.getElementById('transaction-form').getAttribute('data-transaction-id')) {
+            autoFillSmartData(desc);
+        }
+    }
+
+
+    function setupCategoryAutocomplete(){
+      const dl = document.getElementById('category-list');
+      if (!dl) return;
+      const all = (appData.categories||DEFAULT_CATEGORIES).slice().sort((a,b)=>a.localeCompare(b));
+      dl.innerHTML = all.map(c=> `<option value="${c}"></option>`).join('');
+    }
+    
+    function getAllTags() {
+        const allTags = new Set();
+        [...appData.invoices, ...appData.expenses].forEach(t => {
+            (t.tags || []).forEach(tag => allTags.add(tag));
+        });
+        return Array.from(allTags).sort();
+    }
+
+    function calculateGross(){
+      const netInput=document.getElementById('net-amount');
+      const vatSelect=document.getElementById('vat-rate');
+      const vatAmountDisplay=document.getElementById('vat-amount-display');
+      const grossAmountDisplay=document.getElementById('gross-amount-display');
+      
+      let net = parseFloat(netInput?.value)||0; 
+      const rate=parseFloat(vatSelect?.value)||0;
+      
+      const vatAmt=net*rate/100; 
+      const gross=net+vatAmt;
+      
+      if (vatAmountDisplay) vatAmountDisplay.textContent = vatAmt.toFixed(2)+' '+getCurrencySymbol();
+      if (grossAmountDisplay) grossAmountDisplay.textContent = gross.toFixed(2)+' '+getCurrencySymbol();
+    }
+    
+    function getTodayFocusData(type) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        
+        const summary = calculateFinancialSummary(type, 'day', todayStr);
+        
+        const todayDate = new Date(todayStr);
+
+        const upcomingReminders = appData.reminders.filter(r => !r.paid && r.date === todayStr);
+        const upcomingBirthdays = appData.birthdays.filter(b => {
+            const bdRecurrence = new Date(`${todayDate.getFullYear()}-${b.recurringDate}`);
+            return bdRecurrence.toISOString().slice(0, 10) === todayStr;
+        });
+        
+        // Aggiungi gli alert di spesa anomala
+        const expenseSpikes = type === 'personal' ? analyzeExpenseSpikes() : [];
+        
+        return { summary, upcomingReminders, upcomingBirthdays, expenseSpikes };
+    }
+
+
+    // --- Page router (continua nella parte 2) ---
     // --- Page router (dalla parte 2) ---
     function renderNavbar(){
       const navbar=document.getElementById('navbar');
@@ -2197,7 +2827,7 @@
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-indigo-500">
                   <p class="text-sm text-gray-500">Punteggio Salute Finanziaria</p>
-                  <p class="text-xl font-bold ${FHSColor}">${fhs.score}/${fhs.max}</p>
+                  <p class="text-2xl font-extrabold ${FHSColor}">${fhs.score}/${fhs.max}</p>
               </div>
               <div class="bg-white dark:bg-gray-800 p-4 rounded-xl card text-center border-l-4 border-dashed border-purple-500">
                   <p class="text-sm text-gray-500">Obiettivo Saldo Netto Mensile: ${appData.monthlySavingsTarget.toFixed(2)} ${symbol}</p>
@@ -2659,10 +3289,6 @@
                 return;
             }
             
-            const isIncome = amount >= 0;
-            const absoluteAmount = Math.abs(amount);
-
-            // Transazione di aggiustamento
             const oldBalance = appData.currentBankBalance;
             appData.currentBankBalance += amount; 
 
@@ -2729,7 +3355,7 @@
         showModal('ELIMINA PROFILO UTENTE', 
             `Sei sicuro di voler ELIMINARE PERMANENTEMENTE il profilo "${currentName}" e tutti i suoi dati?`, 
             true, 
-            () => {
+            ()={() => {
                 const userKey = globalState.currentUser.dataKey;
                 
                 localStorage.removeItem(userKey);
@@ -2903,7 +3529,7 @@
             <div class="max-h-60 overflow-y-auto border dark:border-gray-700 p-3 rounded-lg bg-gray-50 dark:bg-gray-900 space-y-2 text-sm">
                 ${auditLog.slice(0, 100).map(log => {
                     const date = new Date(log.date).toLocaleTimeString('it-IT', { year: '2-digit', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                    const color = log.action.includes('ADJ') ? 'text-blue-500' : 'text-orange-500';
+                    const color = log.action.includes('ADJ') ? 'text-blue-500' : (log.action.includes('DELETE') ? 'text-red-500' : 'text-orange-500');
                     return `
                         <div class="flex justify-between border-b dark:border-gray-700/50 pb-1">
                             <span class="${color} font-semibold text-xs">${log.action}</span>
@@ -2912,7 +3538,10 @@
                         <p class="text-xs ml-2">
                             ${log.action.includes('ADJ') ? 
                                 `Saldo ${log.oldValue} -> ${log.newValue}. Motivo: ${log.description}` : 
-                                `Trans. #${log.transactionId} (${log.newValue.description}) modificata.`
+                                (log.action.includes('DELETE') ? 
+                                    `Trans. #${log.transactionId} eliminata. Desc: ${log.deletedItem?.description || 'N/A'}` : 
+                                    `Trans. #${log.transactionId} modificata. Desc: ${log.newValue.description}`
+                                )
                             }
                         </p>
                     `;
