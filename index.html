@@ -362,16 +362,16 @@
             <input type="date" id="archiveDateFilter" v-model="archiveDateFilter" @change="calculateDriverStats" style="padding: 8px; font-size: 1rem;">
         </div>
 
-        <div class="stats-box">
-            <h3>Incasso Totale del {{ archiveDateFilterDisplay }}</h3>
-            <p>€{{ dailyTotal.toFixed(2) }}</p>
+        <div class="stats-box" style="background: #e31b23; color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 5px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 5px;">Incasso Totale del {{ archiveDateFilterDisplay }}</h3>
+            <p style="margin: 0; font-size: 1.5rem;">€{{ dailyTotal.toFixed(2) }}</p>
         </div>
 
         <h3 style="color:#6b7280;">Consegne Giornaliere</h3>
         <div style="margin-bottom: 15px;">
             <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtra per Fattorino:</label>
             <select v-model="selectedDriver" @change="calculateDriverStats" style="padding: 8px; border-radius: 6px; width: 100%;">
-                <option value="">Tutti i Fattorini</option>
+                <option value="">Tutti i Fattorini (Solo Consegne)</option>
                 <option v-for="driver in availableDrivers" :value="driver">{{ driver }}</option>
             </select>
         </div>
@@ -384,20 +384,22 @@
         <h3 style="color:#6b7280;">Ordini Completati</h3>
         <div v-if="!filteredArchive.length">Nessun ordine completato per la data selezionata.</div>
         <div class="archive-order-card" v-for="o in filteredArchive.slice().reverse()" :key="o.id">
-            <h5>#{{o.id}} – {{new Date(o.archivedDate).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
-            <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})
-                <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6; margin-left: 10px;">Tavolo/Ritiro: {{o.tableNumber}}</span>
-            </p>
-            <div class="archive-actions" style="margin-top: 5px; display: flex; align-items: center; justify-content: flex-end;">
-                 <div v-if="o.mode === 'consegna'" style="display: flex; align-items: center; gap: 5px; flex-grow: 1;">
-                     <label style="font-size: 0.8rem; white-space: nowrap;">Fattorino:</label>
-                     <select @change="updateArchiveDriver(o.id, $event.target.value)" style="padding: 4px; border-radius: 4px; font-size: 0.8rem; flex-grow: 1;">
-                         <option value="">Nessuno</option>
-                         <option v-for="driver in availableDrivers" :value="driver" :selected="o.driver === driver">{{ driver }}</option>
-                     </select>
-                 </div>
-                 <span v-else-if="o.driver" style="font-size: 0.8rem; color: #10b981;">Fattorino: {{o.driver}}</span>
-                <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+                <h5>#{{o.id}} – {{new Date(o.archivedDate).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
+                <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})
+                    <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6; margin-left: 10px;">Tavolo/Ritiro: {{o.tableNumber}}</span>
+                </p>
+                <div class="archive-actions" style="margin-top: 5px; display: flex; align-items: center; justify-content: flex-end;">
+                    <div v-if="o.mode === 'consegna'" style="display: flex; align-items: center; gap: 5px; flex-grow: 1;">
+                        <label style="font-size: 0.8rem; white-space: nowrap;">Fattorino:</label>
+                        <select @change="updateArchiveDriver(o.id, $event.target.value)" style="padding: 4px; border-radius: 4px; font-size: 0.8rem; flex-grow: 1;">
+                            <option value="">Nessuno</option>
+                            <option v-for="driver in availableDrivers" :value="driver" :selected="o.driver === driver">{{ driver }}</option>
+                        </select>
+                    </div>
+                    <span v-else-if="o.driver" style="font-size: 0.8rem; color: #10b981;">Fattorino: {{o.driver}}</span>
+                    <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
+                </div>
             </div>
         </div>
     </section>
@@ -1132,6 +1134,13 @@
              this.activeModCat = 'Più'; 
              this.modifierSearchTerm = ''; 
         },
+        removeItem(index) {
+            if (confirm(`Sei sicuro di voler eliminare l'articolo "${this.order[index].nome}" dal carrello?`)) {
+                 this.order.splice(index, 1);
+                 this.selectedItemIndex = null;
+                 this.lastSelectedItem = null;
+            }
+        },
         removeModifier(itemIndex, modIndex) {
             this.order[itemIndex].modifiers.splice(modIndex, 1);
         },
@@ -1845,9 +1854,15 @@
         },
         addMeterToOrder() {
             if (!this.isMeterValid) return;
-            const itemToAdd = JSON.parse(JSON.stringify(this.tempMeterItem));
-            this.order.push(itemToAdd);
-            this.selectedItemIndex = this.order.length - 1;
+            // 1. Se stiamo modificando un elemento esistente
+            if (this.selectedItemIndex !== null && this.order[this.selectedItemIndex]?.isMeter) {
+                 // Sostituisce l'elemento esistente
+                this.order[this.selectedItemIndex] = JSON.parse(JSON.stringify(this.tempMeterItem)); 
+            } else {
+                 // Aggiunge un nuovo elemento
+                this.order.push(JSON.parse(JSON.stringify(this.tempMeterItem)));
+                this.selectedItemIndex = this.order.length - 1;
+            }
             this.tempMeterItem = null;
             this.showMeterModal = false;
         },
@@ -1882,9 +1897,15 @@
         },
         addHalfPizzaToOrder() {
             if (!this.isHalfPizzaValid) return;
-            const itemToAdd = JSON.parse(JSON.stringify(this.tempHalfPizzaItem));
-            this.order.push(itemToAdd);
-            this.selectedItemIndex = this.order.length - 1;
+            // 1. Se stiamo modificando un elemento esistente
+            if (this.selectedItemIndex !== null && this.order[this.selectedItemIndex]?.isHalfPizza) {
+                 // Sostituisce l'elemento esistente
+                this.order[this.selectedItemIndex] = JSON.parse(JSON.stringify(this.tempHalfPizzaItem)); 
+            } else {
+                // Aggiunge un nuovo elemento
+                this.order.push(JSON.parse(JSON.stringify(this.tempHalfPizzaItem)));
+                this.selectedItemIndex = this.order.length - 1;
+            }
             this.tempHalfPizzaItem = null;
             this.showHalfPizzaModal = false;
         },
@@ -1898,12 +1919,14 @@
                 this.tempMeterItem = JSON.parse(JSON.stringify(item));
                 this.showMeterModal = true;
                 this.selectedItemIndex = index; // Seleziona l'elemento in modifica
+                this.lastSelectedItem = null;
                 return;
             }
             if (item && item.isHalfPizza) {
                 this.tempHalfPizzaItem = JSON.parse(JSON.stringify(item));
                 this.showHalfPizzaModal = true;
                  this.selectedItemIndex = index; // Seleziona l'elemento in modifica
+                 this.lastSelectedItem = null;
                 return;
             }
 
@@ -1912,6 +1935,7 @@
             if (this.selectedItemIndex !== null) {
                 this.activeModCat = 'Più'; 
                 this.modifierSearchTerm = '';
+                this.lastSelectedItem = null; 
             }
         },
         openModal() {
