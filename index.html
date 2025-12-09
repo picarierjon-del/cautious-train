@@ -900,8 +900,7 @@
     // ⭐ /FUNZIONI HELPER ⭐
 
     PetiteVue.createApp({
-        // ... (Omessa la parte di PetiteVue per brevità, vedi sotto le modifiche importanti)
-        // Dati Iniziali e Stato (Mantenuti ma con aggiunta deleteOrder)
+        // Dati Iniziali e Stato 
 
         view:'inserimento',
         showModal: false, 
@@ -1013,16 +1012,16 @@
         get allItems() {
             return Object.values(this.menu).flat();
         },
+        // **CORREZIONE CHIAVE #1: Logica di filtro degli articoli nel menu**
         get filteredAvailableItems() {
-            let items = this.menu[this.activeCat] || [];
             const term = this.searchTerm.toLowerCase().trim();
-
             if (term) {
                  // Ricerca in tutte le categorie se viene digitato un termine
-                 items = this.allItems.filter(p => p.nome.toLowerCase().includes(term) && 
+                 return this.allItems.filter(p => p.nome.toLowerCase().includes(term) && 
                                                    (!p.isFinished || this.activeCat.includes("Impostazioni")));
             }
-            return items;
+            // Se non c'è termine di ricerca, mostra solo gli elementi della categoria attiva
+            return this.menu[this.activeCat] || [];
         },
         get filteredModifiersForActiveCat() {
             let mods = this.modifiers[this.activeModCat] || [];
@@ -1105,12 +1104,15 @@
         get dailyTotal() {
             return this.filteredArchive.reduce((sum, o) => sum + o.total, 0);
         },
+        // **CORREZIONE CHIAVE #2: Logica per l'abilitazione dei modificatori**
         get isStandardItemOrNoSelection() {
-            // Usato per disabilitare i modificatori per i prodotti composti
-            return this.selectedItemIndex === null || 
-                   (this.order[this.selectedItemIndex] && 
-                    !this.order[this.selectedItemIndex].isMeter && 
-                    !this.order[this.selectedItemIndex].isHalfPizza);
+            // Se non c'è nulla selezionato *nel carrello*, i modificatori sono attivi per aggiungere modifiche generiche.
+            if (this.selectedItemIndex === null) return true;
+            
+            // Altrimenti, i modificatori sono attivi solo se l'articolo selezionato *non è* composto.
+            return this.order[this.selectedItemIndex] && 
+                   !this.order[this.selectedItemIndex].isMeter && 
+                   !this.order[this.selectedItemIndex].isHalfPizza;
         },
 
         // METODI PRINCIPALI
