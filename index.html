@@ -136,6 +136,16 @@
         .item-status .available { background: #22c55e; color: #fff; }
         .item-status .finished { background: #b91c1c; color: #fff; }
 
+        /* Stili Accesso e Notifiche */
+        .access-container { text-align: center; padding: 50px 20px; }
+        .access-container input { max-width: 250px; margin: 10px auto; display: block; }
+
+        .time-capacity { padding: 10px; border: 1px solid #facc15; background-color: #fffbeb; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; }
+        .time-capacity.full { border-color: #b91c1c; background-color: #ffecec; color: #b91c1c; font-weight: 700;}
+        .time-capacity.warning { border-color: #facc15; background-color: #fffbeb; }
+
+        .settings-item .actions { display: flex; gap: 5px; }
+
     </style>
 </head>
 <body>
@@ -150,9 +160,9 @@
                     :class="{active:activeCat===c}" @click="activeCat=c; lastSelectedItem=null;">{{c}}</button>
         </div>
 
-        <div class="mod-row">
+        <div class="mod-row" v-if="Object.keys(modifiers).length > 0">
             <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                    :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeModCat===cat}"
+                    :class="[cat.toLowerCase().includes('più') ? 'green' : cat.toLowerCase().includes('senza') ? 'gray' : cat.toLowerCase().includes('poco') ? 'yellow' : cat.toLowerCase().includes('abbondante') ? 'blue' : '', {active: activeModCat===cat}]"
                     @click="activeModCat=cat; modifierSearchTerm=''" :disabled="selectedItemIndex === null || (order[selectedItemIndex] && (order[selectedItemIndex].isMeter || order[selectedItemIndex].isHalfPizza))">{{cat.toUpperCase()}}</button>
         </div>
         
@@ -194,7 +204,11 @@
                         <span v-if="i.isHalfPizza">🍕 {{i.nome}} ({{i.gusto1}} / {{i.gusto2}})</span>
                         <span v-else-if="i.isMeter">🍕 {{i.nome}} ({{i.sections.length}} Gusti)</span>
                         <span v-else>{{i.nome}}</span>
-                        <span>€{{calculateItemTotal(i).toFixed(2)}} <button @click.stop="removeItem(idx)" style="border:none;background:none;color:#e31b23">✖️</button></span>
+                        
+                        <span @dblclick.stop="openPriceEditModal(idx)" @click.stop="openPriceEditModal(idx)" style="cursor: pointer; font-weight: 700; border-bottom: 1px dashed #e31b23;">
+                            €{{calculateItemTotal(i).toFixed(2)}} 
+                            <button @click.stop="removeItem(idx)" style="border:none;background:none;color:#e31b23; margin-left: 5px;">✖️</button>
+                        </span>
                     </div>
                     
                     <ul v-if="i.modifiers && i.modifiers.length > 0 && !i.isMeter && !i.isHalfPizza" class="modifiers-list">
@@ -245,7 +259,7 @@
                     
                 </li>
             </ul>
-            <div class="total">Totale Ordine: €{{calculatedOrderTotal.toFixed(2)}}</div>
+            <div class="total">Totale Articoli: €{{calculatedOrderTotal.toFixed(2)}}</div>
             <div v-if="deliveryCost > 0" class="total">Costo Consegna: +€{{deliveryCost.toFixed(2)}} ({{zoneName}})</div>
             <div class="total" style="font-size: 1.2rem; margin-top: 10px;">TOTALE COMPLESSIVO: €{{total.toFixed(2)}}</div>
             
@@ -355,158 +369,215 @@
     </section>
 
     <section v-show="view==='storico'">
-        <h2>Storico e Statistiche</h2>
-        
-        <div class="form-row">
-            <label for="archiveDateFilter" style="font-weight: 600;">Filtra Ordini Completati per Data:</label>
-            <input type="date" id="archiveDateFilter" v-model="archiveDateFilter" @change="calculateDriverStats" style="padding: 8px; font-size: 1rem;">
+        <div v-if="!isAccessGranted">
+            <div class="access-container">
+                <h2>Accesso Storico Richiesto</h2>
+                <p>Inserisci il PIN/Password per accedere allo storico ordini.</p>
+                <input type="password" v-model="accessPin" placeholder="PIN/Password" @keyup.enter="grantAccess" required>
+                <button class="final-btn" style="max-width: 200px; margin: 10px auto;" @click="grantAccess">Accedi</button>
+            </div>
         </div>
+        <div v-else>
+            <h2>Storico e Statistiche</h2>
+            
+            <div class="form-row">
+                <label for="archiveDateFilter" style="font-weight: 600;">Filtra Ordini Completati per Data:</label>
+                <input type="date" id="archiveDateFilter" v-model="archiveDateFilter" @change="calculateDriverStats" style="padding: 8px; font-size: 1rem;">
+            </div>
 
-        <div class="stats-box">
-            <h3>Incasso Totale del {{ archiveDateFilterDisplay }}</h3>
-            <p>€{{ dailyTotal.toFixed(2) }}</p>
-        </div>
+            <div class="stats-box">
+                <h3>Incasso Totale del {{ archiveDateFilterDisplay }}</h3>
+                <p>€{{ dailyTotal.toFixed(2) }}</p>
+            </div>
 
-        <h3 style="color:#6b7280;">Consegne Giornaliere</h3>
-        <div style="margin-bottom: 15px;">
-            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtra per Fattorino:</label>
-            <select v-model="selectedDriver" @change="calculateDriverStats" style="padding: 8px; border-radius: 6px; width: 100%;">
-                <option value="">Tutti i Fattorini</option>
-                <option v-for="driver in availableDrivers" :value="driver">{{ driver }}</option>
-            </select>
-        </div>
+            <h3 style="color:#6b7280;">Consegne Giornaliere</h3>
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtra per Fattorino:</label>
+                <select v-model="selectedDriver" @change="calculateDriverStats" style="padding: 8px; border-radius: 6px; width: 100%;">
+                    <option value="">Tutti i Fattorini</option>
+                    <option v-for="driver in availableDrivers" :value="driver">{{ driver }}</option>
+                </select>
+            </div>
 
-        <div v-if="selectedDriver || driverStats.totalOrders > 0" style="background: #f0f0f0; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
-            <p style="margin: 0; font-weight: 700;">{{ selectedDriver ? 'Statistiche di ' + selectedDriver : 'Totale Consegne' }} ({{ archiveDateFilterDisplay }}):</p>
-            <p style="margin: 5px 0 0;">Consegne: **{{ driverStats.totalOrders }}** | Totale Incasso: **€{{ driverStats.totalRevenue.toFixed(2) }}**</p>
-        </div>
+            <div v-if="selectedDriver || driverStats.totalOrders > 0" style="background: #f0f0f0; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 0; font-weight: 700;">{{ selectedDriver ? 'Statistiche di ' + selectedDriver : 'Totale Consegne' }} ({{ archiveDateFilterDisplay }}):</p>
+                <p style="margin: 5px 0 0;">Consegne: **{{ driverStats.totalOrders }}** | Totale Incasso: **€{{ driverStats.totalRevenue.toFixed(2) }}**</p>
+            </div>
 
-        <h3 style="color:#6b7280;">Ordini Completati</h3>
-        <div v-if="!filteredArchive.length">Nessun ordine completato per la data selezionata.</div>
-        <div class="archive-order-card" v-for="o in filteredArchive.slice().reverse()" :key="o.id">
-            <h5>#{{o.id}} – {{new Date(o.archivedDate).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
-            <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})
-                <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6; margin-left: 10px;">Tavolo/Ritiro: {{o.tableNumber}}</span>
-            </p>
-            <div class="archive-actions" style="margin-top: 5px; display: flex; align-items: center; justify-content: flex-end;">
-                 <div v-if="o.mode === 'consegna'" style="display: flex; align-items: center; gap: 5px; flex-grow: 1;">
-                     <label style="font-size: 0.8rem; white-space: nowrap;">Fattorino:</label>
-                     <select @change="updateArchiveDriver(o.id, $event.target.value)" style="padding: 4px; border-radius: 4px; font-size: 0.8rem; flex-grow: 1;">
-                         <option value="">Nessuno</option>
-                         <option v-for="driver in availableDrivers" :value="driver" :selected="o.driver === driver">{{ driver }}</option>
-                     </select>
-                 </div>
-                 <span v-else-if="o.driver" style="font-size: 0.8rem; color: #10b981;">Fattorino: {{o.driver}}</span>
-                <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
+            <h3 style="color:#6b7280;">Ordini Completati</h3>
+            <div v-if="!filteredArchive.length">Nessun ordine completato per la data selezionata.</div>
+            <div class="archive-order-card" v-for="o in filteredArchive.slice().reverse()" :key="o.id">
+                <h5>#{{o.id}} – {{new Date(o.archivedDate).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
+                <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})
+                    <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6; margin-left: 10px;">Tavolo/Ritiro: {{o.tableNumber}}</span>
+                </p>
+                <div class="archive-actions" style="margin-top: 5px; display: flex; align-items: center; justify-content: flex-end;">
+                    <div v-if="o.mode === 'consegna'" style="display: flex; align-items: center; gap: 5px; flex-grow: 1;">
+                        <label style="font-size: 0.8rem; white-space: nowrap;">Fattorino:</label>
+                        <select @change="updateArchiveDriver(o.id, $event.target.value)" style="padding: 4px; border-radius: 4px; font-size: 0.8rem; flex-grow: 1;">
+                            <option value="">Nessuno</option>
+                            <option v-for="driver in availableDrivers" :value="driver" :selected="o.driver === driver">{{ driver }}</option>
+                        </select>
+                    </div>
+                    <span v-else-if="o.driver" style="font-size: 0.8rem; color: #10b981;">Fattorino: {{o.driver}}</span>
+                    <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
+                </div>
             </div>
         </div>
     </section>
 
     <section v-show="view==='impostazioni'" class="settings">
-        
-        <h2>Gestione Fattorini</h2>
-        <div class="settings-list">
-            <div class="settings-item" v-for="(driver, i) in drivers" :key="i">
-                <span>{{driver}}</span>
-                <button class="remove" @click="deleteDriver(i)">Elimina</button>
+        <div v-if="!isAccessGranted">
+            <div class="access-container">
+                <h2>Accesso Impostazioni Richiesto</h2>
+                <p>Inserisci il PIN/Password per accedere alle impostazioni.</p>
+                <input type="password" v-model="accessPin" placeholder="PIN/Password" @keyup.enter="grantAccess" required>
+                <button class="final-btn" style="max-width: 200px; margin: 10px auto;" @click="grantAccess">Accedi</button>
             </div>
         </div>
-        <form @submit.prevent="addDriver">
-            <input type="text" v-model="newDriverName" placeholder="Nome Fattorino (es. Mario Rossi)" required>
-            <button type="submit">Aggiungi Fattorino</button>
-        </form>
-
-        <hr style="margin: 20px 0;">
-
-        <h2>Gestione Menu e Articoli</h2>
-        <div class="cat-row">
-            <button class="cat-btn" v-for="c in Object.keys(menu)" :key="c"
-                    :class="{active:activeSettingsCat===c}" @click="activeSettingsCat=c">{{c}}</button>
-        </div>
-
-        <form @submit.prevent="addCategory" style="margin-bottom: 20px;">
-            <input type="text" v-model="newCategoryName" placeholder="Nome Nuova Categoria" required>
-            <button type="submit">Aggiungi Categoria</button>
-        </form>
-
-        <div v-if="activeSettingsCat">
-            <h3>Articoli in {{ activeSettingsCat }} <button class="remove" @click="deleteCategory(activeSettingsCat)">Rimuovi Categoria</button></h3>
+        <div v-else>
+            <h2>Gestione Account e Sicurezza</h2>
+            <div class="form-row">
+                <label for="adminPin" style="font-weight: 600;">Modifica PIN/Password Amministratore (Attuale: ****)</label>
+                <input type="password" id="adminPin" v-model="newAdminPin" placeholder="Nuovo PIN (es. 0000)" @change="saveAdminPin" required>
+            </div>
             
+            <hr style="margin: 20px 0;">
+
+            <h2>Gestione Capacità (Flusso Ordini)</h2>
+            <div class="form-row">
+                <label for="maxPizzas">Pizze massime per intervallo:</label>
+                <input type="number" id="maxPizzas" v-model.number="capacitySettings.maxPizzas" min="1" required @change="saveData">
+            </div>
+            <div class="form-row">
+                <label for="intervalMinutes">Durata intervallo (minuti):</label>
+                <input type="number" id="intervalMinutes" v-model.number="capacitySettings.intervalMinutes" min="5" step="5" required @change="saveData">
+            </div>
+            <p style="font-size: 0.9rem; color: #6b7280;">Capacità attuale: {{ capacitySettings.maxPizzas }} pizze ogni {{ capacitySettings.intervalMinutes }} minuti.</p>
+
+            <hr style="margin: 20px 0;">
+
+            <h2>Gestione Fattorini</h2>
             <div class="settings-list">
-                <div class="settings-item" v-for="(item, i) in menu[activeSettingsCat]" :key="i">
-                    <span>
-                        {{item.nome}} - €{{item.prezzo.toFixed(2)}} 
-                        <span v-if="item.isMeter">(Mezzo Metro)</span>
-                        <span v-if="item.isHalfPizza">(Metà Pizza)</span>
-                    </span>
-                    <div class="item-status">
-                        <button v-if="item.isFinished" @click="toggleItemFinished(activeSettingsCat, i)" class="available">Disponibile</button>
-                        <button v-else @click="toggleItemFinished(activeSettingsCat, i)" class="finished">Finito</button>
-                        <button class="remove" @click="deleteItem(activeSettingsCat, i)">Elimina</button>
-                    </div>
+                <div class="settings-item" v-for="(driver, i) in drivers" :key="i">
+                    <span>{{driver}}</span>
+                    <button class="remove" @click="deleteDriver(i)">Elimina</button>
                 </div>
             </div>
-
-            <form @submit.prevent="addItemToCategory">
-                <input type="text" v-model="newItemName" placeholder="Nome Articolo" required>
-                <input type="number" step="0.01" v-model.number="newItemPrice" placeholder="Prezzo" required>
-                <button type="submit">Aggiungi Articolo</button>
+            <form @submit.prevent="addDriver">
+                <input type="text" v-model="newDriverName" placeholder="Nome Fattorino (es. Mario Rossi)" required>
+                <button type="submit">Aggiungi Fattorino</button>
             </form>
-        </div>
 
-        <hr style="margin: 20px 0;">
+            <hr style="margin: 20px 0;">
 
-        <h2>Gestione Modificatori</h2>
-        <div class="mod-row">
-            <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                    :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeSettingsModCat===cat}"
-                    @click="activeSettingsModCat=cat">{{cat.toUpperCase()}}</button>
-        </div>
+            <h2>Gestione Menu e Articoli</h2>
+            <div class="cat-row">
+                <button class="cat-btn" v-for="c in Object.keys(menu)" :key="c"
+                        :class="{active:activeSettingsCat===c}" @click="activeSettingsCat=c">{{c}}</button>
+            </div>
 
-        <div v-if="activeSettingsModCat">
-            <h3>Modificatori in {{ activeSettingsModCat }}</h3>
-            
-            <div class="settings-list">
-                <div class="settings-item" v-for="(mod, i) in modifiers[activeSettingsModCat]" :key="i">
-                    <span>{{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span></span>
-                    <div class="item-status">
-                        <button v-if="mod.isFinished" @click="toggleModifierFinished(activeSettingsModCat, i)" class="available">Disponibile</button>
-                        <button v-else @click="toggleModifierFinished(activeSettingsModCat, i)" class="finished">Finito</button>
-                        <button class="remove" @click="deleteModifier(activeSettingsModCat, i)">Elimina</button>
+            <form @submit.prevent="addCategory" style="margin-bottom: 20px;">
+                <input type="text" v-model="newCategoryName" placeholder="Nome Nuova Categoria" required>
+                <button type="submit">Aggiungi Categoria</button>
+            </form>
+
+            <div v-if="activeSettingsCat">
+                <h3>Articoli in {{ activeSettingsCat }} <button class="remove" @click="deleteCategory(activeSettingsCat)">Rimuovi Categoria</button></h3>
+                
+                <div class="settings-list">
+                    <div class="settings-item" v-for="(item, i) in menu[activeSettingsCat]" :key="i">
+                        <span>
+                            {{item.nome}} - €{{item.prezzo.toFixed(2)}} 
+                            <span v-if="item.isMeter">(Mezzo Metro/Grande)</span>
+                            <span v-if="item.isHalfPizza">(Metà Pizza)</span>
+                        </span>
+                        <div class="item-status">
+                            <button v-if="item.isFinished" @click="toggleItemFinished(activeSettingsCat, i)" class="available">Disponibile</button>
+                            <button v-else @click="toggleItemFinished(activeSettingsCat, i)" class="finished">Finito</button>
+                            <button class="remove" @click="deleteItem(activeSettingsCat, i)">Elimina</button>
+                        </div>
                     </div>
                 </div>
+
+                <form @submit.prevent="addItemToCategory">
+                    <input type="text" v-model="newItemName" placeholder="Nome Articolo" required>
+                    <input type="number" step="0.01" v-model.number="newItemPrice" placeholder="Prezzo" required>
+                    <button type="submit">Aggiungi Articolo</button>
+                </form>
             </div>
 
-            <form @submit.prevent="addModifierToCategory">
-                <input type="text" v-model="newModifierName" placeholder="Nome Modificatore" required>
-                <input type="number" step="0.01" v-model.number="newModifierPrice" placeholder="Costo (0 per gratis)" required>
-                <button type="submit">Aggiungi Modificatore</button>
+            <hr style="margin: 20px 0;">
+
+            <h2>Gestione Modificatori</h2>
+            
+            <form @submit.prevent="addModifierCategory" style="margin-bottom: 20px;">
+                <input type="text" v-model="newModifierCategoryName" placeholder="Nome Nuova Categoria Modificatori" required>
+                <button type="submit">Aggiungi Categoria</button>
             </form>
-        </div>
 
-        <hr style="margin: 20px 0;">
+            <div class="cat-row">
+                <button class="cat-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
+                        :class="{active: activeSettingsModCat===cat}"
+                        @click="activeSettingsModCat=cat">{{cat.toUpperCase()}}</button>
+            </div>
 
-        <h2>Zone di Consegna (Delivery)</h2>
-        <div class="settings-list">
-            <div class="settings-item" v-for="(zone, i) in deliveryZones" :key="i">
-                <span>{{zone.name}} - €{{zone.price.toFixed(2)}}</span>
-                <button class="remove" @click="deleteZone(i)">Elimina</button>
+            <div v-if="activeSettingsModCat">
+                <h3>Modificatori in {{ activeSettingsModCat }} <button class="remove" v-if="!isDefaultModifierCategory(activeSettingsModCat)" @click="deleteModifierCategory(activeSettingsModCat)">Rimuovi Categoria</button></h3>
+                
+                <div class="settings-list">
+                    <div class="settings-item" v-for="(mod, i) in modifiers[activeSettingsModCat]" :key="i">
+                        <span>{{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span></span>
+                        <div class="item-status">
+                            <button v-if="mod.isFinished" @click="toggleModifierFinished(activeSettingsModCat, i)" class="available">Disponibile</button>
+                            <button v-else @click="toggleModifierFinished(activeSettingsModCat, i)" class="finished">Finito</button>
+                            <button class="remove" @click="deleteModifier(activeSettingsModCat, i)">Elimina</button>
+                        </div>
+                    </div>
+                </div>
+
+                <form @submit.prevent="addModifierToCategory">
+                    <input type="text" v-model="newModifierName" placeholder="Nome Modificatore" required>
+                    <input type="number" step="0.01" v-model.number="newModifierPrice" placeholder="Costo (0 per gratis)" required>
+                    <button type="submit">Aggiungi Modificatore</button>
+                </form>
+            </div>
+
+            <hr style="margin: 20px 0;">
+
+            <h2>Zone di Consegna (Delivery)</h2>
+            <div class="settings-list">
+                <div class="settings-item" v-for="(zone, i) in deliveryZones" :key="i">
+                    <span>{{zone.name}} - €{{zone.price.toFixed(2)}}</span>
+                    <button class="remove" @click="deleteZone(i)">Elimina</button>
+                </div>
+            </div>
+            <form @submit.prevent="addZone">
+                <input type="text" v-model="newZoneName" placeholder="Nome Zona (es. Centro)" required>
+                <input type="number" step="0.01" v-model.number="newZonePrice" placeholder="Costo (€)" required>
+                <button type="submit">Aggiungi Zona</button>
+            </form>
+
+            <hr style="margin: 20px 0;">
+
+            <h2>Manutenzione Dati</h2>
+            <p style="font-size: 0.9rem; color: #b91c1c;">ATTENZIONE: Queste operazioni sono definitive.</p>
+            <div class="modal-actions" style="justify-content: flex-start; gap: 10px;">
+                <button type="button" class="btn-cancel" style="background: #10b981;" @click="exportData"><i class="fa-solid fa-file-export"></i> Esporta Backup</button>
+                <button type="button" class="btn-confirm" style="background: #3b82f6;" @click="importData"><i class="fa-solid fa-file-import"></i> Importa Backup</button>
+            </div>
+            <div class="modal-actions" style="justify-content: flex-start; margin-top: 10px;">
+                <button type="button" class="final-btn cancel-edit-btn" style="background: #b91c1c;" @click="clearCache"><i class="fa-solid fa-broom"></i> Pulisci Gest. (Tranne Clienti)</button>
             </div>
         </div>
-        <form @submit.prevent="addZone">
-            <input type="text" v-model="newZoneName" placeholder="Nome Zona (es. Centro)" required>
-            <input type="number" step="0.01" v-model.number="newZonePrice" placeholder="Costo (€)" required>
-            <button type="submit">Aggiungi Zona</button>
-        </form>
-
     </section>
 </main>
 
 <nav>
     <button :class="{active:view==='inserimento'}" @click="view='inserimento'"><i class="fa-solid fa-cash-register"></i>Inserimento</button>
     <button :class="{active:view==='ordini'}" @click="view='ordini'"><i class="fa-solid fa-clipboard-list"></i>Ordini</button>
-    <button :class="{active:view==='storico'}" @click="view='storico'; calculateDriverStats();"><i class="fa-solid fa-chart-line"></i>Storico</button>
-    <button :class="{active:view==='impostazioni'}" @click="view='impostazioni'"><i class="fa-solid fa-gear"></i>Impostazioni</button>
+    <button :class="{active:view==='storico'}" @click="view='storico'; isAccessGranted=false; accessPin='';"><i class="fa-solid fa-chart-line"></i>Storico</button>
+    <button :class="{active:view==='impostazioni'}" @click="view='impostazioni'; isAccessGranted=false; accessPin='';"><i class="fa-solid fa-gear"></i>Impostazioni</button>
 </nav>
 
 <div class="modal-overlay" v-show="showModal" @click.self="showModal=false">
@@ -575,11 +646,18 @@
 
             <div class="form-row">
                 <label for="hour">Ora di Ritiro/Consegna *</label>
-                <input type="time" id="hour" v-model="hour" required>
+                <input type="time" id="hour" v-model="hour" required @change="updateCapacityWarning">
             </div>
             
+            <div class="time-capacity" :class="{full: isCapacityFull, warning: isCapacityWarning}" v-if="orderCapacity.total > 0 && orderCapacity.remaining <= capacitySettings.maxPizzas">
+                <p style="margin: 0; font-weight: 700;">Capacità per le {{ hour }}:</p>
+                <p style="margin: 5px 0 0;">Pizze ordinate: **{{ orderCapacity.total }}** | Pizze libere: **{{ orderCapacity.remaining }}** (Max: {{ capacitySettings.maxPizzas }})</p>
+                <p v-if="isCapacityFull" style="margin: 5px 0 0;">**ATTENZIONE: Capacità oraria saturata!**</p>
+                <p v-else-if="isCapacityWarning" style="margin: 5px 0 0;">**AVVISO: La capacità si sta esaurendo.**</p>
+            </div>
+
             <div class="form-row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                <label for="acconto">Acconto Ricevuto / Contanti (opzionale)</label>
+                <label for="acconto">Contanti Ricevuti (opzionale)</label>
                 <input type="number" step="0.01" id="acconto" v-model.number="accontoRicevuto" placeholder="0.00">
             </div>
             <div v-if="restoDaDare > 0" class="total" style="color: #e31b23; font-weight: 700;">
@@ -588,35 +666,60 @@
 
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" @click="showModal=false">Annulla</button>
-                <button type="submit" class="btn-confirm">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
+                <button type="submit" class="btn-confirm" :disabled="isCapacityFull">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="modal-overlay" v-show="showPriceEditModal" @click.self="showPriceEditModal=false">
+    <div class="modal-content">
+        <h3>Modifica Prezzo Manuale</h3>
+        <p>Articolo: <strong>{{ order[tempPriceEditIndex]?.nome }}</strong></p>
+        <div class="form-row">
+            <label for="newPrice">Nuovo Prezzo Totale per l'Articolo</label>
+            <input type="number" step="0.01" id="newPrice" v-model.number="newPriceValue" required>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" @click="showPriceEditModal=false">Annulla</button>
+            <button class="btn-confirm" @click="saveNewPrice">Salva Nuovo Prezzo</button>
+        </div>
     </div>
 </div>
 
 <div class="modal-overlay" v-show="showMeterModal" @click.self="showMeterModal=false">
     <div class="modal-content">
         <h3>Componi {{ tempMeterItem?.nome }}</h3>
-        <p>Sezioni: {{ tempMeterItem?.sections.length }}</p>
+        <p>Prezzo Base: €{{ tempMeterItem?.prezzo.toFixed(2) }}</p>
+        
         <div v-for="(section, secIdx) in tempMeterItem.sections" :key="secIdx" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 6px;">
             <strong>{{ section.name }}</strong> ({{ (section.size * 100).toFixed(0) }}%)
             
             <div class="form-row">
-                <label>Gusto Base</label>
-                <input type="text" v-model="section.gusto" placeholder="Nome Pizza/Gusto..." @input="tempMeterItem.sections[secIdx].gusto = section.gusto">
+                <label>Gusto Base * (non aggiunge prezzo)</label>
+                <input type="text" v-model="section.gusto" placeholder="Nome Pizza/Gusto..." @input="tempMeterItem.sections[secIdx].gusto = section.gusto; gustoSearchTerm=''">
+            </div>
+            
+            <input type="search" v-model="gustoSearchTerm" placeholder="Cerca gusti base (Pizze)..." class="search-mod-input" @focus="tempMeterItem.sections[secIdx].activeSection=true" @blur="tempMeterItem.sections[secIdx].activeSection=false">
+
+            <div class="grid" v-if="filteredPizzaGusti.length > 0 && tempMeterItem.sections[secIdx].activeSection" style="margin-top: 10px;">
+                <div class="item" v-for="p in filteredPizzaGusti" :key="p.nome" @click="selectMeterGusto(secIdx, p.nome)" :class="{disabled: p.isFinished}">
+                    {{p.nome}}
+                </div>
             </div>
 
             <div class="form-row">
-                <label>Modifiche per {{ section.name }}</label>
+                <label style="margin-top: 10px;">Modifiche per {{ section.name }} (Aggiunta prezzo)</label>
                 <div class="mod-row" style="margin-top: 5px;">
                     <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                            :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
+                            :class="[cat.toLowerCase().includes('più') ? 'green' : cat.toLowerCase().includes('senza') ? 'gray' : cat.toLowerCase().includes('poco') ? 'yellow' : cat.toLowerCase().includes('abbondante') ? 'blue' : '', {active: tempModCat===cat}]"
                             @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
                 </div>
                 
-                <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
+                <input type="search" v-model="modifierSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
 
-                <div class="grid" v-if="tempMeterItem" style="margin-top: 10px;">
+                <div class="grid" v-if="filteredTempModifiers.length > 0" style="margin-top: 10px;">
                     <div class="item" v-for="m in filteredTempModifiers" :key="m.nome + m.prezzo" 
                          @click="addMeterModifier(secIdx, m)"
                          :class="{disabled: m.isFinished}">
@@ -653,16 +756,23 @@
             <strong>Metà 1</strong>
             <div class="form-row">
                 <label>Gusto Base *</label>
-                <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." required>
+                <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." @input="gustoSearchTerm=''">
             </div>
+            <input type="search" v-model="gustoSearchTerm" placeholder="Cerca gusti base (Pizze)..." class="search-mod-input" @focus="tempHalfPizzaItem.activeHalf=1" @blur="tempHalfPizzaItem.activeHalf=0">
+            <div class="grid" v-if="filteredPizzaGusti.length > 0 && tempHalfPizzaItem.activeHalf === 1" style="margin-top: 10px;">
+                <div class="item" v-for="p in filteredPizzaGusti" :key="p.nome" @click="selectHalfPizzaGusto(1, p.nome)" :class="{disabled: p.isFinished}">
+                    {{p.nome}} ({{p.prezzo.toFixed(2)}}€)
+                </div>
+            </div>
+
             <label style="margin-top: 10px; display: block;">Modifiche (Metà 1)</label>
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                            :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
+                            :class="[cat.toLowerCase().includes('più') ? 'green' : cat.toLowerCase().includes('senza') ? 'gray' : cat.toLowerCase().includes('poco') ? 'yellow' : cat.toLowerCase().includes('abbondante') ? 'blue' : '', {active: tempModCat===cat}]"
                             @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
             </div>
-            <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
-            <div class="grid" v-if="tempHalfPizzaItem" style="margin-top: 10px;">
+            <input type="search" v-model="modifierSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
+            <div class="grid" v-if="filteredTempModifiers.length > 0" style="margin-top: 10px;">
                 <div class="item" v-for="m in filteredTempModifiers" :key="m.nome + m.prezzo" 
                      @click="addHalfPizzaModifier(1, m)"
                      :class="{disabled: m.isFinished}">
@@ -685,16 +795,23 @@
             <strong>Metà 2</strong>
             <div class="form-row">
                 <label>Gusto Base *</label>
-                <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." required>
+                <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." @input="gustoSearchTerm=''">
             </div>
+             <input type="search" v-model="gustoSearchTerm" placeholder="Cerca gusti base (Pizze)..." class="search-mod-input" @focus="tempHalfPizzaItem.activeHalf=2" @blur="tempHalfPizzaItem.activeHalf=0">
+            <div class="grid" v-if="filteredPizzaGusti.length > 0 && tempHalfPizzaItem.activeHalf === 2" style="margin-top: 10px;">
+                <div class="item" v-for="p in filteredPizzaGusti" :key="p.nome" @click="selectHalfPizzaGusto(2, p.nome)" :class="{disabled: p.isFinished}">
+                    {{p.nome}} ({{p.prezzo.toFixed(2)}}€)
+                </div>
+            </div>
+
              <label style="margin-top: 10px; display: block;">Modifiche (Metà 2)</label>
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                            :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
+                            :class="[cat.toLowerCase().includes('più') ? 'green' : cat.toLowerCase().includes('senza') ? 'gray' : cat.toLowerCase().includes('poco') ? 'yellow' : cat.toLowerCase().includes('abbondante') ? 'blue' : '', {active: tempModCat===cat}]"
                             @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
             </div>
-            <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
-            <div class="grid" v-if="tempHalfPizzaItem" style="margin-top: 10px;">
+            <input type="search" v-model="modifierSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
+            <div class="grid" v-if="filteredTempModifiers.length > 0" style="margin-top: 10px;">
                 <div class="item" v-for="m in filteredTempModifiers" :key="m.nome + m.prezzo" 
                      @click="addHalfPizzaModifier(2, m)"
                      :class="{disabled: m.isFinished}">
@@ -715,7 +832,7 @@
 
         <div class="modal-actions">
             <button type="button" class="btn-cancel" @click="cancelHalfPizzaComposition">Annulla</button>
-            <button class="btn-confirm" :disabled="!isHalfPizzaValid" @click="addHalfPizzaToOrder">Aggiungi al Carrello (Totale stimato: €{{ calculateTempHalfPizzaTotal.toFixed(2) }})</button>
+            <button class="btn-confirm" :disabled="!isHalfPizzaValid" @click="addHalfPizzaToOrder">Aggiungi al Carrello (Totale arrotondato: €{{ calculateTempHalfPizzaTotal.toFixed(2) }})</button>
         </div>
     </div>
 </div>
@@ -773,6 +890,10 @@
         const minutes = String(now.getMinutes()).padStart(2, '0');
         return `${hours}:${minutes}`;
     }
+
+    function roundUpToHalf(num) {
+        return Math.ceil(num * 2) / 2;
+    }
     // ⭐ /FUNZIONI HELPER ⭐
 
     PetiteVue.createApp({
@@ -781,11 +902,22 @@
         showShareModal: false,
         showMeterModal: false, 
         showHalfPizzaModal: false, 
+        showPriceEditModal: false,
         selectedOrderIdForShare: null,
         editingOrderId: null, 
         
+        // Accesso
+        adminPin: localStorage.getItem('pz_admin_pin') || '0000',
+        newAdminPin: '',
+        accessPin: '',
+        isAccessGranted: false, 
+
+        // Capacità Oraria
+        capacitySettings: JSON.parse(localStorage.getItem('pz_capacity_settings') || '{"maxPizzas": 50, "intervalMinutes": 30}'),
+        orderCapacity: { total: 0, remaining: 0, interval: '' },
+
         // --- DATI INIZIALI ---
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Intera (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":14,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":5,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Intera (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2},{"nome":"Aggiunta Pomodoro","prezzo":0.5}],"Senza":[{"nome":"Senza olive","prezzo":0},{"nome":"Senza sale","prezzo":0}],"Poco":[{"nome":"Poco cotta","prezzo":0}],"Abbondante":[{"nome":"Basilico abbondante","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
@@ -795,7 +927,7 @@
 
         // Stato Ordine Corrente
         activeCat:'Pizze',
-        activeModCat: 'Più',
+        activeModCat: Object.keys(JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[]}'))[0] || 'Più',
         order:[],
         calculatedOrderTotal: 0, 
         total:0, 
@@ -805,11 +937,15 @@
         modifierSearchTerm: '', 
         gustoSearchTerm: '', 
 
+        // Stato Modifica Prezzo
+        tempPriceEditIndex: null,
+        newPriceValue: 0,
+
         // Stato Composizione
         tempMeterItem: null, 
         tempHalfPizzaItem: null, 
-        tempModCat: 'Più', 
-
+        tempModCat: Object.keys(JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[]}'))[0] || 'Più', 
+        
         // Dati per il Modale/Finalizzazione
         modes:[
             {id:"consegna",label:"Consegna a domicilio",icon:"fa-solid fa-truck"},
@@ -847,10 +983,11 @@
 
         // Dati per Impostazioni
         activeSettingsCat: 'Pizze', 
-        activeSettingsModCat: 'Più',
+        activeSettingsModCat: Object.keys(JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[]}'))[0] || 'Più',
         newCategoryName: '',
         newItemName: '',
         newItemPrice: 0,
+        newModifierCategoryName: '',
         newModifierName: '',
         newModifierPrice: 0,
         newZoneName: '',
@@ -902,6 +1039,15 @@
             }
             return mods;
         },
+        get filteredPizzaGusti() {
+            let items = this.menu['Pizze'] || [];
+            const term = this.gustoSearchTerm.toLowerCase().trim();
+            
+            if (term) {
+                items = items.filter(p => p.nome.toLowerCase().includes(term));
+            }
+            return items.filter(p => !p.isFinished);
+        },
         get canComposeMeter(){
             return this.menu["Pizze"] && this.menu["Pizze"].length > 0;
         },
@@ -910,7 +1056,7 @@
         },
         get filteredTempModifiers() {
             let mods = this.modifiers[this.tempModCat] || [];
-            const term = this.gustoSearchTerm.toLowerCase().trim();
+            const term = this.modifierSearchTerm.toLowerCase().trim(); // Usa il search globale per i modificatori
             if (term) {
                 mods = mods.filter(m => m.nome.toLowerCase().includes(term));
             }
@@ -924,6 +1070,13 @@
             if (!this.tempHalfPizzaItem) return false;
             return this.tempHalfPizzaItem.gusto1 && this.tempHalfPizzaItem.gusto1.trim().length > 0 && 
                    this.tempHalfPizzaItem.gusto2 && this.tempHalfPizzaItem.gusto2.trim().length > 0;
+        },
+        // Logica Capacità
+        get isCapacityFull() {
+            return this.orderCapacity.remaining <= 0;
+        },
+        get isCapacityWarning() {
+            return this.orderCapacity.remaining <= (this.capacitySettings.maxPizzas * 0.2); // Avviso al 20%
         },
         // --- FINE LOGICA MENU ---
 
@@ -986,9 +1139,15 @@
             localStorage.setItem('pz_archive',JSON.stringify(this.archive)); 
             localStorage.setItem('pz_drivers',JSON.stringify(this.drivers)); 
             localStorage.setItem('pz_customerData',JSON.stringify(this.customerData)); 
+            localStorage.setItem('pz_capacity_settings', JSON.stringify(this.capacitySettings));
         },
 
         calculateItemTotal(item) {
+            // Se il prezzo è stato modificato manualmente, restituisce quello
+            if (item.manualPrice !== undefined) {
+                return item.manualPrice;
+            }
+
             let total = item.prezzo || 0;
             
             // Calcolo modificatori standard
@@ -996,8 +1155,9 @@
                 total += item.modifiers.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
             }
 
-            // Calcolo modificatori Mezzo Metro
+            // Calcolo modificatori Mezzo Metro / Schiacciata Grande (Prezzo fisso + Modificatori)
             if (item.isMeter && item.sections) {
+                // Il prezzo base è già item.prezzo. Aggiungiamo solo i modificatori.
                 total += item.sections.reduce((sectionSum, section) => {
                     if (section.modifiers) {
                         return sectionSum + section.modifiers.reduce((modSum, mod) => modSum + (mod.prezzo || 0), 0);
@@ -1006,14 +1166,31 @@
                 }, 0);
             }
 
-            // Calcolo modificatori Pizza a Metà
+            // Calcolo Pizza a Metà (Prezzo Base + Gusti Base + Modificatori)
             if (item.isHalfPizza) {
+                let gustiPrice = 0;
+                
+                // Cerca il prezzo del gusto 1
+                const gusto1Item = this.menu['Pizze']?.find(p => p.nome === item.gusto1);
+                if (gusto1Item) gustiPrice += gusto1Item.prezzo;
+                
+                // Cerca il prezzo del gusto 2
+                const gusto2Item = this.menu['Pizze']?.find(p => p.nome === item.gusto2);
+                if (gusto2Item) gustiPrice += gusto2Item.prezzo;
+
+                let modifiersPrice = 0;
                 if (item.modifiers1) {
-                    total += item.modifiers1.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
+                    modifiersPrice += item.modifiers1.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
                 }
                 if (item.modifiers2) {
-                    total += item.modifiers2.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
+                    modifiersPrice += item.modifiers2.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
                 }
+
+                // Applica arrotondamento solo al totale Base + Gusti
+                let subTotal = total + gustiPrice;
+                subTotal = roundUpToHalf(subTotal);
+
+                total = subTotal + modifiersPrice;
             }
             
             return total;
@@ -1024,6 +1201,7 @@
             if (item.isFinished) return; // Non cliccabile se finito
             
             this.lastSelectedItem = item; 
+            
             if (item.isMeter) {
                 if (!this.canComposeMeter) {
                     alert("Non puoi comporre un Mezzo Metro se non hai pizze base nel Menu!");
@@ -1033,8 +1211,10 @@
                 this.tempMeterItem.sections.forEach(s => {
                     s.gusto = ''; 
                     s.modifiers = [];
+                    s.activeSection = false; // Stato per la ricerca gusti
                 });
-                this.tempModCat = 'Più';
+                this.tempModCat = Object.keys(this.modifiers)[0] || 'Più';
+                this.modifierSearchTerm = '';
                 this.gustoSearchTerm = '';
                 this.showMeterModal = true;
             } else if (item.isHalfPizza) {
@@ -1047,7 +1227,9 @@
                 this.tempHalfPizzaItem.gusto2 = '';
                 this.tempHalfPizzaItem.modifiers1 = [];
                 this.tempHalfPizzaItem.modifiers2 = [];
-                this.tempModCat = 'Più';
+                this.tempHalfPizzaItem.activeHalf = 0; // Stato per la ricerca gusti
+                this.tempModCat = Object.keys(this.modifiers)[0] || 'Più';
+                this.modifierSearchTerm = '';
                 this.gustoSearchTerm = '';
                 this.showHalfPizzaModal = true;
             } else {
@@ -1062,7 +1244,7 @@
              }
              this.order.push(newItem);
              this.selectedItemIndex = this.order.length - 1; 
-             this.activeModCat = 'Più'; 
+             this.activeModCat = Object.keys(this.modifiers)[0] || 'Più';
              this.modifierSearchTerm = ''; 
         },
 
@@ -1080,6 +1262,8 @@
             if (!item.modifiers) item.modifiers = [];
             
             item.modifiers.push(newMod);
+            // Rimuove l'eventuale prezzo manuale per ricalcolare il totale
+            if (item.manualPrice !== undefined) delete item.manualPrice;
         },
 
         removeItem(index) {
@@ -1089,6 +1273,27 @@
             } else if (this.selectedItemIndex > index) {
                 this.selectedItemIndex--;
             }
+        },
+
+        // Logica Modifica Prezzo Manuale
+        openPriceEditModal(index) {
+            this.tempPriceEditIndex = index;
+            // Utilizza il prezzo calcolato come punto di partenza
+            const currentPrice = this.calculateItemTotal(this.order[index]);
+            this.newPriceValue = parseFloat(currentPrice.toFixed(2)); 
+            this.showPriceEditModal = true;
+        },
+        saveNewPrice() {
+            if (this.tempPriceEditIndex !== null && this.newPriceValue >= 0) {
+                const item = this.order[this.tempPriceEditIndex];
+                item.manualPrice = parseFloat(this.newPriceValue.toFixed(2));
+                alert(`Prezzo di ${item.nome} aggiornato manualmente a €${this.newPriceValue.toFixed(2)}.`);
+                
+                // Disattiva la selezione per evitare modificatori indesiderati
+                this.selectedItemIndex = null; 
+            }
+            this.showPriceEditModal = false;
+            this.tempPriceEditIndex = null;
         },
 
         // Logica Autocomplete/Clienti
@@ -1198,15 +1403,14 @@
             this.view = 'ordini';
         },
 
-        // Logica Stampa Selettiva
+        // Logica Stampa Selettiva (Nessuna modifica, mantengo originale)
         printOrder(orderId, type) {
-            const order = this.orders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId); // Cerca anche nell'archivio
+            const order = this.orders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId);
             if (!order) return;
 
             const printContainer = document.getElementById('print-content-comanda');
             const scontrinoContainer = document.getElementById('print-content-scontrino');
             
-            // Nascondi entrambi i contenitori prima di popolare
             printContainer.style.display = 'none';
             scontrinoContainer.style.display = 'none';
 
@@ -1222,16 +1426,13 @@
                 scontrinoContainer.style.display = 'block';
             }
             
-            // Avvia la stampa
             setTimeout(() => {
                 window.print();
-                // Ripristina la visualizzazione dopo la stampa
                 printContainer.style.display = 'none';
                 scontrinoContainer.style.display = 'none';
             }, 50);
         },
 
-        // Genera HTML per Comanda Cucina (Dettagliata)
         generateComandaHTML(order) {
             const now = new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'});
             let html = `
@@ -1263,7 +1464,10 @@
             order.items.forEach(item => {
                 html += `<li><span class="item-name">1x ${item.nome}</span>`;
                 
-                // Modificatori standard
+                if (item.manualPrice !== undefined) {
+                     html += ` <span style="color:#e31b23; font-size: 0.8rem;">(PREZZO MANUALE: €${item.manualPrice.toFixed(2)})</span>`;
+                }
+
                 if (item.modifiers && item.modifiers.length > 0 && !item.isMeter && !item.isHalfPizza) {
                     html += `<ul class="mod-list">`;
                     item.modifiers.forEach(mod => {
@@ -1272,7 +1476,6 @@
                     html += `</ul>`;
                 }
                 
-                // Composizione Pizza a Metà
                 if (item.isHalfPizza) {
                     html += `<ul class="mod-list" style="margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 5px;">
                                 <li><strong>METÀ 1: ${item.gusto1}</strong></li>`;
@@ -1290,7 +1493,6 @@
                     html += `</ul>`;
                 }
 
-                // Composizione Mezzo Metro
                 if (item.isMeter) {
                      html += `<ul class="mod-list" style="margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 5px;">`;
                      item.sections.forEach(section => {
@@ -1312,7 +1514,6 @@
             return html;
         },
 
-        // Genera HTML per Scontrino (Riepilogo)
         generateScontrinoHTML(order) {
             const now = new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'});
             let html = `
@@ -1348,7 +1549,6 @@
 
                 html += `<tr><td>1x ${itemName}</td><td style="text-align: right;">€${total}</td></tr>`;
                 
-                // Modifiche con costo (solo per trasparenza)
                 const allMods = [];
                 if (item.modifiers) allMods.push(...item.modifiers);
                 if (item.modifiers1) allMods.push(...item.modifiers1);
@@ -1385,6 +1585,10 @@
         },
 
         // --- FUNZIONI DI IMPOSTAZIONI ---
+        isDefaultModifierCategory(cat) {
+            const defaultCats = ["Più", "Senza", "Poco", "Abbondante"];
+            return defaultCats.includes(cat);
+        },
 
         // Gestione Categorie
         addCategory() {
@@ -1420,11 +1624,12 @@
                 }
                 
                 let newItem = { nome: name, prezzo: price };
-                // Se la categoria è per pizze composte, forza le proprietà
-                if (cat.includes("Metà")) newItem.isHalfPizza = true;
-                if (cat.includes("Metro") || cat.includes("Grande")) {
+                // Forza proprietà per categorie speciali (se il nome della categoria le suggerisce)
+                if (cat.includes("Metà")) {
+                    newItem.isHalfPizza = true;
+                } else if (cat.includes("Metro") || cat.includes("Grande")) {
                     newItem.isMeter = true;
-                    // Definizione sezioni di default
+                    // Definisce sezioni di default
                     if (cat.includes("Due")) newItem.sections = [{name:"Metà A", size:0.5}, {name:"Metà B", size:0.5}];
                     else if (cat.includes("Tre")) newItem.sections = [{name:"Terzo 1", size:0.33}, {name:"Terzo 2", size:0.33}, {name:"Terzo 3", size:0.33}];
                     else newItem.sections = [{name:"Gusto Unico", size:1}];
@@ -1446,6 +1651,30 @@
             const item = this.menu[cat][index];
             item.isFinished = !item.isFinished;
             this.saveData();
+        },
+
+        // Gestione Categorie Modificatori
+        addModifierCategory() {
+            const name = this.newModifierCategoryName.trim();
+            if (name && !this.modifiers[name]) {
+                this.modifiers[name] = [];
+                this.newModifierCategoryName = '';
+                this.activeSettingsModCat = name;
+                this.saveData();
+            } else if (this.modifiers[name]) {
+                alert("Categoria modificatori già esistente!");
+            }
+        },
+        deleteModifierCategory(cat) {
+             if (this.isDefaultModifierCategory(cat)) {
+                alert("Non puoi eliminare le categorie predefinite (Più, Senza, Poco, Abbondante).");
+                return;
+            }
+            if (confirm(`Sei sicuro di voler eliminare la categoria di modificatori "${cat}"? Verranno eliminati anche tutti i modificatori al suo interno.`)) {
+                delete this.modifiers[cat];
+                this.activeSettingsModCat = Object.keys(this.modifiers)[0] || null;
+                this.saveData();
+            }
         },
 
         // Gestione Modificatori
@@ -1519,9 +1748,100 @@
                 this.saveData();
             }
         },
+
+        // Gestione Accesso
+        saveAdminPin() {
+            const newPin = this.newAdminPin.trim();
+            if (newPin.length >= 4) {
+                this.adminPin = newPin;
+                localStorage.setItem('pz_admin_pin', newPin);
+                alert("PIN/Password aggiornato!");
+                this.newAdminPin = '';
+            } else {
+                alert("Il PIN deve essere di almeno 4 caratteri/numeri.");
+            }
+        },
+        grantAccess() {
+            if (this.accessPin === this.adminPin) {
+                this.isAccessGranted = true;
+                this.accessPin = '';
+                alert("Accesso consentito!");
+            } else {
+                alert("PIN/Password errato.");
+                this.accessPin = '';
+            }
+        },
+
+        // Import/Export/Cache
+        exportData() {
+            const data = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('pz_')) {
+                    data[key] = localStorage.getItem(key);
+                }
+            }
+            
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pz_export.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert("Dati esportati correttamente come pz_export.json");
+        },
+        importData() {
+            if (!confirm("ATTENZIONE: Sei sicuro di voler importare i dati? Questo sovrascriverà TUTTI i dati attuali (menu, ordini, storico, impostazioni).")) return;
+            
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const importedData = JSON.parse(event.target.result);
+                        for (const key in importedData) {
+                            if (key.startsWith('pz_')) {
+                                localStorage.setItem(key, importedData[key]);
+                            }
+                        }
+                        alert("Dati importati con successo! Ricarica l'applicazione per applicare le modifiche.");
+                        // ricarica la pagina per applicare i cambiamenti
+                        window.location.reload(); 
+                    } catch (error) {
+                        alert("Errore durante l'importazione del file: " + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        },
+        clearCache() {
+            if (!confirm("ATTENZIONE: Sei sicuro di voler PULIRE la gestione? Questo eliminerà menu, ordini attivi, storico e impostazioni. I DATI CLIENTE SARANNO MANTENUTI.")) return;
+            
+            const keysToKeep = ['pz_customerData', 'pz_admin_pin'];
+            
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key.startsWith('pz_') && !keysToKeep.includes(key)) {
+                    localStorage.removeItem(key);
+                }
+            }
+            alert("Dati di gestione puliti. Ricarica l'applicazione.");
+            window.location.reload(); 
+        },
         // --- FINE FUNZIONI DI IMPOSTAZIONI ---
 
-        // Altre funzioni di utilità (MANTENUTE)
+
+        // Altre funzioni di utilità (AGGIORNATE)
         getModifierCategory(modName) {
             for (const cat in this.modifiers) {
                 if (this.modifiers[cat].some(m => m.nome === modName)) {
@@ -1531,17 +1851,16 @@
             return 'Più'; 
         },
         getModifierIcon(cat) {
-            switch (cat) {
-                case 'Più': return '+';
-                case 'Senza': return '-';
-                case 'Poco': return '↓';
-                case 'Abbondante': return '↑';
-                default: return '';
-            }
+            const catLower = cat.toLowerCase();
+            if (catLower.includes('più')) return '+';
+            if (catLower.includes('senza')) return '-';
+            if (catLower.includes('poco')) return '↓';
+            if (catLower.includes('abbondante')) return '↑';
+            return '•';
         },
         formatDate(dateStr) {
             if (!dateStr) return '';
-            const date = new Date(dateStr.replace(/-/g, '/')); // Corregge i problemi di fuso orario con i formati ISO
+            const date = new Date(dateStr.replace(/-/g, '/')); 
             return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
         },
         isFutureOrder(o) {
@@ -1551,13 +1870,13 @@
             const now = new Date();
             const orderTime = new Date(`${o.date}T${o.hour}`);
             const diffMinutes = (orderTime - now) / 60000;
-            return diffMinutes > 5 && diffMinutes <= 15 && o.date === getTodayDateString();
+            return diffMinutes > 5 && diffMinutes <= 15 && o.date === getTodayDateString() && (o.status === 'In preparazione' || o.status === 'Pronto');
         },
         isUrgent(o) {
             const now = new Date();
             const orderTime = new Date(`${o.date}T${o.hour}`);
             const diffMinutes = (orderTime - now) / 60000;
-            return diffMinutes <= 5 && diffMinutes >= 0 && o.date === getTodayDateString();
+            return diffMinutes <= 5 && diffMinutes >= 0 && o.date === getTodayDateString() && (o.status === 'In preparazione' || o.status === 'Pronto');
         },
         selectMode(m) {
             this.mode = m;
@@ -1589,13 +1908,14 @@
             this.accontoRicevuto = null;
             this.selectedItemIndex = null;
             this.lastSelectedItem = null;
+            this.orderCapacity = { total: 0, remaining: 0, interval: '' };
         },
         editOrder(id) {
             const orderToEdit = this.orders.find(o => o.id === id);
             if (!orderToEdit) return;
 
             this.editingOrderId = id;
-            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); // Deep copy
+            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); 
             this.mode = orderToEdit.mode;
             this.customer = orderToEdit.customer;
             this.phone = orderToEdit.phone;
@@ -1609,6 +1929,7 @@
             this.hour = orderToEdit.hour;
             this.accontoRicevuto = orderToEdit.acconto;
             this.updateDeliveryCost();
+            this.updateCapacityWarning(); 
             this.view = 'inserimento';
             this.selectedItemIndex = null;
             this.lastSelectedItem = null; 
@@ -1672,8 +1993,6 @@
             if (this.selectedDriver) {
                 stats = filtered.filter(o => o.driver === this.selectedDriver);
             } else {
-                // Se non è selezionato nessun driver, si contano solo le consegne (mode=consegna)
-                // Se vuoi contare TUTTI gli ordini (anche asporto/banco) togli la condizione (o.mode === 'consegna')
                 stats = filtered.filter(o => o.mode === 'consegna');
             }
             
@@ -1696,11 +2015,11 @@
                 this.tableNumber = order.tableNumber;
                 this.accontoRicevuto = order.acconto; 
 
-                // Suggerisce per oggi o il giorno archiviato
                 this.date = getTodayDateString(); 
                 this.hour = getDefaultHour(); 
 
                 this.updateDeliveryCost();
+                this.updateCapacityWarning(); 
                 this.view = 'inserimento';
                 this.showModal = true; 
             }
@@ -1734,6 +2053,9 @@
             message += `\n\n*Ordine:*`;
             order.items.forEach(item => {
                 let itemLine = `\n- 1x ${item.nome}`;
+                if (item.manualPrice !== undefined) {
+                    itemLine += ` (Prezzo Man.: €${item.manualPrice.toFixed(2)})`;
+                }
 
                 if (item.isHalfPizza) {
                     itemLine += ` (${item.gusto1} / ${item.gusto2})`;
@@ -1762,7 +2084,12 @@
             this.showShareModal = false;
         },
         
-        // Logica composizione Mezzo Metro
+        // Logica composizione Mezzo Metro (AGGIORNATA)
+        selectMeterGusto(secIdx, gustoName) {
+            this.tempMeterItem.sections[secIdx].gusto = gustoName;
+            this.tempMeterItem.sections[secIdx].activeSection = false; // Chiude la selezione dopo il click
+            this.gustoSearchTerm = '';
+        },
         addMeterModifier(secIdx, modifier) {
              if (modifier.isFinished) return;
              
@@ -1771,9 +2098,13 @@
                  this.tempMeterItem.sections[secIdx].modifiers = [];
              }
              this.tempMeterItem.sections[secIdx].modifiers.push(newMod);
+             
+             // Rimuove eventuale prezzo manuale in quanto sono state aggiunte modifiche
+             if (this.tempMeterItem.manualPrice !== undefined) delete this.tempMeterItem.manualPrice;
         },
         removeMeterModifier(secIdx, modIdx) {
             this.tempMeterItem.sections[secIdx].modifiers.splice(modIdx, 1);
+            if (this.tempMeterItem.manualPrice !== undefined) delete this.tempMeterItem.manualPrice;
         },
         cancelMeterComposition() {
             this.tempMeterItem = null;
@@ -1792,7 +2123,16 @@
             return this.tempMeterItem ? this.calculateItemTotal(this.tempMeterItem) : 0;
         },
 
-        // Logica composizione Pizza a Metà
+        // Logica composizione Pizza a Metà (AGGIORNATA)
+        selectHalfPizzaGusto(half, gustoName) {
+            if (half === 1) {
+                this.tempHalfPizzaItem.gusto1 = gustoName;
+            } else {
+                this.tempHalfPizzaItem.gusto2 = gustoName;
+            }
+            this.tempHalfPizzaItem.activeHalf = 0;
+            this.gustoSearchTerm = '';
+        },
         addHalfPizzaModifier(half, modifier) {
             if (modifier.isFinished) return;
 
@@ -1804,6 +2144,8 @@
                 if (!this.tempHalfPizzaItem.modifiers2) this.tempHalfPizzaItem.modifiers2 = [];
                 this.tempHalfPizzaItem.modifiers2.push(newMod);
             }
+            // Rimuove eventuale prezzo manuale
+            if (this.tempHalfPizzaItem.manualPrice !== undefined) delete this.tempHalfPizzaItem.manualPrice;
         },
         removeHalfPizzaModifier(half, modIdx) {
             if (half === 1) {
@@ -1811,6 +2153,7 @@
             } else {
                 this.tempHalfPizzaItem.modifiers2.splice(modIdx, 1);
             }
+             if (this.tempHalfPizzaItem.manualPrice !== undefined) delete this.tempHalfPizzaItem.manualPrice;
         },
         cancelHalfPizzaComposition() {
             this.tempHalfPizzaItem = null;
@@ -1831,9 +2174,58 @@
         selectItem(index) {
             this.selectedItemIndex = this.selectedItemIndex === index ? null : index;
         },
+
+        // Logica Capacità Oraria
+        getIntervalStart(dateStr, hourStr) {
+            const date = new Date(`${dateStr}T${hourStr}`);
+            const intervalMinutes = this.capacitySettings.intervalMinutes;
+            const minutes = date.getMinutes();
+            const startMinutes = Math.floor(minutes / intervalMinutes) * intervalMinutes;
+            
+            date.setMinutes(startMinutes);
+            date.setSeconds(0);
+            date.setMilliseconds(0);
+            
+            return date.toISOString();
+        },
+        getPizzasInOrder(order) {
+            return order.items.filter(i => 
+                (this.menu['Pizze'] && this.menu['Pizze'].some(p => p.nome === i.nome)) ||
+                i.isHalfPizza || i.isMeter
+            ).length;
+        },
+        updateCapacityWarning() {
+            if (!this.date || !this.hour) return;
+
+            const targetInterval = this.getIntervalStart(this.date, this.hour);
+            let pizzasCount = 0;
+
+            this.orders.forEach(o => {
+                if (o.date === this.date) {
+                    const orderInterval = this.getIntervalStart(o.date, o.hour);
+                    if (orderInterval === targetInterval) {
+                        // Esclude l'ordine in modifica dal conteggio per evitare duplicati
+                        if (o.id !== this.editingOrderId) { 
+                             pizzasCount += this.getPizzasInOrder(o);
+                        }
+                    }
+                }
+            });
+
+            // Aggiunge le pizze dell'ordine corrente che si sta creando/modificando
+            pizzasCount += this.order.filter(i => 
+                (this.menu['Pizze'] && this.menu['Pizze'].some(p => p.nome === i.nome)) ||
+                i.isHalfPizza || i.isMeter
+            ).length;
+            
+            this.orderCapacity.total = pizzasCount;
+            this.orderCapacity.remaining = this.capacitySettings.maxPizzas - pizzasCount;
+            this.orderCapacity.interval = targetInterval;
+        },
         openModal() {
             this.zoneName = this.deliveryZones[0]?.name || ''; 
             this.updateDeliveryCost(); 
+            this.updateCapacityWarning();
             this.showModal = true;
         },
 
