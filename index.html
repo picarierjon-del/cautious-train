@@ -173,7 +173,7 @@
         <input type="search" v-model="searchTerm" placeholder="Cerca prodotto..." class="search-input">
 
         <div class="grid">
-            <div class="item" v-for="p in filteredAvailableItems" :key="p.nome" @click="handleItemClick(p, true)" :class="{disabled: p.isFinished || (p.isMeter && !canComposeMeter) || (p.isHalfPizza && !canComposeHalfPizza), 'active-menu-selection': lastSelectedItem === p}">
+            <div class="item" v-for="p in filteredAvailableItems" :key="p.nome" @click="handleItemClick(p)" :class="{disabled: p.isFinished || (p.isMeter && !canComposeMeter) || (p.isHalfPizza && !canComposeHalfPizza), 'active-menu-selection': lastSelectedItem === p}">
                 <strong>{{p.nome}}</strong>
                 <span v-if="p.isFinished" style="color:#b91c1c; font-weight:700;">(FINITO)</span>
                 <span v-else-if="p.isMeter || p.isHalfPizza">€{{(p.isMeter || p.isHalfPizza ? 'COMPOSTO' : p.prezzo.toFixed(2))}}</span>
@@ -594,10 +594,6 @@
     </div>
 </div>
 
-<datalist id="pizza-names-suggestions">
-    <option v-for="name in pizzaNames" :value="name" :key="name"></option>
-</datalist>
-
 <div class="modal-overlay" v-show="showMeterModal" @click.self="showMeterModal=false">
     <div class="modal-content">
         <h3>Componi {{ tempMeterItem?.nome }}</h3>
@@ -607,7 +603,7 @@
             
             <div class="form-row">
                 <label>Gusto Base</label>
-                <input type="text" v-model="section.gusto" placeholder="Nome Pizza/Gusto..." @input="tempMeterItem.sections[secIdx].gusto = section.gusto" list="pizza-names-suggestions">
+                <input type="text" v-model="section.gusto" placeholder="Nome Pizza/Gusto..." @input="tempMeterItem.sections[secIdx].gusto = section.gusto">
             </div>
 
             <div class="form-row">
@@ -657,7 +653,7 @@
             <strong>Metà 1</strong>
             <div class="form-row">
                 <label>Gusto Base *</label>
-                 <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." required list="pizza-names-suggestions">
+                <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." required>
             </div>
             <label style="margin-top: 10px; display: block;">Modifiche (Metà 1)</label>
             <div class="mod-row" style="margin-top: 5px;">
@@ -689,7 +685,7 @@
             <strong>Metà 2</strong>
             <div class="form-row">
                 <label>Gusto Base *</label>
-                 <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." required list="pizza-names-suggestions">
+                <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." required>
             </div>
              <label style="margin-top: 10px; display: block;">Modifiche (Metà 2)</label>
             <div class="mod-row" style="margin-top: 5px;">
@@ -929,30 +925,6 @@
             return this.tempHalfPizzaItem.gusto1 && this.tempHalfPizzaItem.gusto1.trim().length > 0 && 
                    this.tempHalfPizzaItem.gusto2 && this.tempHalfPizzaItem.gusto2.trim().length > 0;
         },
-        // CORREZIONE PUNTO 2: Elenco nomi pizze per l'autocomplete nei modal
-        get pizzaNames() {
-            // Cerca in tutte le categorie, ma prioritizza quelle che contengono "Pizza" nel nome
-            const pizzaCategories = Object.keys(this.menu).filter(cat => cat.toLowerCase().includes('pizza'));
-            
-            let names = [];
-            pizzaCategories.forEach(cat => {
-                this.menu[cat].forEach(item => {
-                    // Esclude gli articoli composti (che non sono gusti base)
-                    if (!item.isMeter && !item.isHalfPizza) {
-                        names.push(item.nome);
-                    }
-                });
-            });
-            // Aggiunge eventuali nomi da altre categorie che non siano composti
-            Object.keys(this.menu).filter(cat => !pizzaCategories.includes(cat)).forEach(cat => {
-                 this.menu[cat].forEach(item => {
-                    if (!item.isMeter && !item.isHalfPizza && !names.includes(item.nome)) {
-                         names.push(item.nome);
-                    }
-                });
-            });
-            return [...new Set(names)].sort();
-        },
         // --- FINE LOGICA MENU ---
 
         // LOGICA ORDINE ATTIVO E FILTRI
@@ -1016,7 +988,6 @@
             localStorage.setItem('pz_customerData',JSON.stringify(this.customerData)); 
         },
 
-        // CORREZIONE PUNTO 3: Calcolo totale per Metà Pizza
         calculateItemTotal(item) {
             let total = item.prezzo || 0;
             
@@ -1035,7 +1006,7 @@
                 }, 0);
             }
 
-            // Calcolo modificatori Pizza a Metà (solo aggiunte a parte, il prezzo base è fisso/medio)
+            // Calcolo modificatori Pizza a Metà
             if (item.isHalfPizza) {
                 if (item.modifiers1) {
                     total += item.modifiers1.reduce((sum, mod) => sum + (mod.prezzo || 0), 0);
@@ -1048,93 +1019,42 @@
             return total;
         },
         
-        // CORREZIONE PUNTO 1: Apertura/Riapertura immediata del modal
-        handleItemClick(item, isFromMenu = false) {
+        // Logica per l'aggiunta di un prodotto base o composizione
+        handleItemClick(item) {
             if (item.isFinished) return; // Non cliccabile se finito
             
-            // Se clicco l'elemento dal menu, lo aggiungo al carrello se non è composto
-            if (isFromMenu) {
-                 this.lastSelectedItem = item; 
-                 if (!item.isMeter && !item.isHalfPizza) {
-                     this.addItem(item);
-                     return;
-                 }
-            }
-            
-            // Controllo se l'elemento selezionato è un elemento composto
-            const selectedItem = this.order[this.selectedItemIndex];
-            const isSelectedComposite = selectedItem && (selectedItem.isMeter || selectedItem.isHalfPizza);
-            
-            // Se si tratta di un articolo composto
-            if (item.isMeter || item.isHalfPizza || isSelectedComposite) {
-                
-                let itemToCompose;
-                let isEditing = false;
-
-                // 1. Se sto cliccando un articolo composto dal menu: prepara per la creazione
-                if (isFromMenu) {
-                     itemToCompose = item;
-                     // Se è composto, forzo l'apertura del modal
-                } 
-                // 2. Se sto cliccando un articolo composto già selezionato nel carrello: prepara per la modifica
-                else if (isSelectedComposite && item === selectedItem) { 
-                    itemToCompose = selectedItem;
-                    isEditing = true;
-                }
-                // 3. Se clicco un articolo composto *diverso* da quello selezionato, ignora
-                else {
+            this.lastSelectedItem = item; 
+            if (item.isMeter) {
+                if (!this.canComposeMeter) {
+                    alert("Non puoi comporre un Mezzo Metro se non hai pizze base nel Menu!");
                     return;
                 }
-
-
-                if (itemToCompose.isMeter) {
-                    if (!this.canComposeMeter) {
-                        alert("Non puoi comporre un Mezzo Metro se non hai pizze base nel Menu!");
-                        return;
-                    }
-                    
-                    if (isEditing) {
-                        // Per la modifica, uso l'oggetto nel carrello come base
-                         this.tempMeterItem = selectedItem; // Non copio, modifico direttamente per salvare al momento della chiusura
-                    } else {
-                        // Per la creazione, faccio una deep copy
-                        this.tempMeterItem = JSON.parse(JSON.stringify(itemToCompose));
-                        this.tempMeterItem.sections.forEach(s => {
-                            if (!s.gusto) s.gusto = ''; 
-                            if (!s.modifiers) s.modifiers = [];
-                        });
-                    }
-                    
-                    this.tempModCat = 'Più';
-                    this.gustoSearchTerm = '';
-                    this.showMeterModal = true;
-                } else if (itemToCompose.isHalfPizza) {
-                    if (!this.canComposeHalfPizza) {
-                         alert("Non puoi comporre una Pizza a Metà se non hai pizze base nel Menu!");
-                        return;
-                    }
-                    
-                    if (isEditing) {
-                        this.tempHalfPizzaItem = selectedItem;
-                    } else {
-                        this.tempHalfPizzaItem = JSON.parse(JSON.stringify(itemToCompose));
-                        if (!this.tempHalfPizzaItem.gusto1) this.tempHalfPizzaItem.gusto1 = '';
-                        if (!this.tempHalfPizzaItem.gusto2) this.tempHalfPizzaItem.gusto2 = '';
-                        if (!this.tempHalfPizzaItem.modifiers1) this.tempHalfPizzaItem.modifiers1 = [];
-                        if (!this.tempHalfPizzaItem.modifiers2) this.tempHalfPizzaItem.modifiers2 = [];
-                    }
-                    
-                    this.tempModCat = 'Più';
-                    this.gustoSearchTerm = '';
-                    this.showHalfPizzaModal = true;
+                this.tempMeterItem = JSON.parse(JSON.stringify(item));
+                this.tempMeterItem.sections.forEach(s => {
+                    s.gusto = ''; 
+                    s.modifiers = [];
+                });
+                this.tempModCat = 'Più';
+                this.gustoSearchTerm = '';
+                this.showMeterModal = true;
+            } else if (item.isHalfPizza) {
+                if (!this.canComposeHalfPizza) {
+                     alert("Non puoi comporre una Pizza a Metà se non hai pizze base nel Menu!");
+                    return;
                 }
-            } 
-            // Se è un articolo semplice e non sono in un ciclo di modifica di un composto
-            else if (isFromMenu) {
-                 this.addItem(item);
+                this.tempHalfPizzaItem = JSON.parse(JSON.stringify(item));
+                this.tempHalfPizzaItem.gusto1 = '';
+                this.tempHalfPizzaItem.gusto2 = '';
+                this.tempHalfPizzaItem.modifiers1 = [];
+                this.tempHalfPizzaItem.modifiers2 = [];
+                this.tempModCat = 'Più';
+                this.gustoSearchTerm = '';
+                this.showHalfPizzaModal = true;
+            } else {
+                this.addItem(item);
             }
         },
-        
+
         addItem(item) {
              const newItem = JSON.parse(JSON.stringify(item)); 
              if (!newItem.isMeter && !newItem.isHalfPizza) {
@@ -1168,12 +1088,6 @@
                 this.selectedItemIndex = null;
             } else if (this.selectedItemIndex > index) {
                 this.selectedItemIndex--;
-            }
-        },
-        removeModifier(itemIndex, modIndex) {
-            const item = this.order[itemIndex];
-            if (item && item.modifiers) {
-                item.modifiers.splice(modIndex, 1);
             }
         },
 
@@ -1875,7 +1789,6 @@
             this.showMeterModal = false;
         },
         get calculateTempMeterTotal() {
-            // Per il Mezzo Metro, la logica di calcolo è la stessa di calculateItemTotal
             return this.tempMeterItem ? this.calculateItemTotal(this.tempMeterItem) : 0;
         },
 
@@ -1913,18 +1826,10 @@
             this.showHalfPizzaModal = false;
         },
         get calculateTempHalfPizzaTotal() {
-             // Per la Metà Pizza, la logica di calcolo è la stessa di calculateItemTotal
             return this.tempHalfPizzaItem ? this.calculateItemTotal(this.tempHalfPizzaItem) : 0;
         },
         selectItem(index) {
             this.selectedItemIndex = this.selectedItemIndex === index ? null : index;
-            // Seleziona e riapri il modal se l'articolo è composto e viene cliccato di nuovo nel carrello
-            if (this.selectedItemIndex !== null) {
-                const item = this.order[this.selectedItemIndex];
-                if (item.isMeter || item.isHalfPizza) {
-                    this.handleItemClick(item, false); // Apri il modal in modalità modifica
-                }
-            }
         },
         openModal() {
             this.zoneName = this.deliveryZones[0]?.name || ''; 
