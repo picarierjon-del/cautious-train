@@ -45,7 +45,9 @@
         /* Stili Ordine Corrente */
         .order-box { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 20px; }
         .order-box ul { list-style: none; padding: 0; margin: 0; }
-        .order-box .order-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; font-size: .9rem; cursor: pointer; }
+        /* Modifica qui: Rende l'intero blocco cliccabile per la selezione, non solo la div */
+        .order-box li.selectable-item { cursor: pointer; } 
+        .order-box .order-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; font-size: .9rem; }
         .order-box .order-item.selected { background-color: #fff3f4; border: 2px solid #e31b23; padding: 6px 0; border-radius: 4px;}
         .order-box .modifiers-list { list-style: none; padding-left: 15px; font-size: 0.8rem; margin-top: 2px; margin-bottom: 4px;}
         .order-box .modifiers-list li { display: flex; justify-content: space-between; align-items: center;}
@@ -153,7 +155,10 @@
         <div class="mod-row">
             <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                     :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeModCat===cat}"
-                    @click="activeModCat=cat; modifierSearchTerm=''" :disabled="selectedItemIndex === null || (order[selectedItemIndex] && (order[selectedItemIndex].isMeter || order[selectedItemIndex].isHalfPizza))">{{cat.toUpperCase()}}</button>
+                    @click="activeModCat=cat; modifierSearchTerm=''" 
+                    :disabled="selectedItemIndex === null || (order[selectedItemIndex] && (order[selectedItemIndex].isMeter || order[selectedItemIndex].isHalfPizza))">
+                {{cat.toUpperCase()}}
+            </button>
         </div>
         
         <input type="search" v-model="modifierSearchTerm" placeholder="Filtra aggiunte/modificatori..." class="search-mod-input"
@@ -189,10 +194,10 @@
                 </span>
             </h3>
             <ul>
-                <li v-for="(i,idx) in order" :key="idx" @click="selectItem(idx)">
+                <li v-for="(i,idx) in order" :key="idx" @click="selectItem(idx)" class="selectable-item">
                     <div class="order-item" :class="{selected: selectedItemIndex === idx}">
-                        <span v-if="i.isHalfPizza">🍕 {{i.nome}} ({{i.gusto1}} / {{i.gusto2}})</span>
-                        <span v-else-if="i.isMeter">🍕 {{i.nome}} ({{i.sections.length}} Gusti)</span>
+                        <span v-if="i.isHalfPizza" @click.stop="openHalfPizzaModalForEdit(idx)">🍕 {{i.nome}} ({{i.gusto1}} / {{i.gusto2}})</span>
+                        <span v-else-if="i.isMeter" @click.stop="openMeterModalForEdit(idx)">🍕 {{i.nome}} ({{i.sections.length}} Gusti)</span>
                         <span v-else>{{i.nome}}</span>
                         <span>€{{calculateItemTotal(i).toFixed(2)}} <button @click.stop="removeItem(idx)" style="border:none;background:none;color:#e31b23">✖️</button></span>
                     </div>
@@ -235,11 +240,12 @@
                     <ul v-if="i.isMeter" class="modifiers-list" style="padding-left: 0;">
                         <li v-for="(section, secIdx) in i.sections" :key="secIdx" style="display: block; margin-bottom: 5px;">
                             <strong style="color: #444; font-weight: 600;">{{ section.name }}</strong>: {{ section.gusto }}
-                            <span v-if="section.modifiers && section.modifiers.length > 0" style="font-style: italic;">
-                                (<span v-for="(mod, mIdx) in section.modifiers" :key="mIdx">
+                            <ul v-if="section.modifiers && section.modifiers.length > 0">
+                                <li v-for="(mod, mIdx) in section.modifiers" :key="mIdx" style="display: block; font-size: 0.9rem; padding-left: 5px;">
                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
-                                </span> Modifiche)
-                            </span>
+                                    {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                     
@@ -598,23 +604,18 @@
     <div class="modal-content">
         <h3>Componi {{ tempMeterItem?.nome }}</h3>
         <p>Sezioni: {{ tempMeterItem?.sections.length }}</p>
-        
-        <input type="search" v-model="searchTerm" placeholder="Cerca pizza base/gusto..." class="search-input">
-        <div class="grid" v-if="filteredPizzaGusti.length > 0">
-            <div class="item" v-for="p in filteredPizzaGusti" :key="p.nome" @click="setMeterGusto(p.nome)" :class="{disabled: p.isFinished}">
-                <strong>{{p.nome}}</strong>
-                <span v-if="p.isFinished" style="color:#b91c1c; font-weight:700;">(FINITO)</span>
-                <span v-else>€{{p.prezzo.toFixed(2)}}</span>
-            </div>
-        </div>
-        <div v-else-if="searchTerm" style="text-align: center; margin: 10px 0; color: #6b7280;">Nessun gusto trovato.</div>
-
         <div v-for="(section, secIdx) in tempMeterItem.sections" :key="secIdx" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 6px;">
             <strong>{{ section.name }}</strong> ({{ (section.size * 100).toFixed(0) }}%)
             
             <div class="form-row">
                 <label>Gusto Base *</label>
-                <input type="text" v-model="section.gusto" placeholder="Nome Pizza/Gusto..." required>
+                <input type="text" v-model="section.gusto" placeholder="Nome Pizza/Gusto..." required
+                       list="pizza-suggestions-meter"
+                       @focus="filterPizzas('', 'meter')"
+                       @input="filterPizzas(section.gusto, 'meter')">
+                <datalist id="pizza-suggestions-meter">
+                    <option v-for="p in filteredPizzaSuggestions" :value="p.nome" :key="p.nome"></option>
+                </datalist>
             </div>
 
             <div class="form-row">
@@ -622,7 +623,7 @@
                 <div class="mod-row" style="margin-top: 5px;">
                     <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                             :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
-                            @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
+                            @click="tempModCat=cat; gustoSearchTerm=''">{{cat.toUpperCase()}}</button>
                 </div>
                 
                 <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
@@ -660,27 +661,23 @@
         <h3>Componi {{ tempHalfPizzaItem?.nome }}</h3>
         <p>Prezzo Base: €{{ tempHalfPizzaItem?.prezzo.toFixed(2) }}</p>
 
-        <input type="search" v-model="searchTerm" placeholder="Cerca pizza base/gusto..." class="search-input">
-        <div class="grid" v-if="filteredPizzaGusti.length > 0">
-            <div class="item" v-for="p in filteredPizzaGusti" :key="p.nome" @click="setHalfPizzaGusto(p.nome)" :class="{disabled: p.isFinished}">
-                <strong>{{p.nome}}</strong>
-                <span v-if="p.isFinished" style="color:#b91c1c; font-weight:700;">(FINITO)</span>
-                <span v-else>€{{p.prezzo.toFixed(2)}}</span>
-            </div>
-        </div>
-        <div v-else-if="searchTerm" style="text-align: center; margin: 10px 0; color: #6b7280;">Nessun gusto trovato.</div>
-
         <div style="margin-bottom: 15px; border: 1px solid #e31b23; padding: 10px; border-radius: 6px;">
             <strong>Metà 1</strong>
             <div class="form-row">
                 <label>Gusto Base *</label>
-                <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." required>
+                <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." required
+                       list="pizza-suggestions-half1"
+                       @focus="filterPizzas('', 'half1')"
+                       @input="filterPizzas(tempHalfPizzaItem.gusto1, 'half1')">
+                <datalist id="pizza-suggestions-half1">
+                    <option v-for="p in filteredPizzaSuggestions" :value="p.nome" :key="p.nome"></option>
+                </datalist>
             </div>
             <label style="margin-top: 10px; display: block;">Modifiche (Metà 1)</label>
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                             :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
-                            @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
+                            @click="tempModCat=cat; gustoSearchTerm=''">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
             <div class="grid" v-if="tempHalfPizzaItem" style="margin-top: 10px;">
@@ -706,13 +703,19 @@
             <strong>Metà 2</strong>
             <div class="form-row">
                 <label>Gusto Base *</label>
-                <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." required>
+                <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." required
+                       list="pizza-suggestions-half2"
+                       @focus="filterPizzas('', 'half2')"
+                       @input="filterPizzas(tempHalfPizzaItem.gusto2, 'half2')">
+                <datalist id="pizza-suggestions-half2">
+                    <option v-for="p in filteredPizzaSuggestions" :value="p.nome" :key="p.nome"></option>
+                </datalist>
             </div>
              <label style="margin-top: 10px; display: block;">Modifiche (Metà 2)</label>
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
                             :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
-                            @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
+                            @click="tempModCat=cat; gustoSearchTerm=''">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
             <div class="grid" v-if="tempHalfPizzaItem" style="margin-top: 10px;">
@@ -825,6 +828,7 @@
         searchTerm: '',
         modifierSearchTerm: '', 
         gustoSearchTerm: '', 
+        filteredPizzaSuggestions: [], // NUOVO: per l'autocomplete dei gusti
 
         // Stato Composizione
         tempMeterItem: null, 
@@ -910,24 +914,11 @@
             let items = this.menu[this.activeCat] || [];
             const term = this.searchTerm.toLowerCase().trim();
 
-            if (term && !items.some(item => item.nome.toLowerCase().includes(term))) {
-                 // Se la ricerca globale è attiva, cerca in tutte le categorie
-                 items = this.allItems.filter(p => p.nome.toLowerCase().includes(term));
-            } else if (term) {
-                // Filtra solo nella categoria attiva se la ricerca non è su tutta
-                 items = items.filter(p => p.nome.toLowerCase().includes(term));
+            if (term) {
+                // Filtra su TUTTI gli articoli se c'è un termine di ricerca
+                items = this.allItems.filter(p => p.nome.toLowerCase().includes(term));
             }
             return items;
-        },
-        // NUOVO: Filtra gli elementi che possono essere gusti base (pizze semplici, per esempio) in base al searchTerm
-        get filteredPizzaGusti() {
-            const term = this.searchTerm.toLowerCase().trim();
-            if (!term) return [];
-            
-            // Filtra solo gli elementi che NON sono composti (isMeter/isHalfPizza)
-            const baseItems = this.allItems.filter(p => !p.isMeter && !p.isHalfPizza);
-            
-            return baseItems.filter(p => p.nome.toLowerCase().includes(term));
         },
         get filteredModifiersForActiveCat() {
             let mods = this.modifiers[this.activeModCat] || [];
@@ -938,6 +929,7 @@
             return mods;
         },
         get canComposeMeter(){
+            // Controlla se esiste almeno una categoria di pizze semplici per fungere da base gusto
             return this.menu["Pizze"] && this.menu["Pizze"].length > 0;
         },
         get canComposeHalfPizza(){
@@ -961,6 +953,19 @@
                    this.tempHalfPizzaItem.gusto2 && this.tempHalfPizzaItem.gusto2.trim().length > 0;
         },
         // --- FINE LOGICA MENU ---
+
+        // Logica Autocomplete Gusti (PIZZE BASE)
+        filterPizzas(term, source) {
+            const pizzaItems = this.menu["Pizze"] || []; 
+            term = term.toLowerCase().trim();
+
+            if (!term) {
+                this.filteredPizzaSuggestions = pizzaItems; 
+                return;
+            }
+            
+            this.filteredPizzaSuggestions = pizzaItems.filter(p => p.nome.toLowerCase().includes(term));
+        },
 
         // LOGICA ORDINE ATTIVO E FILTRI
         get filteredActiveOrders() {
@@ -1020,6 +1025,7 @@
             localStorage.setItem('pz_zones',JSON.stringify(this.deliveryZones));
             localStorage.setItem('pz_archive',JSON.stringify(this.archive)); 
             localStorage.setItem('pz_drivers',JSON.stringify(this.drivers)); 
+            this.customerData.sort((a, b) => b.lastOrder - a.lastOrder); // Ordina per ultimo ordine
             localStorage.setItem('pz_customerData',JSON.stringify(this.customerData)); 
         },
 
@@ -1059,11 +1065,13 @@
             if (item.isFinished) return; // Non cliccabile se finito
             
             this.lastSelectedItem = item; 
+
             if (item.isMeter) {
                 if (!this.canComposeMeter) {
                     alert("Non puoi comporre un Mezzo Metro se non hai pizze base nel Menu!");
                     return;
                 }
+                // Prepara il nuovo item composto
                 this.tempMeterItem = JSON.parse(JSON.stringify(item));
                 this.tempMeterItem.sections.forEach(s => {
                     s.gusto = ''; 
@@ -1071,13 +1079,13 @@
                 });
                 this.tempModCat = 'Più';
                 this.gustoSearchTerm = '';
-                this.searchTerm = ''; // Resetta il filtro per il gusto nel modal
                 this.showMeterModal = true;
             } else if (item.isHalfPizza) {
                 if (!this.canComposeHalfPizza) {
                      alert("Non puoi comporre una Pizza a Metà se non hai pizze base nel Menu!");
                     return;
                 }
+                // Prepara il nuovo item composto
                 this.tempHalfPizzaItem = JSON.parse(JSON.stringify(item));
                 this.tempHalfPizzaItem.gusto1 = '';
                 this.tempHalfPizzaItem.gusto2 = '';
@@ -1085,7 +1093,6 @@
                 this.tempHalfPizzaItem.modifiers2 = [];
                 this.tempModCat = 'Più';
                 this.gustoSearchTerm = '';
-                this.searchTerm = ''; // Resetta il filtro per il gusto nel modal
                 this.showHalfPizzaModal = true;
             } else {
                 this.addItem(item);
@@ -1111,7 +1118,7 @@
             if (modifier.isFinished) return; // Modificatore non aggiungibile se finito
             
             const item = this.order[this.selectedItemIndex];
-            if (item.isMeter || item.isHalfPizza) return; 
+            if (item.isMeter || item.isHalfPizza) return; // Non permettere modifiche dirette su item composti
             
             const newMod = JSON.parse(JSON.stringify(modifier));
             if (!item.modifiers) item.modifiers = [];
@@ -1128,6 +1135,13 @@
             }
         },
 
+        removeModifier(itemIndex, modIndex) {
+            const item = this.order[itemIndex];
+            if (item && item.modifiers) {
+                item.modifiers.splice(modIndex, 1);
+            }
+        },
+
         // Logica Autocomplete/Clienti
         filterCustomers() {
             const term = this.customer.toLowerCase().trim();
@@ -1135,6 +1149,7 @@
                 this.filteredCustomerSuggestions = [];
                 return;
             }
+            // Filtra e prende solo i 5 suggerimenti più recenti
             const uniqueCustomers = [];
             const namesAdded = new Set();
             for (const data of this.customerData) {
@@ -1162,8 +1177,6 @@
         saveCustomerData() {
             if (!this.customer.trim()) return;
 
-            const existingIndex = this.customerData.findIndex(c => c.customer === this.customer.trim());
-
             const newCustomerEntry = {
                 customer: this.customer.trim(),
                 phone: this.phone.trim(),
@@ -1174,12 +1187,15 @@
                 deliveryCost: this.deliveryCost,
                 lastOrder: Date.now() 
             };
+
+            const existingIndex = this.customerData.findIndex(c => c.customer === this.customer.trim());
             
             if (existingIndex !== -1) {
+                // Rimuove la vecchia voce (per poi reinserirla come la più recente)
                 this.customerData.splice(existingIndex, 1); 
             }
-            this.customerData.unshift(newCustomerEntry);
-            this.customerData = this.customerData.slice(0, 50); 
+            this.customerData.unshift(newCustomerEntry); // Aggiunge come primo (più recente)
+            this.customerData = this.customerData.slice(0, 50); // Mantiene solo gli ultimi 50
             this.saveData();
         },
 
@@ -1237,7 +1253,7 @@
 
         // Logica Stampa Selettiva
         printOrder(orderId, type) {
-            const order = this.orders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId); // Cerca anche nell'archivio
+            const order = this.orders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId); 
             if (!order) return;
 
             const printContainer = document.getElementById('print-content-comanda');
@@ -1458,12 +1474,12 @@
                 
                 let newItem = { nome: name, prezzo: price };
                 // Se la categoria è per pizze composte, forza le proprietà
-                if (cat.includes("Metà")) newItem.isHalfPizza = true;
-                if (cat.includes("Metro") || cat.includes("Grande")) {
+                if (cat.toLowerCase().includes("metà")) newItem.isHalfPizza = true;
+                if (cat.toLowerCase().includes("metro") || cat.toLowerCase().includes("schiacciata grande")) {
                     newItem.isMeter = true;
                     // Definizione sezioni di default
-                    if (cat.includes("Due")) newItem.sections = [{name:"Metà A", size:0.5}, {name:"Metà B", size:0.5}];
-                    else if (cat.includes("Tre")) newItem.sections = [{name:"Terzo 1", size:0.33}, {name:"Terzo 2", size:0.33}, {name:"Terzo 3", size:0.33}];
+                    if (name.toLowerCase().includes("due")) newItem.sections = [{name:"Metà A", size:0.5}, {name:"Metà B", size:0.5}];
+                    else if (name.toLowerCase().includes("tre")) newItem.sections = [{name:"Terzo 1", size:0.33}, {name:"Terzo 2", size:0.33}, {name:"Terzo 3", size:0.33}];
                     else newItem.sections = [{name:"Gusto Unico", size:1}];
                 }
 
@@ -1578,7 +1594,7 @@
         },
         formatDate(dateStr) {
             if (!dateStr) return '';
-            const date = new Date(dateStr.replace(/-/g, '/')); // Corregge i problemi di fuso orario con i formati ISO
+            const date = new Date(dateStr.replace(/-/g, '/')); 
             return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
         },
         isFutureOrder(o) {
@@ -1626,14 +1642,13 @@
             this.accontoRicevuto = null;
             this.selectedItemIndex = null;
             this.lastSelectedItem = null;
-            this.searchTerm = ''; // Resetta il termine di ricerca
         },
         editOrder(id) {
             const orderToEdit = this.orders.find(o => o.id === id);
             if (!orderToEdit) return;
 
             this.editingOrderId = id;
-            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); // Deep copy
+            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); 
             this.mode = orderToEdit.mode;
             this.customer = orderToEdit.customer;
             this.phone = orderToEdit.phone;
@@ -1650,7 +1665,6 @@
             this.view = 'inserimento';
             this.selectedItemIndex = null;
             this.lastSelectedItem = null; 
-            this.searchTerm = ''; // Resetta il termine di ricerca
         },
         cancelEdit() {
             this.resetCurrentOrderState();
@@ -1711,8 +1725,6 @@
             if (this.selectedDriver) {
                 stats = filtered.filter(o => o.driver === this.selectedDriver);
             } else {
-                // Se non è selezionato nessun driver, si contano solo le consegne (mode=consegna)
-                // Se vuoi contare TUTTI gli ordini (anche asporto/banco) togli la condizione (o.mode === 'consegna')
                 stats = filtered.filter(o => o.mode === 'consegna');
             }
             
@@ -1735,7 +1747,6 @@
                 this.tableNumber = order.tableNumber;
                 this.accontoRicevuto = order.acconto; 
 
-                // Suggerisce per oggi o il giorno archiviato
                 this.date = getTodayDateString(); 
                 this.hour = getDefaultHour(); 
 
@@ -1802,15 +1813,15 @@
         },
         
         // Logica composizione Mezzo Metro
-        setMeterGusto(gustoName) {
-            if (!this.tempMeterItem || this.tempMeterItem.sections.every(s => s.gusto.trim())) return; // Se tutte le sezioni sono piene, ignora
-            
-            // Trova la prima sezione con gusto vuoto e assegna
-            const emptySection = this.tempMeterItem.sections.find(s => !s.gusto.trim());
-            if (emptySection) {
-                 emptySection.gusto = gustoName;
-                 this.searchTerm = ''; // Pulisce la ricerca dopo l'assegnazione
-            }
+        openMeterModalForEdit(index) {
+             const item = this.order[index];
+             if (item.isMeter) {
+                this.selectedItemIndex = index; // Seleziona l'elemento per l'editing
+                this.tempMeterItem = JSON.parse(JSON.stringify(item));
+                this.tempModCat = 'Più';
+                this.gustoSearchTerm = '';
+                this.showMeterModal = true;
+             }
         },
         addMeterModifier(secIdx, modifier) {
              if (modifier.isFinished) return;
@@ -1827,32 +1838,44 @@
         cancelMeterComposition() {
             this.tempMeterItem = null;
             this.showMeterModal = false;
+            if (this.order.length > 0) {
+                 this.selectedItemIndex = this.order.length - 1; // Ri-seleziona l'ultimo elemento non composto se c'è
+            } else {
+                 this.selectedItemIndex = null;
+            }
             this.lastSelectedItem = null; 
-            this.searchTerm = '';
         },
         addMeterToOrder() {
             if (!this.isMeterValid) return;
             const itemToAdd = JSON.parse(JSON.stringify(this.tempMeterItem));
-            this.order.push(itemToAdd);
-            this.selectedItemIndex = this.order.length - 1;
+            
+            if (this.selectedItemIndex !== null && this.order[this.selectedItemIndex]?.isMeter) {
+                 // Modifica elemento esistente
+                 this.order[this.selectedItemIndex] = itemToAdd;
+                 this.selectedItemIndex = this.selectedItemIndex;
+            } else {
+                 // Aggiungi nuovo elemento
+                 this.order.push(itemToAdd);
+                 this.selectedItemIndex = this.order.length - 1;
+            }
+
             this.tempMeterItem = null;
             this.showMeterModal = false;
-            this.searchTerm = '';
         },
         get calculateTempMeterTotal() {
             return this.tempMeterItem ? this.calculateItemTotal(this.tempMeterItem) : 0;
         },
 
         // Logica composizione Pizza a Metà
-        setHalfPizzaGusto(gustoName) {
-            if (!this.tempHalfPizzaItem) return;
-
-            if (!this.tempHalfPizzaItem.gusto1.trim()) {
-                this.tempHalfPizzaItem.gusto1 = gustoName;
-            } else if (!this.tempHalfPizzaItem.gusto2.trim()) {
-                this.tempHalfPizzaItem.gusto2 = gustoName;
-            }
-            this.searchTerm = ''; // Pulisce la ricerca dopo l'assegnazione
+        openHalfPizzaModalForEdit(index) {
+             const item = this.order[index];
+             if (item.isHalfPizza) {
+                 this.selectedItemIndex = index; 
+                 this.tempHalfPizzaItem = JSON.parse(JSON.stringify(item));
+                 this.tempModCat = 'Più';
+                 this.gustoSearchTerm = '';
+                 this.showHalfPizzaModal = true;
+             }
         },
         addHalfPizzaModifier(half, modifier) {
             if (modifier.isFinished) return;
@@ -1876,23 +1899,46 @@
         cancelHalfPizzaComposition() {
             this.tempHalfPizzaItem = null;
             this.showHalfPizzaModal = false;
+            if (this.order.length > 0) {
+                 this.selectedItemIndex = this.order.length - 1;
+            } else {
+                 this.selectedItemIndex = null;
+            }
             this.lastSelectedItem = null; 
-            this.searchTerm = '';
         },
         addHalfPizzaToOrder() {
             if (!this.isHalfPizzaValid) return;
             const itemToAdd = JSON.parse(JSON.stringify(this.tempHalfPizzaItem));
-            this.order.push(itemToAdd);
-            this.selectedItemIndex = this.order.length - 1;
+            
+             if (this.selectedItemIndex !== null && this.order[this.selectedItemIndex]?.isHalfPizza) {
+                 // Modifica elemento esistente
+                 this.order[this.selectedItemIndex] = itemToAdd;
+                 this.selectedItemIndex = this.selectedItemIndex;
+            } else {
+                 // Aggiungi nuovo elemento
+                 this.order.push(itemToAdd);
+                 this.selectedItemIndex = this.order.length - 1;
+            }
+
             this.tempHalfPizzaItem = null;
             this.showHalfPizzaModal = false;
-            this.searchTerm = '';
         },
         get calculateTempHalfPizzaTotal() {
             return this.tempHalfPizzaItem ? this.calculateItemTotal(this.tempHalfPizzaItem) : 0;
         },
         selectItem(index) {
-            this.selectedItemIndex = this.selectedItemIndex === index ? null : index;
+            const item = this.order[index];
+            if (item.isMeter || item.isHalfPizza) {
+                 // Se è un elemento composto, aprirlo per l'editing
+                 if (item.isMeter) {
+                      this.openMeterModalForEdit(index);
+                 } else if (item.isHalfPizza) {
+                      this.openHalfPizzaModalForEdit(index);
+                 }
+            } else {
+                 // Per elementi standard, seleziona/deseleziona per i modificatori standard
+                 this.selectedItemIndex = this.selectedItemIndex === index ? null : index;
+            }
         },
         openModal() {
             this.zoneName = this.deliveryZones[0]?.name || ''; 
