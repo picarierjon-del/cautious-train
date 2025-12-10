@@ -93,6 +93,8 @@
         .order-card.warning-urgent { border-left: 5px solid #b91c1c; } /* Rosso (5 min) */
         .order-card.warning-near:before { content: "ATTENZIONE: Vicino!"; position: absolute; top: -10px; right: 10px; background: #facc15; color: #333; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
         .order-card.warning-urgent:before { content: "URGENTE: Imminente!"; position: absolute; top: -10px; right: 10px; background: #b91c1c; color: #fff; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+        
+        .allergy-alert { color: #b91c1c; margin-left: 5px; font-size: 1rem; font-weight: 700;} /* Nuovo stile */
 
         /* Stili per la stampa (nasconde elementi non necessari) */
         @media print {
@@ -265,6 +267,17 @@
             <button class="filter-btn-status" :class="{active: activeDateFilter === 'tomorrow'}" @click="activeDateFilter = 'tomorrow'">DOMANI</button>
             <button class="filter-btn-status" :class="{active: activeDateFilter === 'future'}" @click="activeDateFilter = 'future'">FUTURI</button>
         </div>
+        
+        <div v-if="activeDateFilter === 'today' || activeDateFilter === 'tomorrow'" 
+             style="background: #e6f7ff; border: 1px solid #91d5ff; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem;">
+            <p style="margin: 0; font-weight: 700; color: #1890ff;">
+                Slot Pizze Disponibili per {{ nextAvailableTime.display }}: 
+                <span :style="{color: nextAvailableTime.available ? '#22c55e' : '#b91c1c'}">
+                    {{ nextAvailableTime.available ? nextAvailableTime.remaining : '0' }} / {{ pizzaLimitQuantity }}
+                </span>
+            </p>
+        </div>
+
 
         <div v-if="!filteredActiveOrders.length">Nessun ordine attivo trovato per la data selezionata.</div>
         <div class="order-card" v-for="o in filteredActiveOrders" :key="o.id"
@@ -291,7 +304,10 @@
             <p v-else-if="o.phone">📞 {{o.phone}}</p>
             <p v-else-if="o.driver" style="font-size: 0.9rem;">Fattorino (Asporto/Banco): **{{o.driver}}**</p>
             
-            <p v-if="o.notes" style="font-size: 0.9rem; margin-top: 8px;">**Note:** {{o.notes}}</p>
+            <p v-if="o.notes" style="font-size: 0.9rem; margin-top: 8px;">
+                **Note:** {{o.notes}}
+                <span v-if="hasAllergyKeywords(o.notes)" class="allergy-alert" title="AVVISO ALLERGIA/NOTE CRITICHE">⚠️</span>
+            </p>
             
             <ul class="order-items">
                 <li v-for="it in o.items">
@@ -405,6 +421,28 @@
     </section>
 
     <section v-show="view==='impostazioni'" class="settings">
+        
+        <h2>Configurazione Produzione</h2>
+        <div style="background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 20px;">
+             <form @submit.prevent="updatePizzaLimit" style="display: block; gap: 0;">
+                <div class="form-row">
+                    <label for="limitQuantity">Quantità Massima di Pizze per Slot (Capacità Produttiva)</label>
+                    <input type="number" id="limitQuantity" v-model.number="tempPizzaLimitQuantity" min="1" required style="width: 100%;">
+                </div>
+                <div class="form-row">
+                    <label for="limitMinutes">Fascia Oraria in Minuti (Slot Temporale)</label>
+                    <input type="number" id="limitMinutes" v-model.number="tempPizzaLimitMinutes" min="1" required style="width: 100%;">
+                </div>
+                <div style="text-align: right;">
+                    <button type="submit" style="width: auto;">Aggiorna Limite</button>
+                </div>
+            </form>
+            <p style="font-size: 0.9rem; margin-top: 10px; padding-top: 5px; border-top: 1px dashed #eee;">
+                Limite Attuale: **{{ pizzaLimitQuantity }} pizze ogni {{ pizzaLimitMinutes }} minuti**.
+            </p>
+        </div>
+
+        <hr style="margin: 20px 0;">
         
         <h2>Gestione Fattorini</h2>
         <div class="settings-list">
@@ -568,6 +606,9 @@
             <div class="form-row">
                 <label for="notes">Note/Istruzioni (es. citofono, piano, allergie)</label>
                 <textarea id="notes" v-model="notes"></textarea>
+                 <div v-if="hasAllergyKeywords(notes)" style="color: #b91c1c; font-weight: 700; margin-top: 5px;">
+                     ⚠️ ATTENZIONE: Parola chiave allergia/critica rilevata!
+                 </div>
             </div>
 
             <div class="form-row">
@@ -578,6 +619,12 @@
             <div class="form-row">
                 <label for="hour">Ora di Ritiro/Consegna *</label>
                 <input type="time" id="hour" v-model="hour" required>
+                <div v-if="!isMeterOrHalfPizzaOnly" style="font-size: 0.9rem; margin-top: 5px; padding: 5px; border-radius: 4px;"
+                    :style="{backgroundColor: pizzaSlotStatus.canBook ? '#d4edda' : '#f8d7da', color: pizzaSlotStatus.canBook ? '#155724' : '#721c24'}">
+                    <i :class="pizzaSlotStatus.canBook ? 'fa-solid fa-check-circle' : 'fa-solid fa-exclamation-triangle'"></i> 
+                    **Slot Pizze ({{ pizzaSlotStatus.intervalStart }} - {{ pizzaSlotStatus.intervalEnd }}):** {{ pizzaSlotStatus.bookedPizzas }} / {{ pizzaLimitQuantity }}. 
+                    <span v-if="!pizzaSlotStatus.canBook">**CAPACITÀ MAX RAGGIUNTA!** Ordina per la fascia successiva ({{ nextAvailableTime.display }}).</span>
+                </div>
             </div>
             
             <div class="form-row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
@@ -590,7 +637,7 @@
 
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" @click="showModal=false">Annulla</button>
-                <button type="submit" class="btn-confirm">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
+                <button type="submit" class="btn-confirm" :disabled="!canFinalizeOrder">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
             </div>
         </form>
     </div>
@@ -788,6 +835,12 @@
         const minutes = String(now.getMinutes()).padStart(2, '0');
         return `${hours}:${minutes}`;
     }
+    
+    // Funzione per arrotondare l'ora al minuto di limite più vicino
+    function roundTime(date, minutes) {
+        const coeff = 1000 * 60 * minutes;
+        return new Date(Math.round(date.getTime() / coeff) * coeff);
+    }
     // ⭐ /FUNZIONI HELPER ⭐
 
     PetiteVue.createApp({
@@ -807,6 +860,13 @@
         archive: JSON.parse(localStorage.getItem('pz_archive')||'[]'), 
         drivers: JSON.parse(localStorage.getItem('pz_drivers')||'[]'),
         customerData: JSON.parse(localStorage.getItem('pz_customerData')||'[]'), 
+        
+        // NUOVO: Limiti di Produzione
+        pizzaLimitMinutes: parseInt(localStorage.getItem('pz_limit_minutes') || 5), 
+        pizzaLimitQuantity: parseInt(localStorage.getItem('pz_limit_quantity') || 10),
+        tempPizzaLimitMinutes: parseInt(localStorage.getItem('pz_limit_minutes') || 5), 
+        tempPizzaLimitQuantity: parseInt(localStorage.getItem('pz_limit_quantity') || 10),
+
 
         // Stato Ordine Corrente
         activeCat:'Pizze',
@@ -895,6 +955,111 @@
         get selectedOrderForShare() {
             return this.orders.find(o => o.id === this.selectedOrderIdForShare);
         },
+        
+        // NUOVO: Ritorna il numero di pizze nell'ordine corrente
+        get currentOrderPizzaCount() {
+            return this.order.filter(item => 
+                (item.nome && (
+                    item.nome.toLowerCase().includes('pizza') || 
+                    Object.keys(this.menu).some(cat => cat.toLowerCase().includes('pizza') && this.menu[cat].some(p => p.nome === item.nome))
+                )) && 
+                !item.nome.toLowerCase().includes('schiacciata') // Escludi schiacciate/altro che non è "pizza"
+            ).length;
+        },
+        
+        // NUOVO: Verifica se l'ordine contiene SOLO elementi non-pizza (es. solo bibite)
+        get isMeterOrHalfPizzaOnly() {
+            return this.currentOrderPizzaCount === 0;
+        },
+        
+        // NUOVO: Stato dello slot pizze per l'ora selezionata
+        get pizzaSlotStatus() {
+            const currentOrderPizzas = this.currentOrderPizzaCount;
+            if (currentOrderPizzas === 0) {
+                 return { bookedPizzas: 0, remainingPizzas: this.pizzaLimitQuantity, canBook: true, intervalStart: this.hour, intervalEnd: this.hour };
+            }
+            
+            const targetTimeStr = `${this.date}T${this.hour}`;
+            const targetDate = new Date(targetTimeStr);
+            
+            // Arrotonda all'inizio dello slot
+            const slotStart = roundTime(targetDate, this.pizzaLimitMinutes);
+            const slotEnd = new Date(slotStart.getTime() + this.pizzaLimitMinutes * 60000);
+            
+            const ordersInSlot = this.orders.filter(o => {
+                if (this.editingOrderId && o.id === this.editingOrderId) return false; // Ignora l'ordine in modifica
+                
+                const orderTime = new Date(`${o.date}T${o.hour}`);
+                return orderTime >= slotStart && orderTime < slotEnd;
+            });
+            
+            // Conta le pizze negli ordini esistenti
+            const bookedPizzas = ordersInSlot.reduce((sum, order) => sum + this.getPizzaCountForOrder(order), 0);
+            
+            const totalPizzas = bookedPizzas + currentOrderPizzas;
+            
+            return {
+                bookedPizzas: bookedPizzas,
+                remainingPizzas: this.pizzaLimitQuantity - bookedPizzas,
+                canBook: totalPizzas <= this.pizzaLimitQuantity,
+                intervalStart: slotStart.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+                intervalEnd: slotEnd.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+            };
+        },
+        
+        // NUOVO: Prossimo orario disponibile
+        get nextAvailableTime() {
+            const currentOrderPizzas = this.currentOrderPizzaCount;
+            const now = new Date();
+            let nextSlotStart = roundTime(now, this.pizzaLimitMinutes);
+            
+            // Se l'orario richiesto è valido, usa quello
+            if (this.pizzaSlotStatus.canBook || currentOrderPizzas === 0) {
+                const targetTimeStr = `${this.date}T${this.hour}`;
+                nextSlotStart = roundTime(new Date(targetTimeStr), this.pizzaLimitMinutes);
+            }
+            
+            let attempts = 0;
+            const maxAttempts = 24 * 60 / this.pizzaLimitMinutes; // Max 24 ore di ricerca
+            
+            while (attempts < maxAttempts) {
+                const slotEnd = new Date(nextSlotStart.getTime() + this.pizzaLimitMinutes * 60000);
+                
+                const ordersInSlot = this.orders.filter(o => {
+                    if (this.editingOrderId && o.id === this.editingOrderId) return false;
+                    const orderTime = new Date(`${o.date}T${o.hour}`);
+                    return orderTime >= nextSlotStart && orderTime < slotEnd;
+                });
+                
+                const bookedPizzas = ordersInSlot.reduce((sum, order) => sum + this.getPizzaCountForOrder(order), 0);
+                const remaining = this.pizzaLimitQuantity - bookedPizzas;
+                
+                if (remaining >= currentOrderPizzas) {
+                    return {
+                        date: nextSlotStart.toISOString().substring(0, 10),
+                        time: nextSlotStart.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+                        display: nextSlotStart.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+                        available: true,
+                        remaining: remaining,
+                    };
+                }
+                
+                nextSlotStart = slotEnd; 
+                attempts++;
+            }
+            
+             return { date: '', time: '', display: 'Non Trovato', available: false, remaining: 0 };
+        },
+        
+        // NUOVO: Blocca il pulsante di finalizzazione se l'orario è saturo
+        get canFinalizeOrder() {
+            if (this.order.length === 0) return false;
+            
+            // Se sono solo elementi non-pizza (es. bibite) o è un ordine in modifica, bypassa il check
+            if (this.isMeterOrHalfPizzaOnly || this.editingOrderId) return true; 
+            
+            return this.pizzaSlotStatus.canBook;
+        },
 
         // LOGICA MENU E MODIFICATORI
         get allItems() {
@@ -962,6 +1127,7 @@
                 filtered = filtered.filter(o => {
                     const orderDate = new Date(o.date.replace(/-/g, '/'));
                     const tomorrowDate = new Date(tomorrowStr.replace(/-/g, '/'));
+                    // Usa getTime() per comparare correttamente le date
                     return orderDate.getTime() > tomorrowDate.getTime();
                 });
             }
@@ -1001,8 +1167,30 @@
             localStorage.setItem('pz_archive',JSON.stringify(this.archive)); 
             localStorage.setItem('pz_drivers',JSON.stringify(this.drivers)); 
             localStorage.setItem('pz_customerData',JSON.stringify(this.customerData)); 
+            localStorage.setItem('pz_limit_minutes', this.pizzaLimitMinutes.toString());
+            localStorage.setItem('pz_limit_quantity', this.pizzaLimitQuantity.toString());
         },
 
+        // NUOVO: Funzione per contare le pizze in un ordine (incluse Metri e Metà)
+        getPizzaCountForOrder(order) {
+            return order.items.reduce((count, item) => {
+                const name = item.nome.toLowerCase();
+                // Assumiamo che "Pizze", "Pizza Metà" e "Mezzo Metro" contengano pizze
+                const isPizzaCategory = Object.keys(this.menu).some(cat => 
+                    cat.toLowerCase().includes('pizza') && 
+                    this.menu[cat].some(p => p.nome === item.nome)
+                );
+                
+                // Escludi esplicitamente Schiacciate (a meno che non siano esplicitamente pizze schiacciate)
+                if (name.includes('schiacciata') && !name.includes('pizza')) return count;
+
+                if (isPizzaCategory || name.includes('pizza')) {
+                    return count + 1; // 1 per ogni pizza/metro/metà
+                }
+                return count;
+            }, 0);
+        },
+        
         getPizzasFromMenu() {
              return this.menu["Pizze"] || []; // Assumiamo che "Pizze" sia la categoria base
         },
@@ -1224,6 +1412,12 @@
                  alert("Inserisci Data e Ora di ritiro/consegna!");
                  return;
             }
+            
+            if (!this.canFinalizeOrder) {
+                alert(`ATTENZIONE: La capacità massima di ${this.pizzaLimitQuantity} pizze per lo slot ${this.pizzaSlotStatus.intervalStart} è stata raggiunta! Seleziona un'ora successiva.`);
+                return;
+            }
+
 
             let ord = {
                 id: this.editingOrderId || Date.now(), 
@@ -1454,6 +1648,18 @@
         },
 
         // --- FUNZIONI DI IMPOSTAZIONI ---
+        
+        // NUOVO: Aggiorna i limiti di produzione
+        updatePizzaLimit() {
+            if (this.tempPizzaLimitQuantity > 0 && this.tempPizzaLimitMinutes > 0) {
+                this.pizzaLimitQuantity = this.tempPizzaLimitQuantity;
+                this.pizzaLimitMinutes = this.tempPizzaLimitMinutes;
+                this.saveData();
+                alert(`Limiti di produzione aggiornati: ${this.pizzaLimitQuantity} pizze ogni ${this.pizzaLimitMinutes} minuti.`);
+            } else {
+                alert("I valori di limite devono essere maggiori di 0.");
+            }
+        },
 
         // Gestione Categorie
         addCategory() {
@@ -1617,7 +1823,11 @@
             return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
         },
         isFutureOrder(o) {
-            return o.date !== getTodayDateString();
+            // Check se l'ordine è per un giorno dopo domani
+            const orderDate = new Date(o.date.replace(/-/g, '/'));
+            const tomorrowStr = getTomorrowLocalString();
+            const tomorrowDate = new Date(tomorrowStr.replace(/-/g, '/'));
+            return orderDate.getTime() > tomorrowDate.getTime();
         },
         isNear(o) {
             const now = new Date();
@@ -1630,6 +1840,13 @@
             const orderTime = new Date(`${o.date}T${o.hour}`);
             const diffMinutes = (orderTime - now) / 60000;
             return diffMinutes <= 5 && diffMinutes >= 0 && o.date === getTodayDateString();
+        },
+        // NUOVO: Verifica la presenza di parole chiave per le allergie
+        hasAllergyKeywords(notes) {
+            if (!notes) return false;
+            const lowerNotes = notes.toLowerCase();
+            const keywords = ['senza glutine', 'celiachia', 'allergia', 'senza lattosio', 'intolleranza', 'non toccare', 'attenzione'];
+            return keywords.some(k => lowerNotes.includes(k));
         },
         selectMode(m) {
             this.mode = m;
