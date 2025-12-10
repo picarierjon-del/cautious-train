@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Pizzeria Smart – Gestionale</title>
+    <title>Pizzeria Smart – Gestionale Avanzato</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         /* Stili Generali */
@@ -31,6 +31,23 @@
         .mod-btn.active { border-color: #e31b23; background-color: #ffecec; box-shadow: 0 0 0 3px #e31b23; }
         .mod-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
+        /* Icone Modificatori per l'ordine corrente */
+        .mod-icon {
+            display: inline-block;
+            width: 15px; 
+            height: 15px;
+            line-height: 15px;
+            text-align: center;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-right: 3px;
+        }
+        .mod-icon.Più { background: #22c55e; color: #fff; }
+        .mod-icon.Senza { background: #6b7280; color: #fff; }
+        .mod-icon.Poco { background: #facc15; color: #333; }
+        .mod-icon.Abbondante { background: #3b82f6; color: #fff; }
+
         .search-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; }
         .search-mod-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 10px; }
 
@@ -136,6 +153,19 @@
         .item-status .available { background: #22c55e; color: #fff; }
         .item-status .finished { background: #b91c1c; color: #fff; }
 
+        /* NUOVO: Stili per i Modificatori Custom nelle Impostazioni */
+        .mod-category-settings-item {
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 10px; 
+            background: #ffecec; 
+            border: 2px solid #e31b23; 
+            border-radius: 6px; 
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
     </style>
 </head>
 <body>
@@ -152,7 +182,7 @@
 
         <div class="mod-row">
             <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                    :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeModCat===cat}"
+                    :class="[catColor(cat), {active: activeModCat===cat}]"
                     @click="activeModCat=cat; modifierSearchTerm=''" :disabled="selectedItemIndex === null || (order[selectedItemIndex] && (order[selectedItemIndex].isMeter || order[selectedItemIndex].isHalfPizza))">{{cat.toUpperCase()}}</button>
         </div>
         
@@ -420,10 +450,24 @@
 
         <hr style="margin: 20px 0;">
 
+        <h2>Gestione Categorie Modificatori</h2>
+        <div class="settings-list">
+             <div class="mod-category-settings-item" v-for="(cat, catName) in modifiers" :key="catName">
+                <span>{{ catName }}</span>
+                 <button class="remove" @click="deleteModifierCategory(catName)" :disabled="isDefaultModifierCategory(catName)">Elimina</button>
+            </div>
+        </div>
+         <form @submit.prevent="addModifierCategory">
+            <input type="text" v-model="newModifierCategoryName" placeholder="Nome Nuova Categoria Modificatore" required>
+            <input type="text" v-model="newModifierCategoryColor" placeholder="Colore (green, gray, yellow, blue, custom...)" required>
+            <button type="submit">Aggiungi Categoria</button>
+        </form>
+        <hr style="margin: 20px 0;">
+
         <h2>Gestione Modificatori</h2>
         <div class="mod-row">
             <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                    :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeSettingsModCat===cat}"
+                    :class="[catColor(cat), {active: activeSettingsModCat===cat}]"
                     @click="activeSettingsModCat=cat">{{cat.toUpperCase()}}</button>
         </div>
 
@@ -617,7 +661,7 @@
                 <label>Modifiche per {{ section.name }}</label>
                 <div class="mod-row" style="margin-top: 5px;">
                     <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                            :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
+                            :class="[catColor(cat), {active: tempModCat===cat}]"
                             @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
                 </div>
                 
@@ -669,7 +713,7 @@
             <label style="margin-top: 10px; display: block;">Modifiche (Metà 1)</label>
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                            :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
+                            :class="[catColor(cat), {active: tempModCat===cat}]"
                             @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
@@ -705,7 +749,7 @@
              <label style="margin-top: 10px; display: block;">Modifiche (Metà 2)</label>
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                            :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
+                            :class="[catColor(cat), {active: tempModCat===cat}]"
                             @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
@@ -807,6 +851,7 @@
         archive: JSON.parse(localStorage.getItem('pz_archive')||'[]'), 
         drivers: JSON.parse(localStorage.getItem('pz_drivers')||'[]'),
         customerData: JSON.parse(localStorage.getItem('pz_customerData')||'[]'), 
+        modifierCategoriesColors: JSON.parse(localStorage.getItem('pz_mod_colors') || '{"Più":"green","Senza":"gray","Poco":"yellow","Abbondante":"blue"}'), // NUOVO
 
         // Stato Ordine Corrente
         activeCat:'Pizze',
@@ -871,6 +916,8 @@
         newZoneName: '',
         newZonePrice: 0,
         newDriverName: '',
+        newModifierCategoryName: '', // NUOVO
+        newModifierCategoryColor: '', // NUOVO
 
         get calculatedOrderTotal(){
             if (this.order.length === 0) return 0;
@@ -894,6 +941,15 @@
         },
         get selectedOrderForShare() {
             return this.orders.find(o => o.id === this.selectedOrderIdForShare);
+        },
+
+        // NUOVO: Funzione per ottenere la classe di colore
+        catColor(catName) {
+            return this.modifierCategoriesColors[catName] || 'custom';
+        },
+        // NUOVO: Funzione per le categorie di default (non eliminabili)
+        isDefaultModifierCategory(catName) {
+             return ["Più", "Senza", "Poco", "Abbondante"].includes(catName);
         },
 
         // LOGICA MENU E MODIFICATORI
@@ -1001,6 +1057,7 @@
             localStorage.setItem('pz_archive',JSON.stringify(this.archive)); 
             localStorage.setItem('pz_drivers',JSON.stringify(this.drivers)); 
             localStorage.setItem('pz_customerData',JSON.stringify(this.customerData)); 
+            localStorage.setItem('pz_mod_colors',JSON.stringify(this.modifierCategoriesColors)); // NUOVO
         },
 
         getPizzasFromMenu() {
@@ -1094,7 +1151,7 @@
                         s.gusto = ''; 
                         s.modifiers = [];
                     });
-                    this.tempModCat = 'Più';
+                    this.tempModCat = Object.keys(this.modifiers)[0] || 'Più';
                     this.gustoSearchTerm = '';
                 }
                 this.showMeterModal = true;
@@ -1114,7 +1171,7 @@
                     this.tempHalfPizzaItem.gusto2 = '';
                     this.tempHalfPizzaItem.modifiers1 = [];
                     this.tempHalfPizzaItem.modifiers2 = [];
-                    this.tempModCat = 'Più';
+                    this.tempModCat = Object.keys(this.modifiers)[0] || 'Più';
                     this.gustoSearchTerm = '';
                 }
                 this.showHalfPizzaModal = true;
@@ -1131,7 +1188,7 @@
              }
              this.order.push(newItem);
              this.selectedItemIndex = this.order.length - 1; 
-             this.activeModCat = 'Più'; 
+             this.activeModCat = Object.keys(this.modifiers)[0] || 'Più'; 
              this.modifierSearchTerm = ''; 
         },
         removeItem(index) {
@@ -1517,7 +1574,38 @@
             this.saveData();
         },
 
-        // Gestione Modificatori (Punto 4: Aggiungere modificatori nelle impostazioni)
+        // Gestione Categorie Modificatori (PUNTO RICHIESTO)
+        addModifierCategory() {
+            const name = this.newModifierCategoryName.trim();
+            const color = this.newModifierCategoryColor.trim();
+
+            if (name && color) {
+                if (this.modifiers[name]) {
+                    alert("Categoria modificatore già esistente!");
+                    return;
+                }
+                this.modifiers = { [name]: [], ...this.modifiers }; // Aggiunge in cima
+                this.modifierCategoriesColors[name] = color;
+                this.newModifierCategoryName = '';
+                this.newModifierCategoryColor = '';
+                this.activeSettingsModCat = name;
+                this.saveData();
+            }
+        },
+        deleteModifierCategory(cat) {
+             if (this.isDefaultModifierCategory(cat)) {
+                alert("Non è possibile eliminare una categoria modificatore di default.");
+                return;
+            }
+             if (confirm(`Sei sicuro di voler eliminare la categoria modificatore "${cat}"? Verranno eliminati anche tutti i modificatori al suo interno.`)) {
+                delete this.modifiers[cat];
+                delete this.modifierCategoriesColors[cat];
+                this.activeSettingsModCat = Object.keys(this.modifiers)[0] || null;
+                this.saveData();
+            }
+        },
+        
+        // Gestione Modificatori
         addModifierToCategory() {
             const cat = this.activeSettingsModCat;
             const name = this.newModifierName.trim();
@@ -1600,7 +1688,7 @@
                     return cat;
                 }
             }
-            return 'Più'; 
+            return Object.keys(this.modifiers)[0] || 'Più'; 
         },
         getModifierIcon(cat) {
             switch (cat) {
@@ -1608,7 +1696,7 @@
                 case 'Senza': return '-';
                 case 'Poco': return '↓';
                 case 'Abbondante': return '↑';
-                default: return '';
+                default: return '*'; // Icona generica per le custom
             }
         },
         formatDate(dateStr) {
@@ -1933,7 +2021,7 @@
             // Per gli elementi standard, seleziona/deseleziona per aggiungere modificatori
             this.selectedItemIndex = this.selectedItemIndex === index ? null : index;
             if (this.selectedItemIndex !== null) {
-                this.activeModCat = 'Più'; 
+                this.activeModCat = Object.keys(this.modifiers)[0] || 'Più'; 
                 this.modifierSearchTerm = '';
                 this.lastSelectedItem = null; 
             }
