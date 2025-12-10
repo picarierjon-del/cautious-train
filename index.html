@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Pizzeria Smart – Gestionale</title>
+    <title>Pizzeria Smart – Gestionale Super Business Top</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         /* Stili Generali */
@@ -28,9 +28,32 @@
         .mod-btn.gray { border-color: #6b7280; color: #6b7280; } /* Senza */
         .mod-btn.yellow { border-color: #facc15; color: #facc15; } /* Poco */
         .mod-btn.blue { border-color: #3b82f6; color: #3b82f6; } /* Abbondante */
+        .mod-btn.custom { border-color: #f97316; color: #f97316; } /* Default Custom Color */
+        .mod-btn.orange { border-color: #f97316; color: #f97316; } /* Custom */
+        .mod-btn.purple { border-color: #8b5cf6; color: #8b5cf6; } /* Custom */
         .mod-btn.active { border-color: #e31b23; background-color: #ffecec; box-shadow: 0 0 0 3px #e31b23; }
         .mod-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
+        /* Icone Modificatori per l'ordine corrente */
+        .mod-icon {
+            display: inline-block;
+            width: 15px; 
+            height: 15px;
+            line-height: 15px;
+            text-align: center;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-right: 3px;
+        }
+        .mod-icon.Più { background: #22c55e; color: #fff; }
+        .mod-icon.Senza { background: #6b7280; color: #fff; }
+        .mod-icon.Poco { background: #facc15; color: #333; }
+        .mod-icon.Abbondante { background: #3b82f6; color: #fff; }
+        .mod-icon.custom { background: #f97316; color: #fff; }
+        .mod-icon.orange { background: #f97316; color: #fff; } 
+        .mod-icon.purple { background: #8b5cf6; color: #fff; } 
+
         .search-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; }
         .search-mod-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 10px; }
 
@@ -63,7 +86,7 @@
         .mode-card.active { border-color: #e31b23; box-shadow: 0 0 0 2px #e31b23 inset; }
         .form-row { margin-bottom: 10px; }
         .form-row label { display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600; }
-        .form-row input, .form-row select, .form-row textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .form-row input, .form-row select, .form-row textarea, .form-row datalist { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
         .modal-actions { display: flex; justify-content: space-between; margin-top: 15px; }
         .modal-actions button { padding: 10px 15px; border-radius: 6px; font-weight: 700; }
         .modal-actions .btn-cancel { background: #6b7280; color: #fff; border: none; }
@@ -88,13 +111,19 @@
         .filter-btn-status { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.9rem; }
         .filter-btn-status.active { background: #e31b23; color: #fff; border-color: #e31b23; }
 
-        /* Avvisi Temporali (Mantenuti) */
+        /* Avvisi Temporali (Mantenuti) - LOGICA FORNO */
         .order-card.warning-near { border-left: 5px solid #facc15; } /* Giallo (15 min) */
         .order-card.warning-urgent { border-left: 5px solid #b91c1c; } /* Rosso (5 min) */
         .order-card.warning-near:before { content: "ATTENZIONE: Vicino!"; position: absolute; top: -10px; right: 10px; background: #facc15; color: #333; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
         .order-card.warning-urgent:before { content: "URGENTE: Imminente!"; position: absolute; top: -10px; right: 10px; background: #b91c1c; color: #fff; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
         
-        .allergy-alert { color: #b91c1c; margin-left: 5px; font-size: 1rem; font-weight: 700;} /* Nuovo stile */
+        /* NUOVO: Avviso di Sovraccarico Produttivo */
+        .order-card .production-warning {
+             color: #b91c1c; 
+             font-weight: 700; 
+             margin-left: 10px; 
+             display: inline-block;
+        }
 
         /* Stili per la stampa (nasconde elementi non necessari) */
         @media print {
@@ -112,6 +141,21 @@
             .print-comanda .mod-list { font-size: 11pt; margin-top: 2px; padding-left: 10px; }
             .print-comanda .mod-list li { border: none; }
             .print-comanda .note { color: #b91c1c; margin-top: 8px; font-weight: bold; }
+            .print-comanda .mode-tag {
+                font-size: 18pt; 
+                font-weight: 900; 
+                text-align: center; 
+                border: 2px solid #000; 
+                padding: 5px 0; 
+                margin-bottom: 10px;
+                display: block;
+            }
+            .print-comanda .custom-message-top { text-align: center; margin-bottom: 10px; font-style: italic; font-size: 10pt; }
+            .print-comanda .custom-message-bottom { text-align: center; margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px; font-size: 10pt; font-weight: bold; }
+            
+            /* NUOVO: Evidenziazione Allergie su stampa */
+            .print-comanda .allergy-highlight { color: #b91c1c; font-weight: 900; } 
+
 
             /* Stili specifici per lo scontrino */
             .print-scontrino { font-family: monospace; font-size: 10pt; line-height: 1.3; width: 80mm; margin: 0 auto; }
@@ -138,6 +182,25 @@
         .item-status .available { background: #22c55e; color: #fff; }
         .item-status .finished { background: #b91c1c; color: #fff; }
 
+        /* NUOVO: Stili per i Modificatori Custom nelle Impostazioni */
+        .mod-category-settings-item {
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 10px; 
+            background: #ffecec; 
+            border: 2px solid #e31b23; 
+            border-radius: 6px; 
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        /* NUOVO: Stili per Evidenziazione Allergie */
+        .allergy-highlight { 
+            color: #b91c1c; 
+            font-weight: 700; 
+        }
+
     </style>
 </head>
 <body>
@@ -154,7 +217,7 @@
 
         <div class="mod-row">
             <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                    :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeModCat===cat}"
+                    :class="[catColor(cat), {active: activeModCat===cat}]"
                     @click="activeModCat=cat; modifierSearchTerm=''" :disabled="selectedItemIndex === null || (order[selectedItemIndex] && (order[selectedItemIndex].isMeter || order[selectedItemIndex].isHalfPizza))">{{cat.toUpperCase()}}</button>
         </div>
         
@@ -202,7 +265,7 @@
                     <ul v-if="i.modifiers && i.modifiers.length > 0 && !i.isMeter && !i.isHalfPizza" class="modifiers-list">
                         <li v-for="(mod, modIdx) in i.modifiers" :key="modIdx">
                             <span>
-                                <span :class="['mod-icon', getModifierCategory(mod.nome)]">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                 {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                             </span>
                             <button class="mod-remove-btn" @click.stop="removeModifier(idx, modIdx)">❌</button>
@@ -215,7 +278,7 @@
                             <ul v-if="i.modifiers1 && i.modifiers1.length > 0">
                                 <li v-for="(mod, modIdx) in i.modifiers1" :key="modIdx">
                                     <span>
-                                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                         {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                     </span>
                                 </li>
@@ -226,7 +289,7 @@
                             <ul v-if="i.modifiers2 && i.modifiers2.length > 0">
                                 <li v-for="(mod, modIdx) in i.modifiers2" :key="modIdx">
                                     <span>
-                                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                         {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                     </span>
                                 </li>
@@ -239,7 +302,7 @@
                             <strong style="color: #444; font-weight: 600;">{{ section.name }}</strong>: {{ section.gusto }}
                             <span v-if="section.modifiers && section.modifiers.length > 0" style="font-style: italic;">
                                 (<span v-for="(mod, mIdx) in section.modifiers" :key="mIdx">
-                                    <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                    <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                 </span> Modifiche)
                             </span>
                         </li>
@@ -267,24 +330,16 @@
             <button class="filter-btn-status" :class="{active: activeDateFilter === 'tomorrow'}" @click="activeDateFilter = 'tomorrow'">DOMANI</button>
             <button class="filter-btn-status" :class="{active: activeDateFilter === 'future'}" @click="activeDateFilter = 'future'">FUTURI</button>
         </div>
-        
-        <div v-if="activeDateFilter === 'today' || activeDateFilter === 'tomorrow'" 
-             style="background: #e6f7ff; border: 1px solid #91d5ff; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem;">
-            <p style="margin: 0; font-weight: 700; color: #1890ff;">
-                Slot Pizze Disponibili per {{ nextAvailableTime.display }}: 
-                <span :style="{color: nextAvailableTime.available ? '#22c55e' : '#b91c1c'}">
-                    {{ nextAvailableTime.available ? nextAvailableTime.remaining : '0' }} / {{ pizzaLimitQuantity }}
-                </span>
-            </p>
-        </div>
-
 
         <div v-if="!filteredActiveOrders.length">Nessun ordine attivo trovato per la data selezionata.</div>
         <div class="order-card" v-for="o in filteredActiveOrders" :key="o.id"
              :class="{'warning-urgent': isUrgent(o), 'warning-near': isNear(o) && !isUrgent(o), 'future-order': isFutureOrder(o)}">
-            <h4>
+             <h4>
                 <span>#{{o.id}} – {{o.mode.toUpperCase()}} ({{o.status}})</span>
                 <span v-if="o.tableNumber" style="color:#3b82f6; font-size:1rem;">Tavolo/Ritiro: {{o.tableNumber}}</span>
+                 <span v-if="o.isOverloaded" class="production-warning" title="ATTENZIONE: Sovraccarico Produttivo per questa fascia oraria!">
+                    <i class="fa-solid fa-triangle-exclamation"></i> SOVRACCARICO
+                </span>
             </h4>
             <p><strong>Cliente: {{o.customer}}</strong></p>
             <p>Data: **{{ formatDate(o.date) }}** | Ritiro/Consegna: **{{o.hour}}**</p>
@@ -304,10 +359,7 @@
             <p v-else-if="o.phone">📞 {{o.phone}}</p>
             <p v-else-if="o.driver" style="font-size: 0.9rem;">Fattorino (Asporto/Banco): **{{o.driver}}**</p>
             
-            <p v-if="o.notes" style="font-size: 0.9rem; margin-top: 8px;">
-                **Note:** {{o.notes}}
-                <span v-if="hasAllergyKeywords(o.notes)" class="allergy-alert" title="AVVISO ALLERGIA/NOTE CRITICHE">⚠️</span>
-            </p>
+            <p v-if="o.notes" style="font-size: 0.9rem; margin-top: 8px;" v-html="'**Note:** ' + highlightAllergens(o.notes)"></p>
             
             <ul class="order-items">
                 <li v-for="it in o.items">
@@ -320,7 +372,7 @@
                         <li>**Metà 1: {{ it.gusto1 }}**
                             <ul v-if="it.modifiers1 && it.modifiers1.length > 0">
                                 <li v-for="mod in it.modifiers1">
-                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                     * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                 </li>
                             </ul>
@@ -328,7 +380,7 @@
                         <li>**Metà 2: {{ it.gusto2 }}**
                              <ul v-if="it.modifiers2 && it.modifiers2.length > 0">
                                 <li v-for="mod in it.modifiers2">
-                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                     * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                 </li>
                             </ul>
@@ -340,7 +392,7 @@
                             **{{ sec.name }}:** {{ sec.gusto }}
                             <ul v-if="sec.modifiers && sec.modifiers.length > 0">
                                 <li v-for="mod in sec.modifiers">
-                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                     * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                 </li>
                             </ul>
@@ -348,7 +400,7 @@
                     </ul>
                     <ul v-if="it.modifiers && it.modifiers.length > 0 && !it.isMeter && !it.isHalfPizza">
                         <li v-for="mod in it.modifiers">
-                             <span :class="['mod-icon', getModifierCategory(mod.nome)]" style="width:12px; height:12px; font-size:0.7rem;">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                             <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                             * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                         </li>
                     </ul>
@@ -356,8 +408,8 @@
             </ul>
             <p><strong>Totale: €{{o.total.toFixed(2)}}</strong></p>
             <div class="order-actions">
-                <button class="edit" @click="editOrder(o.id)">Modifica</button>
-                <button @click="advance(o)">Avanza Stato: {{ getNextStatus(o.status) }}</button>
+                <button class="edit" @click="editOrder(o.id)"><i class="fa-solid fa-pen-to-square"></i> Modifica</button>
+                <button @click="advance(o)">Avanza Stato: {{ getNextStatus(o.status) }}</button> 
                 <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
                 <button class="share" @click="showShareMenu(o.id)"><i class="fa-solid fa-share-alt"></i> Azioni</button>
                 
@@ -383,18 +435,19 @@
             <p style="margin: 0; font-size: 1.5rem;">€{{ dailyTotal.toFixed(2) }}</p>
         </div>
 
-        <h3 style="color:#6b7280;">Consegne Giornaliere</h3>
+        <h3 style="color:#6b7280;">Statistiche Ricavi/Consegne</h3>
         <div style="margin-bottom: 15px;">
-            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtra per Fattorino:</label>
+            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtra per Fattorino/Modalità:</label>
             <select v-model="selectedDriver" @change="calculateDriverStats" style="padding: 8px; border-radius: 6px; width: 100%;">
-                <option value="">Tutti i Fattorini (Solo Consegne)</option>
-                <option v-for="driver in availableDrivers" :value="driver">{{ driver }}</option>
+                <option value="all_delivery">Tutte le Consegne (Ricavi Delivery)</option>
+                <option value="all_sales">Tutti gli Ordini (Ricavi Totali)</option>
+                <option v-for="driver in drivers" :value="driver">{{ driver }} (Consegne/Asporto)</option>
             </select>
         </div>
 
         <div v-if="selectedDriver || driverStats.totalOrders > 0" style="background: #f0f0f0; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
-            <p style="margin: 0; font-weight: 700;">{{ selectedDriver ? 'Statistiche di ' + selectedDriver : 'Totale Consegne' }} ({{ archiveDateFilterDisplay }}):</p>
-            <p style="margin: 5px 0 0;">Consegne: **{{ driverStats.totalOrders }}** | Totale Incasso: **€{{ driverStats.totalRevenue.toFixed(2) }}**</p>
+            <p style="margin: 0; font-weight: 700;">{{ selectedDriverText }} ({{ archiveDateFilterDisplay }}):</p>
+            <p style="margin: 5px 0 0;">Ordini Gestiti: **{{ driverStats.totalOrders }}** | Totale Ricavo: **€{{ driverStats.totalRevenue.toFixed(2) }}**</p>
         </div>
 
         <h3 style="color:#6b7280;">Ordini Completati</h3>
@@ -422,28 +475,23 @@
 
     <section v-show="view==='impostazioni'" class="settings">
         
-        <h2>Configurazione Produzione</h2>
-        <div style="background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 20px;">
-             <form @submit.prevent="updatePizzaLimit" style="display: block; gap: 0;">
-                <div class="form-row">
-                    <label for="limitQuantity">Quantità Massima di Pizze per Slot (Capacità Produttiva)</label>
-                    <input type="number" id="limitQuantity" v-model.number="tempPizzaLimitQuantity" min="1" required style="width: 100%;">
-                </div>
-                <div class="form-row">
-                    <label for="limitMinutes">Fascia Oraria in Minuti (Slot Temporale)</label>
-                    <input type="number" id="limitMinutes" v-model.number="tempPizzaLimitMinutes" min="1" required style="width: 100%;">
-                </div>
-                <div style="text-align: right;">
-                    <button type="submit" style="width: auto;">Aggiorna Limite</button>
-                </div>
-            </form>
-            <p style="font-size: 0.9rem; margin-top: 10px; padding-top: 5px; border-top: 1px dashed #eee;">
-                Limite Attuale: **{{ pizzaLimitQuantity }} pizze ogni {{ pizzaLimitMinutes }} minuti**.
-            </p>
+        <h2>Gestione Capacità Produttiva 🍕⏱️</h2>
+        <p style="font-size: 0.9rem; color: #6b7280;">Definisci la quantità massima di "Pizze" che il forno può gestire in un intervallo di tempo.</p>
+        <div class="form-row" style="display: flex; gap: 10px; align-items: flex-end;">
+            <div style="flex: 1;">
+                <label for="maxPizzas">Max Pizze (Equivalenti)</label>
+                <input type="number" id="maxPizzas" v-model.number="productionLimits.maxPizzas" required min="1">
+            </div>
+            <div style="flex: 1;">
+                <label for="intervalMinutes">Ogni (Minuti)</label>
+                <input type="number" id="intervalMinutes" v-model.number="productionLimits.intervalMinutes" required min="1">
+            </div>
+            <button @click="saveProductionLimits" style="flex: 0 0 100px;">Salva</button>
         </div>
-
-        <hr style="margin: 20px 0;">
+        <p style="font-size: 0.9rem; margin-top: 0;">Attuale: **{{ productionLimits.maxPizzas }} Pizze** ogni **{{ productionLimits.intervalMinutes }} Minuti**.</p>
         
+        <hr style="margin: 20px 0;">
+
         <h2>Gestione Fattorini</h2>
         <div class="settings-list">
             <div class="settings-item" v-for="(driver, i) in drivers" :key="i">
@@ -458,10 +506,24 @@
 
         <hr style="margin: 20px 0;">
 
+        <h2>Gestione Categorie Modificatori</h2>
+        <div class="settings-list">
+             <div class="mod-category-settings-item" v-for="(cat, catName) in modifiers" :key="catName">
+                <span>{{ catName }} <span v-if="modifierCategoriesColors[catName]" :style="{color: modifierCategoriesColors[catName]}">({{ modifierCategoriesColors[catName] }})</span></span>
+                 <button class="remove" @click="deleteModifierCategory(catName)" :disabled="isDefaultModifierCategory(catName)">Elimina</button>
+            </div>
+        </div>
+         <form @submit.prevent="addModifierCategory">
+            <input type="text" v-model="newModifierCategoryName" placeholder="Nome Nuova Categoria Modificatore" required>
+            <input type="text" v-model="newModifierCategoryColor" placeholder="Colore (green, gray, yellow, blue, custom...)" required>
+            <button type="submit">Aggiungi Categoria</button>
+        </form>
+        <hr style="margin: 20px 0;">
+
         <h2>Gestione Modificatori</h2>
         <div class="mod-row">
             <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                    :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: activeSettingsModCat===cat}"
+                    :class="[catColor(cat), {active: activeSettingsModCat===cat}]"
                     @click="activeSettingsModCat=cat">{{cat.toUpperCase()}}</button>
         </div>
 
@@ -538,6 +600,18 @@
             <input type="number" step="0.01" v-model.number="newZonePrice" placeholder="Costo (€)" required>
             <button type="submit">Aggiungi Zona</button>
         </form>
+        
+        <hr style="margin: 20px 0;">
+
+        <h2>Impostazioni Stampa Comanda</h2>
+        <div class="form-row">
+            <label for="printMessageTop">Messaggio in Cima (es. OFFERTA DEL GIORNO)</label>
+            <input type="text" id="printMessageTop" v-model="printMessageTop" placeholder="Opzionale">
+        </div>
+        <div class="form-row">
+            <label for="printMessageBottom">Messaggio in Fondo (es. Grazie per l'ordine)</label>
+            <input type="text" id="printMessageBottom" v-model="printMessageBottom" placeholder="Opzionale">
+        </div>
 
     </section>
 </main>
@@ -604,11 +678,12 @@
             </div>
             
             <div class="form-row">
-                <label for="notes">Note/Istruzioni (es. citofono, piano, allergie)</label>
+                <label for="notes">Note/Istruzioni (<span v-html="highlightAllergens('es. citofono, piano, allergie')"></span>)</label>
                 <textarea id="notes" v-model="notes"></textarea>
-                 <div v-if="hasAllergyKeywords(notes)" style="color: #b91c1c; font-weight: 700; margin-top: 5px;">
-                     ⚠️ ATTENZIONE: Parola chiave allergia/critica rilevata!
-                 </div>
+            </div>
+            
+            <div v-if="isProductionOverloaded" style="padding: 10px; background: #fee2e2; border: 2px solid #b91c1c; border-radius: 6px; margin-bottom: 15px; font-weight: 700; color: #b91c1c;">
+                ⚠️ ATTENZIONE: **Sovraccarico Produttivo!** Limite di {{ productionLimits.maxPizzas }} pizze superato nella fascia oraria {{ checkProductionLimit.intervalDisplay }}.
             </div>
 
             <div class="form-row">
@@ -619,16 +694,10 @@
             <div class="form-row">
                 <label for="hour">Ora di Ritiro/Consegna *</label>
                 <input type="time" id="hour" v-model="hour" required>
-                <div v-if="!isMeterOrHalfPizzaOnly" style="font-size: 0.9rem; margin-top: 5px; padding: 5px; border-radius: 4px;"
-                    :style="{backgroundColor: pizzaSlotStatus.canBook ? '#d4edda' : '#f8d7da', color: pizzaSlotStatus.canBook ? '#155724' : '#721c24'}">
-                    <i :class="pizzaSlotStatus.canBook ? 'fa-solid fa-check-circle' : 'fa-solid fa-exclamation-triangle'"></i> 
-                    **Slot Pizze ({{ pizzaSlotStatus.intervalStart }} - {{ pizzaSlotStatus.intervalEnd }}):** {{ pizzaSlotStatus.bookedPizzas }} / {{ pizzaLimitQuantity }}. 
-                    <span v-if="!pizzaSlotStatus.canBook">**CAPACITÀ MAX RAGGIUNTA!** Ordina per la fascia successiva ({{ nextAvailableTime.display }}).</span>
-                </div>
             </div>
             
             <div class="form-row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                <label for="acconto">Acconto Ricevuto / Contanti (opzionale)</label>
+                <label for="acconto">Contanti Ricevuti (opzionale)</label>
                 <input type="number" step="0.01" id="acconto" v-model.number="accontoRicevuto" placeholder="0.00">
             </div>
             <div v-if="restoDaDare > 0" class="total" style="color: #e31b23; font-weight: 700;">
@@ -637,7 +706,7 @@
 
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" @click="showModal=false">Annulla</button>
-                <button type="submit" class="btn-confirm" :disabled="!canFinalizeOrder">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
+                <button type="submit" class="btn-confirm">{{ editingOrderId ? 'Aggiorna Ordine' : 'Conferma e Salva Ordine' }}</button>
             </div>
         </form>
     </div>
@@ -646,6 +715,7 @@
 <div class="modal-overlay" v-show="showMeterModal" @click.self="showMeterModal=false; cancelMeterComposition()">
     <div class="modal-content" @click.stop>
         <h3>Componi {{ tempMeterItem?.nome }}</h3>
+        <p>Prezzo Base: €{{ tempMeterItem?.prezzo.toFixed(2) }}</p>
         <p>Sezioni: {{ tempMeterItem?.sections.length }}</p>
         <div v-for="(section, secIdx) in tempMeterItem.sections" :key="secIdx" style="margin-bottom: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 6px;">
             <strong>{{ section.name }}</strong> ({{ (section.size * 100).toFixed(0) }}%)
@@ -664,7 +734,7 @@
                 <label>Modifiche per {{ section.name }}</label>
                 <div class="mod-row" style="margin-top: 5px;">
                     <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                            :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
+                            :class="[catColor(cat), {active: tempModCat===cat}]"
                             @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
                 </div>
                 
@@ -682,7 +752,7 @@
                 <ul style="list-style: none; padding-left: 0; margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 5px;">
                     <li v-for="(mod, modIdx) in section.modifiers" :key="modIdx" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                         <span>
-                            <span :class="['mod-icon', getModifierCategory(mod.nome)]">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                            <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                             {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                         </span>
                         <button class="mod-remove-btn" @click.stop="removeMeterModifier(secIdx, modIdx)">❌</button>
@@ -701,7 +771,7 @@
 <div class="modal-overlay" v-show="showHalfPizzaModal" @click.self="showHalfPizzaModal=false; cancelHalfPizzaComposition()">
     <div class="modal-content" @click.stop>
         <h3>Componi {{ tempHalfPizzaItem?.nome }}</h3>
-        <p>Prezzo Base (Media Gusti): €{{ calculateTempHalfPizzaBasePrice.toFixed(2) }}</p>
+        <p>Prezzo Base (Media Gusti Arrotondata): €{{ calculateTempHalfPizzaBasePrice.toFixed(2) }}</p>
 
         <div style="margin-bottom: 15px; border: 1px solid #e31b23; padding: 10px; border-radius: 6px;">
             <strong>Metà 1</strong>
@@ -716,7 +786,7 @@
             <label style="margin-top: 10px; display: block;">Modifiche (Metà 1)</label>
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                            :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
+                            :class="[catColor(cat), {active: tempModCat===cat}]"
                             @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
@@ -731,7 +801,7 @@
             <ul style="list-style: none; padding-left: 0; margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 5px;">
                 <li v-for="(mod, modIdx) in tempHalfPizzaItem.modifiers1" :key="modIdx" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                     <span>
-                        <span :class="['mod-icon', getModifierCategory(mod.nome)]">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                         {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                     </span>
                     <button class="mod-remove-btn" @click.stop="removeHalfPizzaModifier(1, modIdx)">❌</button>
@@ -752,7 +822,7 @@
              <label style="margin-top: 10px; display: block;">Modifiche (Metà 2)</label>
             <div class="mod-row" style="margin-top: 5px;">
                  <button class="mod-btn" v-for="cat in Object.keys(modifiers)" :key="cat"
-                            :class="{green:cat==='Più', gray:cat==='Senza', yellow:cat==='Poco', blue:cat==='Abbondante', active: tempModCat===cat}"
+                            :class="[catColor(cat), {active: tempModCat===cat}]"
                             @click="tempModCat=cat">{{cat.toUpperCase()}}</button>
             </div>
             <input type="search" v-model="gustoSearchTerm" placeholder="Filtra modificatori..." class="search-mod-input">
@@ -767,7 +837,7 @@
             <ul style="list-style: none; padding-left: 0; margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 5px;">
                 <li v-for="(mod, modIdx) in tempHalfPizzaItem.modifiers2" :key="modIdx" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                     <span>
-                        <span :class="['mod-icon', getModifierCategory(mod.nome)]">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                         {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                     </span>
                     <button class="mod-remove-btn" @click.stop="removeHalfPizzaModifier(2, modIdx)">❌</button>
@@ -835,12 +905,6 @@
         const minutes = String(now.getMinutes()).padStart(2, '0');
         return `${hours}:${minutes}`;
     }
-    
-    // Funzione per arrotondare l'ora al minuto di limite più vicino
-    function roundTime(date, minutes) {
-        const coeff = 1000 * 60 * minutes;
-        return new Date(Math.round(date.getTime() / coeff) * coeff);
-    }
     // ⭐ /FUNZIONI HELPER ⭐
 
     PetiteVue.createApp({
@@ -853,20 +917,17 @@
         editingOrderId: null, 
         
         // --- DATI INIZIALI ---
-        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Intero (1 Gusto)","prezzo":15,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":17,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}],"Schiacciata Grande":[{"nome":"Intera (1 Gusto)","prezzo":12,"isMeter":true,"sections":[{"name":"Gusto Unico","size":1}]},{"nome":"Diviso in Due (2 Gusti)","prezzo":13,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]},{"nome":"Diviso in Tre (3 Gusti)","prezzo":14,"isMeter":true,"sections":[{"name":"Terzo 1","size":0.33},{"name":"Terzo 2","size":0.33},{"name":"Terzo 3","size":0.33}]}]}'),
+        menu: JSON.parse(localStorage.getItem('pz_menu')||'{"Pizze":[{"nome":"Margherita","prezzo":5},{"nome":"Diavola","prezzo":7.5},{"nome":"Quattro Formaggi","prezzo":9},{"nome":"Gorgonzola e Speck","prezzo":10.5}],"Bibite":[{"nome":"Acqua Naturale 1L","prezzo":1.5},{"nome":"Coca Cola 33cl","prezzo":2.5},{"nome":"Birra Artigianale","prezzo":5.5}],"Schiacciate":[{"nome":"Schiacciata Crudo e Rucola","prezzo":6.5},{"nome":"Schiacciata Vegetariana","prezzo":5.5}],"Pizza Metà":[{"nome":"Pizza Divisa a Metà","prezzo":0,"isHalfPizza":true}],"Mezzo Metro":[{"nome":"Diviso in Due (2 Gusti)","prezzo":16,"isMeter":true,"sections":[{"name":"Metà A","size":0.5},{"name":"Metà B","size":0.5}]}]}'),
         modifiers: JSON.parse(localStorage.getItem('pz_modifiers')||'{"Più":[{"nome":"Extra mozzarella","prezzo":1.5},{"nome":"Doppia salsiccia","prezzo":2},{"nome":"Aggiunta Pomodoro","prezzo":0.5}],"Senza":[{"nome":"Senza olive","prezzo":0},{"nome":"Senza sale","prezzo":0}],"Poco":[{"nome":"Poco cotta","prezzo":0}],"Abbondante":[{"nome":"Basilico abbondante","prezzo":0}]}'),
         deliveryZones: JSON.parse(localStorage.getItem('pz_zones')||'[{"name":"Centro","price":2.5},{"name":"Periferia","price":4}]'),
         orders: JSON.parse(localStorage.getItem('pz_orders')||'[]'),
         archive: JSON.parse(localStorage.getItem('pz_archive')||'[]'), 
         drivers: JSON.parse(localStorage.getItem('pz_drivers')||'[]'),
         customerData: JSON.parse(localStorage.getItem('pz_customerData')||'[]'), 
-        
-        // NUOVO: Limiti di Produzione
-        pizzaLimitMinutes: parseInt(localStorage.getItem('pz_limit_minutes') || 5), 
-        pizzaLimitQuantity: parseInt(localStorage.getItem('pz_limit_quantity') || 10),
-        tempPizzaLimitMinutes: parseInt(localStorage.getItem('pz_limit_minutes') || 5), 
-        tempPizzaLimitQuantity: parseInt(localStorage.getItem('pz_limit_quantity') || 10),
-
+        modifierCategoriesColors: JSON.parse(localStorage.getItem('pz_mod_colors') || '{"Più":"green","Senza":"gray","Poco":"yellow","Abbondante":"blue"}'), 
+        productionLimits: JSON.parse(localStorage.getItem('pz_productionLimits') || '{"maxPizzas": 10, "intervalMinutes": 5}'), 
+        printMessageTop: localStorage.getItem('pz_printMessageTop') || '', 
+        printMessageBottom: localStorage.getItem('pz_printMessageBottom') || 'Grazie per aver scelto la Pizzeria Smart!', 
 
         // Stato Ordine Corrente
         activeCat:'Pizze',
@@ -879,17 +940,17 @@
         searchTerm: '',
         modifierSearchTerm: '', 
         gustoSearchTerm: '', 
-
+        
         // Stato Composizione
         tempMeterItem: null, 
         tempHalfPizzaItem: null, 
         tempModCat: 'Più', 
-
+        
         // Dati per il Modale/Finalizzazione
         modes:[
-            {id:"consegna",label:"Consegna a domicilio",icon:"fa-solid fa-truck"},
-            {id:"asporto",label:"Asporto",icon:"fa-solid fa-bag-shopping"},
-            {id:"banco",label:"Banco",icon:"fa-solid fa-chair"}
+            {id:"consegna",label:"Consegna a domicilio",icon:"fa-solid fa-truck", sigla: "DEL"},
+            {id:"asporto",label:"Asporto",icon:"fa-solid fa-bag-shopping", sigla: "ASP"},
+            {id:"banco",label:"Banco",icon:"fa-solid fa-chair", sigla: "BNC"}
         ],
         mode:'',
         customer:'',
@@ -906,6 +967,9 @@
         driver: '', 
         minDate: getTodayDateString(), 
         accontoRicevuto: null, 
+        
+        // Controlli Produttivi
+        isProductionOverloaded: false, 
 
         // Filtri Ordini Attivi
         activeDateFilter: 'today', 
@@ -913,7 +977,7 @@
         filteredCustomerSuggestions: [],
 
         // Dati per Storico/Statistiche
-        selectedDriver: '', 
+        selectedDriver: 'all_delivery', 
         driverStats: { totalOrders: 0, totalRevenue: 0 }, 
         archiveDateFilter: getTodayDateString(),
 
@@ -931,6 +995,8 @@
         newZoneName: '',
         newZonePrice: 0,
         newDriverName: '',
+        newModifierCategoryName: '', 
+        newModifierCategoryColor: '', 
 
         get calculatedOrderTotal(){
             if (this.order.length === 0) return 0;
@@ -950,115 +1016,39 @@
              return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         },
         get availableDrivers(){
-            return ["Banco"].concat(this.drivers);
+            return this.drivers;
         },
         get selectedOrderForShare() {
             return this.orders.find(o => o.id === this.selectedOrderIdForShare);
         },
-        
-        // NUOVO: Ritorna il numero di pizze nell'ordine corrente
-        get currentOrderPizzaCount() {
-            return this.order.filter(item => 
-                (item.nome && (
-                    item.nome.toLowerCase().includes('pizza') || 
-                    Object.keys(this.menu).some(cat => cat.toLowerCase().includes('pizza') && this.menu[cat].some(p => p.nome === item.nome))
-                )) && 
-                !item.nome.toLowerCase().includes('schiacciata') // Escludi schiacciate/altro che non è "pizza"
-            ).length;
+        get selectedDriverText() {
+            if (this.selectedDriver === 'all_delivery') return 'Totale Consegne (Ricavi Delivery)';
+            if (this.selectedDriver === 'all_sales') return 'Totale Vendite (Ricavi Totali)';
+            return `Statistiche di ${this.selectedDriver}`;
         },
         
-        // NUOVO: Verifica se l'ordine contiene SOLO elementi non-pizza (es. solo bibite)
-        get isMeterOrHalfPizzaOnly() {
-            return this.currentOrderPizzaCount === 0;
-        },
-        
-        // NUOVO: Stato dello slot pizze per l'ora selezionata
-        get pizzaSlotStatus() {
-            const currentOrderPizzas = this.currentOrderPizzaCount;
-            if (currentOrderPizzas === 0) {
-                 return { bookedPizzas: 0, remainingPizzas: this.pizzaLimitQuantity, canBook: true, intervalStart: this.hour, intervalEnd: this.hour };
-            }
-            
-            const targetTimeStr = `${this.date}T${this.hour}`;
-            const targetDate = new Date(targetTimeStr);
-            
-            // Arrotonda all'inizio dello slot
-            const slotStart = roundTime(targetDate, this.pizzaLimitMinutes);
-            const slotEnd = new Date(slotStart.getTime() + this.pizzaLimitMinutes * 60000);
-            
-            const ordersInSlot = this.orders.filter(o => {
-                if (this.editingOrderId && o.id === this.editingOrderId) return false; // Ignora l'ordine in modifica
-                
-                const orderTime = new Date(`${o.date}T${o.hour}`);
-                return orderTime >= slotStart && orderTime < slotEnd;
-            });
-            
-            // Conta le pizze negli ordini esistenti
-            const bookedPizzas = ordersInSlot.reduce((sum, order) => sum + this.getPizzaCountForOrder(order), 0);
-            
-            const totalPizzas = bookedPizzas + currentOrderPizzas;
-            
-            return {
-                bookedPizzas: bookedPizzas,
-                remainingPizzas: this.pizzaLimitQuantity - bookedPizzas,
-                canBook: totalPizzas <= this.pizzaLimitQuantity,
-                intervalStart: slotStart.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-                intervalEnd: slotEnd.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-            };
-        },
-        
-        // NUOVO: Prossimo orario disponibile
-        get nextAvailableTime() {
-            const currentOrderPizzas = this.currentOrderPizzaCount;
-            const now = new Date();
-            let nextSlotStart = roundTime(now, this.pizzaLimitMinutes);
-            
-            // Se l'orario richiesto è valido, usa quello
-            if (this.pizzaSlotStatus.canBook || currentOrderPizzas === 0) {
-                const targetTimeStr = `${this.date}T${this.hour}`;
-                nextSlotStart = roundTime(new Date(targetTimeStr), this.pizzaLimitMinutes);
-            }
-            
-            let attempts = 0;
-            const maxAttempts = 24 * 60 / this.pizzaLimitMinutes; // Max 24 ore di ricerca
-            
-            while (attempts < maxAttempts) {
-                const slotEnd = new Date(nextSlotStart.getTime() + this.pizzaLimitMinutes * 60000);
-                
-                const ordersInSlot = this.orders.filter(o => {
-                    if (this.editingOrderId && o.id === this.editingOrderId) return false;
-                    const orderTime = new Date(`${o.date}T${o.hour}`);
-                    return orderTime >= nextSlotStart && orderTime < slotEnd;
-                });
-                
-                const bookedPizzas = ordersInSlot.reduce((sum, order) => sum + this.getPizzaCountForOrder(order), 0);
-                const remaining = this.pizzaLimitQuantity - bookedPizzas;
-                
-                if (remaining >= currentOrderPizzas) {
-                    return {
-                        date: nextSlotStart.toISOString().substring(0, 10),
-                        time: nextSlotStart.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-                        display: nextSlotStart.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-                        available: true,
-                        remaining: remaining,
-                    };
+        // Logica per l'unità produttiva (pizza-equivalente)
+        get productionItemCount() {
+            return this.order.reduce((count, item) => {
+                if (item.isHalfPizza || item.isMeter || (this.menu['Pizze'] && this.menu['Pizze'].some(p => p.nome === item.nome))) {
+                     return count + 1; // Contiamo 1 per ogni elemento pizza/simile
                 }
-                
-                nextSlotStart = slotEnd; 
-                attempts++;
-            }
-            
-             return { date: '', time: '', display: 'Non Trovato', available: false, remaining: 0 };
+                return count;
+            }, 0);
         },
-        
-        // NUOVO: Blocca il pulsante di finalizzazione se l'orario è saturo
-        get canFinalizeOrder() {
-            if (this.order.length === 0) return false;
-            
-            // Se sono solo elementi non-pizza (es. bibite) o è un ordine in modifica, bypassa il check
-            if (this.isMeterOrHalfPizzaOnly || this.editingOrderId) return true; 
-            
-            return this.pizzaSlotStatus.canBook;
+
+        // Funzione per ottenere la classe di colore
+        catColor(catName) {
+             const colorClass = this.modifierCategoriesColors[catName] || 'custom';
+             // Ritorna la classe CSS usata per gli stili
+             return ['green', 'gray', 'yellow', 'blue', 'orange', 'purple'].includes(colorClass.toLowerCase()) ? colorClass.toLowerCase() : 'custom';
+        },
+        // Funzione per le categorie di default (non eliminabili)
+        isDefaultModifierCategory(catName) {
+             return ["Più", "Senza", "Poco", "Abbondante"].includes(catName);
+        },
+        getModeSigla(modeId) {
+            return this.modes.find(m => m.id === modeId)?.sigla || 'ERR';
         },
 
         // LOGICA MENU E MODIFICATORI
@@ -1110,6 +1100,7 @@
         // LOGICA ORDINE ATTIVO E FILTRI
         get filteredActiveOrders() {
             let filtered = [...this.orders].sort((a, b) => {
+                // Ordina per data/ora di ritiro/consegna
                 const dateTimeA = new Date(`${a.date}T${a.hour}`);
                 const dateTimeB = new Date(`${b.date}T${b.hour}`);
                 return dateTimeA - dateTimeB;
@@ -1127,7 +1118,6 @@
                 filtered = filtered.filter(o => {
                     const orderDate = new Date(o.date.replace(/-/g, '/'));
                     const tomorrowDate = new Date(tomorrowStr.replace(/-/g, '/'));
-                    // Usa getTime() per comparare correttamente le date
                     return orderDate.getTime() > tomorrowDate.getTime();
                 });
             }
@@ -1167,30 +1157,72 @@
             localStorage.setItem('pz_archive',JSON.stringify(this.archive)); 
             localStorage.setItem('pz_drivers',JSON.stringify(this.drivers)); 
             localStorage.setItem('pz_customerData',JSON.stringify(this.customerData)); 
-            localStorage.setItem('pz_limit_minutes', this.pizzaLimitMinutes.toString());
-            localStorage.setItem('pz_limit_quantity', this.pizzaLimitQuantity.toString());
-        },
-
-        // NUOVO: Funzione per contare le pizze in un ordine (incluse Metri e Metà)
-        getPizzaCountForOrder(order) {
-            return order.items.reduce((count, item) => {
-                const name = item.nome.toLowerCase();
-                // Assumiamo che "Pizze", "Pizza Metà" e "Mezzo Metro" contengano pizze
-                const isPizzaCategory = Object.keys(this.menu).some(cat => 
-                    cat.toLowerCase().includes('pizza') && 
-                    this.menu[cat].some(p => p.nome === item.nome)
-                );
-                
-                // Escludi esplicitamente Schiacciate (a meno che non siano esplicitamente pizze schiacciate)
-                if (name.includes('schiacciata') && !name.includes('pizza')) return count;
-
-                if (isPizzaCategory || name.includes('pizza')) {
-                    return count + 1; // 1 per ogni pizza/metro/metà
-                }
-                return count;
-            }, 0);
+            localStorage.setItem('pz_mod_colors',JSON.stringify(this.modifierCategoriesColors)); 
+            localStorage.setItem('pz_productionLimits', JSON.stringify(this.productionLimits)); 
+            localStorage.setItem('pz_printMessageTop', this.printMessageTop);
+            localStorage.setItem('pz_printMessageBottom', this.printMessageBottom);
         },
         
+        // Logica per la gestione del Sovraccarico Produttivo (PUNTO RICHIESTO)
+        checkProductionLimit() {
+            const requestedTime = new Date(`${this.date}T${this.hour}`);
+            const limitIntervalMs = this.productionLimits.intervalMinutes * 60000;
+            const maxPizzas = this.productionLimits.maxPizzas;
+            
+            // Definisce l'intervallo di tempo da monitorare (es. 5 minuti prima e 5 minuti dopo l'orario richiesto)
+            const startTime = new Date(requestedTime.getTime() - limitIntervalMs);
+            const endTime = new Date(requestedTime.getTime() + limitIntervalMs);
+            
+            let currentPizzasInInterval = 0;
+            let currentPizzasInIntervalDisplay = 0;
+            
+            // Calcola le pizze già presenti negli ordini attivi per questo intervallo
+            this.orders.forEach(o => {
+                // Esclude l'ordine in modifica
+                if (o.id === this.editingOrderId) return; 
+                
+                const orderTime = new Date(`${o.date}T${o.hour}`);
+                if (orderTime >= startTime && orderTime <= endTime) {
+                    const orderPizzas = o.items.reduce((count, item) => {
+                        // Contiamo solo gli articoli considerati come "pizza"
+                        if (item.isHalfPizza || item.isMeter || (this.menu['Pizze'] && this.menu['Pizze'].some(p => p.nome === item.nome))) {
+                            return count + 1; 
+                        }
+                        return count;
+                    }, 0);
+                    currentPizzasInInterval += orderPizzas;
+                }
+            });
+            
+            currentPizzasInIntervalDisplay = currentPizzasInInterval;
+            
+            // Aggiunge le pizze dell'ordine corrente che si sta finalizzando
+            currentPizzasInInterval += this.productionItemCount;
+
+            this.isProductionOverloaded = currentPizzasInInterval > maxPizzas;
+            
+            const startHour = String(startTime.getHours()).padStart(2, '0');
+            const startMinute = String(startTime.getMinutes()).padStart(2, '0');
+            const endHour = String(endTime.getHours()).padStart(2, '0');
+            const endMinute = String(endTime.getMinutes()).padStart(2, '0');
+
+            return {
+                isOverloaded: this.isProductionOverloaded,
+                currentCount: currentPizzasInIntervalDisplay, 
+                orderCount: this.productionItemCount,
+                intervalDisplay: `${startHour}:${startMinute} - ${endHour}:${endMinute}`
+            };
+        },
+        saveProductionLimits() {
+            if (this.productionLimits.maxPizzas < 1 || this.productionLimits.intervalMinutes < 1) {
+                alert("I limiti di produzione devono essere maggiori di zero.");
+                return;
+            }
+            localStorage.setItem('pz_productionLimits', JSON.stringify(this.productionLimits));
+            alert("Limiti di produzione salvati!");
+        },
+
+
         getPizzasFromMenu() {
              return this.menu["Pizze"] || []; // Assumiamo che "Pizze" sia la categoria base
         },
@@ -1207,7 +1239,7 @@
         },
         
         get calculateTempHalfPizzaBasePrice() {
-            if (!this.tempHalfPizzaItem || !this.isHalfPizzaValid) return this.tempHalfPizzaItem?.prezzo || 0; // Prezzo base se non validi
+            if (!this.tempHalfPizzaItem) return 0; 
 
             const price1 = this.getPizzaPrice(this.tempHalfPizzaItem.gusto1);
             const price2 = this.getPizzaPrice(this.tempHalfPizzaItem.gusto2);
@@ -1223,7 +1255,7 @@
             let total = item.prezzo || 0;
             
             if (item.isHalfPizza) {
-                 // 3. Logica Media Arrotondata (solo per il prezzo base, le aggiunte sono separate)
+                 // Logica Media Arrotondata (solo per il prezzo base)
                 if (item.gusto1 && item.gusto2) {
                      const price1 = this.getPizzaPrice(item.gusto1);
                      const price2 = this.getPizzaPrice(item.gusto2);
@@ -1263,7 +1295,7 @@
         
         // Logica per l'aggiunta di un prodotto base o composizione
         handleItemClick(item) {
-            if (item.isFinished) return; // Non cliccabile se finito
+            if (item.isFinished) return; 
             
             this.lastSelectedItem = item; 
             
@@ -1282,7 +1314,7 @@
                         s.gusto = ''; 
                         s.modifiers = [];
                     });
-                    this.tempModCat = 'Più';
+                    this.tempModCat = Object.keys(this.modifiers)[0] || 'Più';
                     this.gustoSearchTerm = '';
                 }
                 this.showMeterModal = true;
@@ -1302,7 +1334,7 @@
                     this.tempHalfPizzaItem.gusto2 = '';
                     this.tempHalfPizzaItem.modifiers1 = [];
                     this.tempHalfPizzaItem.modifiers2 = [];
-                    this.tempModCat = 'Più';
+                    this.tempModCat = Object.keys(this.modifiers)[0] || 'Più';
                     this.gustoSearchTerm = '';
                 }
                 this.showHalfPizzaModal = true;
@@ -1319,7 +1351,7 @@
              }
              this.order.push(newItem);
              this.selectedItemIndex = this.order.length - 1; 
-             this.activeModCat = 'Più'; 
+             this.activeModCat = Object.keys(this.modifiers)[0] || 'Più'; 
              this.modifierSearchTerm = ''; 
         },
         removeItem(index) {
@@ -1337,7 +1369,7 @@
                 alert("Seleziona prima un articolo nel carrello!");
                 return;
             }
-            if (modifier.isFinished) return; // Modificatore non aggiungibile se finito
+            if (modifier.isFinished) return; 
             
             const item = this.order[this.selectedItemIndex];
             if (item.isMeter || item.isHalfPizza) return; 
@@ -1347,6 +1379,20 @@
             
             item.modifiers.push(newMod);
         },
+        
+        // Logica Evidenziazione Allergie (PUNTO RICHIESTO)
+        highlightAllergens(text) {
+             if (!text) return '';
+             const allergyTerms = ["glutine", "lattosio", "uova", "soia", "arachidi", "noci", "pesce", "crostacei", "sesamo", "senape", "solfiti", "sedano", "lupini", "molluschi", "allergia", "celiachia"];
+             let highlightedText = text;
+             
+             allergyTerms.forEach(term => {
+                 const regex = new RegExp(`(${term})`, 'gi'); // 'g' per globale, 'i' per case-insensitive
+                 highlightedText = highlightedText.replace(regex, `<span class="allergy-highlight">$1</span>`);
+             });
+             
+             return highlightedText;
+         },
 
         // Logica Autocomplete/Clienti
         filterCustomers() {
@@ -1413,11 +1459,7 @@
                  return;
             }
             
-            if (!this.canFinalizeOrder) {
-                alert(`ATTENZIONE: La capacità massima di ${this.pizzaLimitQuantity} pizze per lo slot ${this.pizzaSlotStatus.intervalStart} è stata raggiunta! Seleziona un'ora successiva.`);
-                return;
-            }
-
+            const prodCheck = this.checkProductionLimit();
 
             let ord = {
                 id: this.editingOrderId || Date.now(), 
@@ -1437,7 +1479,8 @@
                 hour: this.hour,
                 driver: this.mode === 'consegna' ? (this.editingOrderId ? (this.orders.find(o => o.id === this.editingOrderId)?.driver || '') : '') : '',
                 status: this.editingOrderId ? (this.orders.find(o => o.id === this.editingOrderId)?.status || 'In preparazione') : 'In preparazione', 
-                acconto: this.accontoRicevuto || 0 
+                acconto: this.accontoRicevuto || 0,
+                isOverloaded: prodCheck.isOverloaded 
             };
             
             if (this.editingOrderId) {
@@ -1463,7 +1506,7 @@
 
         // Logica Stampa Selettiva
         printOrder(orderId, type) {
-            const order = this.orders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId); // Cerca anche nell'archivio
+            const order = this.orders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId); 
             if (!order) return;
 
             const printContainer = document.getElementById('print-content-comanda');
@@ -1497,7 +1540,19 @@
         // Genera HTML per Comanda Cucina (Dettagliata)
         generateComandaHTML(order) {
             const now = new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'});
-            let html = `
+            const modeSigla = this.getModeSigla(order.mode);
+            
+            let html = '';
+            
+            // Messaggio in cima (PUNTO RICHIESTO)
+            if (this.printMessageTop.trim()) {
+                html += `<p class="custom-message-top">${this.printMessageTop.trim()}</p>`;
+            }
+
+            // Sigla Modalità (PUNTO RICHIESTO)
+            html += `<span class="mode-tag">${modeSigla}</span>`;
+
+            html += `
                 <h1>COMANDA CUCINA</h1>
                 <p style="text-align: center; margin-bottom: 10px; font-size: 10pt;">Stampa: ${now} | Ordine # ${order.id}</p>
                 
@@ -1517,9 +1572,16 @@
                     html += `<p><strong>Fattorino:</strong> ${order.driver}</p>`;
                 }
             }
+            // Note con evidenziazione Allergie
             if (order.notes) {
-                html += `<p class="note"><strong>NOTE:</strong> ${order.notes}</p>`;
+                html += `<p class="note"><strong>NOTE:</strong> ${this.highlightAllergens(order.notes)}</p>`;
             }
+            
+            // Avviso Sovraccarico
+            if (order.isOverloaded) {
+                 html += `<p class="note" style="color:#b91c1c;">**ATTENZIONE: Sovraccarico Produttivo!**</p>`;
+            }
+
 
             html += `<h2>Articoli (Totale €${order.total.toFixed(2)})</h2><ul>`;
 
@@ -1571,6 +1633,11 @@
             });
 
             html += `</ul>`;
+            
+            // Messaggio in fondo (PUNTO RICHIESTO)
+             if (this.printMessageBottom.trim()) {
+                html += `<p class="custom-message-bottom">${this.printMessageBottom.trim()}</p>`;
+            }
             
             return html;
         },
@@ -1641,6 +1708,10 @@
                     html += `<p style="text-align: right;"><strong>RESTO DA DARE: €${resto.toFixed(2)}</strong></p>`;
                 }
             }
+            
+            if (order.notes) {
+                html += `<p style="text-align: center; font-size: 8pt; margin-top: 10px;" v-html="highlightAllergens(order.notes)"></p>`;
+            }
 
             html += `<p style="text-align: center; margin-top: 10px; font-size: 8pt;">Grazie e Arrivederci!</p>`;
 
@@ -1648,18 +1719,6 @@
         },
 
         // --- FUNZIONI DI IMPOSTAZIONI ---
-        
-        // NUOVO: Aggiorna i limiti di produzione
-        updatePizzaLimit() {
-            if (this.tempPizzaLimitQuantity > 0 && this.tempPizzaLimitMinutes > 0) {
-                this.pizzaLimitQuantity = this.tempPizzaLimitQuantity;
-                this.pizzaLimitMinutes = this.tempPizzaLimitMinutes;
-                this.saveData();
-                alert(`Limiti di produzione aggiornati: ${this.pizzaLimitQuantity} pizze ogni ${this.pizzaLimitMinutes} minuti.`);
-            } else {
-                alert("I valori di limite devono essere maggiori di 0.");
-            }
-        },
 
         // Gestione Categorie
         addCategory() {
@@ -1723,7 +1782,38 @@
             this.saveData();
         },
 
-        // Gestione Modificatori (Punto 4: Aggiungere modificatori nelle impostazioni)
+        // Gestione Categorie Modificatori (PUNTO RICHIESTO)
+        addModifierCategory() {
+            const name = this.newModifierCategoryName.trim();
+            const color = this.newModifierCategoryColor.trim();
+
+            if (name && color) {
+                if (this.modifiers[name]) {
+                    alert("Categoria modificatore già esistente!");
+                    return;
+                }
+                this.modifiers = { [name]: [], ...this.modifiers }; // Aggiunge in cima
+                this.modifierCategoriesColors[name] = color;
+                this.newModifierCategoryName = '';
+                this.newModifierCategoryColor = '';
+                this.activeSettingsModCat = name;
+                this.saveData();
+            }
+        },
+        deleteModifierCategory(cat) {
+             if (this.isDefaultModifierCategory(cat)) {
+                alert("Non è possibile eliminare una categoria modificatore di default.");
+                return;
+            }
+             if (confirm(`Sei sicuro di voler eliminare la categoria modificatore "${cat}"? Verranno eliminati anche tutti i modificatori al suo interno.`)) {
+                delete this.modifiers[cat];
+                delete this.modifierCategoriesColors[cat];
+                this.activeSettingsModCat = Object.keys(this.modifiers)[0] || null;
+                this.saveData();
+            }
+        },
+        
+        // Gestione Modificatori
         addModifierToCategory() {
             const cat = this.activeSettingsModCat;
             const name = this.newModifierName.trim();
@@ -1806,7 +1896,7 @@
                     return cat;
                 }
             }
-            return 'Più'; 
+            return Object.keys(this.modifiers)[0] || 'Più'; 
         },
         getModifierIcon(cat) {
             switch (cat) {
@@ -1814,20 +1904,17 @@
                 case 'Senza': return '-';
                 case 'Poco': return '↓';
                 case 'Abbondante': return '↑';
-                default: return '';
+                default: return '*'; 
             }
         },
         formatDate(dateStr) {
             if (!dateStr) return '';
-            const date = new Date(dateStr.replace(/-/g, '/')); // Corregge i problemi di fuso orario con i formati ISO
+            const date = new Date(dateStr.replace(/-/g, '/')); 
             return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
         },
         isFutureOrder(o) {
-            // Check se l'ordine è per un giorno dopo domani
-            const orderDate = new Date(o.date.replace(/-/g, '/'));
-            const tomorrowStr = getTomorrowLocalString();
-            const tomorrowDate = new Date(tomorrowStr.replace(/-/g, '/'));
-            return orderDate.getTime() > tomorrowDate.getTime();
+            const today = getTodayDateString();
+            return o.date !== today;
         },
         isNear(o) {
             const now = new Date();
@@ -1840,13 +1927,6 @@
             const orderTime = new Date(`${o.date}T${o.hour}`);
             const diffMinutes = (orderTime - now) / 60000;
             return diffMinutes <= 5 && diffMinutes >= 0 && o.date === getTodayDateString();
-        },
-        // NUOVO: Verifica la presenza di parole chiave per le allergie
-        hasAllergyKeywords(notes) {
-            if (!notes) return false;
-            const lowerNotes = notes.toLowerCase();
-            const keywords = ['senza glutine', 'celiachia', 'allergia', 'senza lattosio', 'intolleranza', 'non toccare', 'attenzione'];
-            return keywords.some(k => lowerNotes.includes(k));
         },
         selectMode(m) {
             this.mode = m;
@@ -1884,7 +1964,7 @@
             if (!orderToEdit) return;
 
             this.editingOrderId = id;
-            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); // Deep copy
+            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); 
             this.mode = orderToEdit.mode;
             this.customer = orderToEdit.customer;
             this.phone = orderToEdit.phone;
@@ -1901,6 +1981,7 @@
             this.view = 'inserimento';
             this.selectedItemIndex = null;
             this.lastSelectedItem = null; 
+            this.isProductionOverloaded = orderToEdit.isOverloaded || false; // Mantiene lo stato di sovraccarico
         },
         cancelEdit() {
             this.resetCurrentOrderState();
@@ -1951,21 +2032,20 @@
          },
         calculateDriverStats() {
             const dateStr = this.archiveDateFilter;
-            const filtered = this.archive.filter(o => o.archivedDate.startsWith(dateStr));
+            let filtered = this.archive.filter(o => o.archivedDate.startsWith(dateStr));
+            let stats = [];
 
-            this.driverStats.totalOrders = 0;
-            this.driverStats.totalRevenue = 0;
-
-            let stats = filtered;
-            
-            if (this.selectedDriver) {
-                stats = filtered.filter(o => o.driver === this.selectedDriver);
-            } else {
-                // Se non è selezionato nessun driver, si contano solo le consegne (mode=consegna)
-                // Se vuoi contare TUTTI gli ordini (anche asporto/banco) togli la condizione (o.mode === 'consegna')
+            if (this.selectedDriver === 'all_delivery') {
+                // Tutte le consegne (solo mode=consegna)
                 stats = filtered.filter(o => o.mode === 'consegna');
+            } else if (this.selectedDriver === 'all_sales') {
+                // Tutti gli ordini
+                stats = filtered;
+            } else {
+                // Statistiche per un fattorino specifico (assegnato per consegna o asporto/banco)
+                stats = filtered.filter(o => o.driver === this.selectedDriver);
             }
-            
+
             this.driverStats.totalOrders = stats.length;
             this.driverStats.totalRevenue = stats.reduce((sum, o) => sum + o.total, 0);
         },
@@ -1984,6 +2064,7 @@
                 this.notes = order.notes;
                 this.tableNumber = order.tableNumber;
                 this.accontoRicevuto = order.acconto; 
+                this.isProductionOverloaded = false; // Forza il ricalcolo al momento del salvataggio
 
                 // Suggerisce per oggi o il giorno archiviato
                 this.date = getTodayDateString(); 
@@ -2025,12 +2106,12 @@
                 let itemLine = `\n- 1x ${item.nome}`;
 
                 if (item.isHalfPizza) {
-                    itemLine += ` (${item.gusto1} / ${item.gusto2})`;
+                    itemLine += ` (Metà ${item.gusto1} / Metà ${item.gusto2})`;
                     
                     const mods1 = item.modifiers1?.map(m => m.nome).join(', ');
                     const mods2 = item.modifiers2?.map(m => m.nome).join(', ');
-                    if (mods1) itemLine += `\n  - Metà 1: ${mods1}`;
-                    if (mods2) itemLine += `\n  - Metà 2: ${mods2}`;
+                    if (mods1) itemLine += `\n  - Modifiche Metà 1: ${mods1}`;
+                    if (mods2) itemLine += `\n  - Modifiche Metà 2: ${mods2}`;
 
                 } else if (item.isMeter) {
                     item.sections.forEach(section => {
@@ -2135,14 +2216,14 @@
             if (item && item.isMeter) {
                 this.tempMeterItem = JSON.parse(JSON.stringify(item));
                 this.showMeterModal = true;
-                this.selectedItemIndex = index; // Seleziona l'elemento in modifica
+                this.selectedItemIndex = index; 
                 this.lastSelectedItem = null;
                 return;
             }
             if (item && item.isHalfPizza) {
                 this.tempHalfPizzaItem = JSON.parse(JSON.stringify(item));
                 this.showHalfPizzaModal = true;
-                 this.selectedItemIndex = index; // Seleziona l'elemento in modifica
+                 this.selectedItemIndex = index; 
                  this.lastSelectedItem = null;
                 return;
             }
@@ -2150,7 +2231,7 @@
             // Per gli elementi standard, seleziona/deseleziona per aggiungere modificatori
             this.selectedItemIndex = this.selectedItemIndex === index ? null : index;
             if (this.selectedItemIndex !== null) {
-                this.activeModCat = 'Più'; 
+                this.activeModCat = Object.keys(this.modifiers)[0] || 'Più'; 
                 this.modifierSearchTerm = '';
                 this.lastSelectedItem = null; 
             }
@@ -2158,6 +2239,10 @@
         openModal() {
             this.zoneName = this.deliveryZones[0]?.name || ''; 
             this.updateDeliveryCost(); 
+            
+            // Ricalcola lo stato di sovraccarico prima di aprire il modale
+            this.checkProductionLimit(); 
+            
             this.showModal = true;
         },
 
@@ -2172,3 +2257,4 @@
     }).mount()
 </script>
 </body>
+</html>
