@@ -107,7 +107,7 @@
         .filter-btn-status { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.9rem; }
         .filter-btn-status.active { background: #e31b23; color: #fff; border-color: #e31b23; }
 
-        /* Avvisi Temporali (Mantenuti) */
+        /* Avvisi Temporali (Mantenuti) - LOGICA FORNO */
         .order-card.warning-near { border-left: 5px solid #facc15; } /* Giallo (15 min) */
         .order-card.warning-urgent { border-left: 5px solid #b91c1c; } /* Rosso (5 min) */
         .order-card.warning-near:before { content: "ATTENZIONE: Vicino!"; position: absolute; top: -10px; right: 10px; background: #facc15; color: #333; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
@@ -301,7 +301,7 @@
         <div v-if="!filteredActiveOrders.length">Nessun ordine attivo trovato per la data selezionata.</div>
         <div class="order-card" v-for="o in filteredActiveOrders" :key="o.id"
              :class="{'warning-urgent': isUrgent(o), 'warning-near': isNear(o) && !isUrgent(o), 'future-order': isFutureOrder(o)}">
-            <h4>
+             <h4>
                 <span>#{{o.id}} – {{o.mode.toUpperCase()}} ({{o.status}})</span>
                 <span v-if="o.tableNumber" style="color:#3b82f6; font-size:1rem;">Tavolo/Ritiro: {{o.tableNumber}}</span>
             </h4>
@@ -372,8 +372,8 @@
             </ul>
             <p><strong>Totale: €{{o.total.toFixed(2)}}</strong></p>
             <div class="order-actions">
-                <button class="edit" @click="editOrder(o.id)">Modifica</button>
-                <button @click="advance(o)">Avanza Stato: {{ getNextStatus(o.status) }}</button>
+                <button class="edit" @click="editOrder(o.id)"><i class="fa-solid fa-pen-to-square"></i> Modifica</button>
+                <button @click="advance(o)">Avanza Stato: {{ getNextStatus(o.status) }}</button> 
                 <button class="duplicate" @click="duplicateOrder(o)"><i class="fa-solid fa-copy"></i> Duplica</button>
                 <button class="share" @click="showShareMenu(o.id)"><i class="fa-solid fa-share-alt"></i> Azioni</button>
                 
@@ -627,7 +627,7 @@
             </div>
             
             <div class="form-row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                <label for="acconto">Acconto Ricevuto / Contanti (opzionale)</label>
+                <label for="acconto">Contanti Ricevuti (opzionale)</label>
                 <input type="number" step="0.01" id="acconto" v-model.number="accontoRicevuto" placeholder="0.00">
             </div>
             <div v-if="restoDaDare > 0" class="total" style="color: #e31b23; font-weight: 700;">
@@ -853,7 +853,7 @@
         archive: JSON.parse(localStorage.getItem('pz_archive')||'[]'), 
         drivers: JSON.parse(localStorage.getItem('pz_drivers')||'[]'),
         customerData: JSON.parse(localStorage.getItem('pz_customerData')||'[]'), 
-        modifierCategoriesColors: JSON.parse(localStorage.getItem('pz_mod_colors') || '{"Più":"green","Senza":"gray","Poco":"yellow","Abbondante":"blue"}'), // NUOVO
+        modifierCategoriesColors: JSON.parse(localStorage.getItem('pz_mod_colors') || '{"Più":"green","Senza":"gray","Poco":"yellow","Abbondante":"blue"}'), 
 
         // Stato Ordine Corrente
         activeCat:'Pizze',
@@ -918,8 +918,8 @@
         newZoneName: '',
         newZonePrice: 0,
         newDriverName: '',
-        newModifierCategoryName: '', // NUOVO
-        newModifierCategoryColor: '', // NUOVO
+        newModifierCategoryName: '', 
+        newModifierCategoryColor: '', 
 
         get calculatedOrderTotal(){
             if (this.order.length === 0) return 0;
@@ -945,11 +945,11 @@
             return this.orders.find(o => o.id === this.selectedOrderIdForShare);
         },
 
-        // NUOVO: Funzione per ottenere la classe di colore
+        // Funzione per ottenere la classe di colore
         catColor(catName) {
             return this.modifierCategoriesColors[catName] || 'custom';
         },
-        // NUOVO: Funzione per le categorie di default (non eliminabili)
+        // Funzione per le categorie di default (non eliminabili)
         isDefaultModifierCategory(catName) {
              return ["Più", "Senza", "Poco", "Abbondante"].includes(catName);
         },
@@ -1003,6 +1003,7 @@
         // LOGICA ORDINE ATTIVO E FILTRI
         get filteredActiveOrders() {
             let filtered = [...this.orders].sort((a, b) => {
+                // Ordina per data/ora di ritiro/consegna
                 const dateTimeA = new Date(`${a.date}T${a.hour}`);
                 const dateTimeB = new Date(`${b.date}T${b.hour}`);
                 return dateTimeA - dateTimeB;
@@ -1059,7 +1060,7 @@
             localStorage.setItem('pz_archive',JSON.stringify(this.archive)); 
             localStorage.setItem('pz_drivers',JSON.stringify(this.drivers)); 
             localStorage.setItem('pz_customerData',JSON.stringify(this.customerData)); 
-            localStorage.setItem('pz_mod_colors',JSON.stringify(this.modifierCategoriesColors)); // NUOVO
+            localStorage.setItem('pz_mod_colors',JSON.stringify(this.modifierCategoriesColors)); 
         },
 
         getPizzasFromMenu() {
@@ -1078,7 +1079,7 @@
         },
         
         get calculateTempHalfPizzaBasePrice() {
-            if (!this.tempHalfPizzaItem || !this.isHalfPizzaValid) return this.tempHalfPizzaItem?.prezzo || 0; // Prezzo base se non validi
+            if (!this.tempHalfPizzaItem || !this.isHalfPizzaValid) return this.tempHalfPizzaItem?.prezzo || 0; 
 
             const price1 = this.getPizzaPrice(this.tempHalfPizzaItem.gusto1);
             const price2 = this.getPizzaPrice(this.tempHalfPizzaItem.gusto2);
@@ -1094,7 +1095,7 @@
             let total = item.prezzo || 0;
             
             if (item.isHalfPizza) {
-                 // 3. Logica Media Arrotondata (solo per il prezzo base, le aggiunte sono separate)
+                 // Logica Media Arrotondata (solo per il prezzo base)
                 if (item.gusto1 && item.gusto2) {
                      const price1 = this.getPizzaPrice(item.gusto1);
                      const price2 = this.getPizzaPrice(item.gusto2);
@@ -1134,7 +1135,7 @@
         
         // Logica per l'aggiunta di un prodotto base o composizione
         handleItemClick(item) {
-            if (item.isFinished) return; // Non cliccabile se finito
+            if (item.isFinished) return; 
             
             this.lastSelectedItem = item; 
             
@@ -1208,7 +1209,7 @@
                 alert("Seleziona prima un articolo nel carrello!");
                 return;
             }
-            if (modifier.isFinished) return; // Modificatore non aggiungibile se finito
+            if (modifier.isFinished) return; 
             
             const item = this.order[this.selectedItemIndex];
             if (item.isMeter || item.isHalfPizza) return; 
@@ -1328,7 +1329,7 @@
 
         // Logica Stampa Selettiva
         printOrder(orderId, type) {
-            const order = this.orders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId); // Cerca anche nell'archivio
+            const order = this.orders.find(o => o.id === orderId) || this.archive.find(o => o.id === orderId); 
             if (!order) return;
 
             const printContainer = document.getElementById('print-content-comanda');
@@ -1698,12 +1699,12 @@
                 case 'Senza': return '-';
                 case 'Poco': return '↓';
                 case 'Abbondante': return '↑';
-                default: return '*'; // Icona generica per le custom
+                default: return '*'; 
             }
         },
         formatDate(dateStr) {
             if (!dateStr) return '';
-            const date = new Date(dateStr.replace(/-/g, '/')); // Corregge i problemi di fuso orario con i formati ISO
+            const date = new Date(dateStr.replace(/-/g, '/')); 
             return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
         },
         isFutureOrder(o) {
@@ -1758,7 +1759,7 @@
             if (!orderToEdit) return;
 
             this.editingOrderId = id;
-            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); // Deep copy
+            this.order = JSON.parse(JSON.stringify(orderToEdit.items)); 
             this.mode = orderToEdit.mode;
             this.customer = orderToEdit.customer;
             this.phone = orderToEdit.phone;
@@ -1836,7 +1837,6 @@
                 stats = filtered.filter(o => o.driver === this.selectedDriver);
             } else {
                 // Se non è selezionato nessun driver, si contano solo le consegne (mode=consegna)
-                // Se vuoi contare TUTTI gli ordini (anche asporto/banco) togli la condizione (o.mode === 'consegna')
                 stats = filtered.filter(o => o.mode === 'consegna');
             }
             
@@ -2009,14 +2009,14 @@
             if (item && item.isMeter) {
                 this.tempMeterItem = JSON.parse(JSON.stringify(item));
                 this.showMeterModal = true;
-                this.selectedItemIndex = index; // Seleziona l'elemento in modifica
+                this.selectedItemIndex = index; 
                 this.lastSelectedItem = null;
                 return;
             }
             if (item && item.isHalfPizza) {
                 this.tempHalfPizzaItem = JSON.parse(JSON.stringify(item));
                 this.showHalfPizzaModal = true;
-                 this.selectedItemIndex = index; // Seleziona l'elemento in modifica
+                 this.selectedItemIndex = index; 
                  this.lastSelectedItem = null;
                 return;
             }
