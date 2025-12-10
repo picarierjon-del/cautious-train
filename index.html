@@ -46,10 +46,10 @@
             font-weight: 700;
             margin-right: 3px;
         }
-        .mod-icon.green { background: #22c55e; color: #fff; }
-        .mod-icon.gray { background: #6b7280; color: #fff; }
-        .mod-icon.yellow { background: #facc15; color: #333; }
-        .mod-icon.blue { background: #3b82f6; color: #fff; }
+        .mod-icon.Più { background: #22c55e; color: #fff; }
+        .mod-icon.Senza { background: #6b7280; color: #fff; }
+        .mod-icon.Poco { background: #facc15; color: #333; }
+        .mod-icon.Abbondante { background: #3b82f6; color: #fff; }
         .mod-icon.custom { background: #f97316; color: #fff; }
         .mod-icon.orange { background: #f97316; color: #fff; } 
         .mod-icon.purple { background: #8b5cf6; color: #fff; } 
@@ -248,7 +248,7 @@
                     <ul v-if="i.modifiers && i.modifiers.length > 0 && !i.isMeter && !i.isHalfPizza" class="modifiers-list">
                         <li v-for="(mod, modIdx) in i.modifiers" :key="modIdx">
                             <span>
-                                <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                 {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                             </span>
                             <button class="mod-remove-btn" @click.stop="removeModifier(idx, modIdx)">❌</button>
@@ -261,7 +261,7 @@
                             <ul v-if="i.modifiers1 && i.modifiers1.length > 0">
                                 <li v-for="(mod, modIdx) in i.modifiers1" :key="modIdx">
                                     <span>
-                                        <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                         {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                     </span>
                                 </li>
@@ -272,7 +272,7 @@
                             <ul v-if="i.modifiers2 && i.modifiers2.length > 0">
                                 <li v-for="(mod, modIdx) in i.modifiers2" :key="modIdx">
                                     <span>
-                                        <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                         {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                     </span>
                                 </li>
@@ -285,7 +285,7 @@
                             <strong style="color: #444; font-weight: 600;">{{ section.name }}</strong>: {{ section.gusto }}
                             <span v-if="section.modifiers && section.modifiers.length > 0" style="font-style: italic;">
                                 (<span v-for="(mod, mIdx) in section.modifiers" :key="mIdx">
-                                    <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                    <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                 </span> Modifiche)
                             </span>
                         </li>
@@ -324,8 +324,8 @@
             <p><strong>Cliente: {{o.customer}}</strong></p>
             <p>Data: **{{ formatDate(o.date) }}** | Ritiro/Consegna: **{{o.hour}}**</p>
             
-            <div style="margin-bottom: 8px; padding-top: 5px; border-top: 1px dotted #ccc;">
-                <label style="font-size: 0.9rem; font-weight: 600;">Fattorino Assegnato ({{ o.mode === 'consegna' ? 'Delivery' : 'Interno' }}):</label>
+            <div v-if="o.mode === 'consegna'" style="margin-bottom: 8px; padding-top: 5px; border-top: 1px dotted #ccc;">
+                <label style="font-size: 0.9rem; font-weight: 600;">Fattorino Assegnato:</label>
                 <select @change="updateActiveOrderDriver(o.id, $event.target.value)" style="padding: 6px; border-radius: 4px; width: 100%;">
                     <option value="">Nessuno</option>
                     <option v-for="driver in availableDrivers" :value="driver" :selected="o.driver === driver">{{ driver }}</option>
@@ -337,6 +337,7 @@
                 </p>
             </div>
             <p v-else-if="o.phone">📞 {{o.phone}}</p>
+            <p v-else-if="o.driver" style="font-size: 0.9rem;">Fattorino (Asporto/Banco): **{{o.driver}}**</p>
             
             <p v-if="o.notes" style="font-size: 0.9rem; margin-top: 8px;">**Note:** {{o.notes}}</p>
             
@@ -351,7 +352,7 @@
                         <li>**Metà 1: {{ it.gusto1 }}**
                             <ul v-if="it.modifiers1 && it.modifiers1.length > 0">
                                 <li v-for="mod in it.modifiers1">
-                                     <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                     * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                 </li>
                             </ul>
@@ -359,7 +360,7 @@
                         <li>**Metà 2: {{ it.gusto2 }}**
                              <ul v-if="it.modifiers2 && it.modifiers2.length > 0">
                                 <li v-for="mod in it.modifiers2">
-                                     <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                     * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                 </li>
                             </ul>
@@ -371,7 +372,7 @@
                             **{{ sec.name }}:** {{ sec.gusto }}
                             <ul v-if="sec.modifiers && sec.modifiers.length > 0">
                                 <li v-for="mod in sec.modifiers">
-                                     <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                                     <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                                     * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                                 </li>
                             </ul>
@@ -379,7 +380,7 @@
                     </ul>
                     <ul v-if="it.modifiers && it.modifiers.length > 0 && !it.isMeter && !it.isHalfPizza">
                         <li v-for="mod in it.modifiers">
-                             <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                             <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316', width:'12px', height:'12px', fontSize:'0.7rem'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                             * {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                         </li>
                     </ul>
@@ -418,11 +419,9 @@
         <div style="margin-bottom: 15px;">
             <label style="font-weight: 600; display: block; margin-bottom: 5px;">Filtra per Fattorino/Modalità:</label>
             <select v-model="selectedDriver" @change="calculateDriverStats" style="padding: 8px; border-radius: 6px; width: 100%;">
-                <option value="all_delivery">Totale Consegne (Ricavi Delivery)</option>
-                <option value="all_asporto">Totale Asporto (Ricavi Asporto)</option>
-                <option value="all_banco">Totale Banco (Ricavi Banco)</option>
+                <option value="all_delivery">Tutte le Consegne (Ricavi Delivery)</option>
                 <option value="all_sales">Tutti gli Ordini (Ricavi Totali)</option>
-                <option v-for="driver in drivers" :value="driver">{{ driver }} (Consegne/Asporto/Banco)</option>
+                <option v-for="driver in drivers" :value="driver">{{ driver }} (Consegne/Asporto)</option>
             </select>
         </div>
 
@@ -435,7 +434,7 @@
         <div v-if="!filteredArchive.length">Nessun ordine completato per la data selezionata.</div>
         <div class="archive-order-card" v-for="o in filteredArchive.slice().reverse()" :key="o.id">
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 10px;">
-                <h5>#{{o.id}} – {{new Date(o.archivedTime).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'})}} | Cliente: {{o.customer}}</h5>
+                <h5>#{{o.id}} – {{new Date(o.archivedDate).toLocaleTimeString()}} | Cliente: {{o.customer}}</h5>
                 <p style="margin: 0;">**Totale: €{{o.total.toFixed(2)}}** ({{o.mode}})
                     <span v-if="o.tableNumber" style="font-size: 0.8rem; color: #3b82f6; margin-left: 10px;">Tavolo/Ritiro: {{o.tableNumber}}</span>
                 </p>
@@ -683,7 +682,7 @@
             <div class="form-row">
                 <label>Gusto Base *</label>
                 <input type="text" v-model="section.gusto" placeholder="Nome Pizza/Gusto..." 
-                       @input="section.gusto = $event.target.value"
+                       @input="tempMeterItem.sections[secIdx].gusto = section.gusto"
                        list="pizza-suggestions-meter">
                 <datalist id="pizza-suggestions-meter">
                     <option v-for="p in filterPizzas(section.gusto)" :value="p.nome" :key="p.nome"></option>
@@ -712,7 +711,7 @@
                 <ul style="list-style: none; padding-left: 0; margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 5px;">
                     <li v-for="(mod, modIdx) in section.modifiers" :key="modIdx" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                         <span>
-                            <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                            <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                             {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                         </span>
                         <button class="mod-remove-btn" @click.stop="removeMeterModifier(secIdx, modIdx)">❌</button>
@@ -738,7 +737,6 @@
             <div class="form-row">
                 <label>Gusto Base *</label>
                 <input type="text" v-model="tempHalfPizzaItem.gusto1" placeholder="Nome Pizza/Gusto..." required 
-                       @input="tempHalfPizzaItem.gusto1 = $event.target.value"
                        list="pizza-suggestions-half1">
                 <datalist id="pizza-suggestions-half1">
                     <option v-for="p in filterPizzas(tempHalfPizzaItem.gusto1)" :value="p.nome" :key="p.nome"></option>
@@ -762,7 +760,7 @@
             <ul style="list-style: none; padding-left: 0; margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 5px;">
                 <li v-for="(mod, modIdx) in tempHalfPizzaItem.modifiers1" :key="modIdx" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                     <span>
-                        <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                         {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                     </span>
                     <button class="mod-remove-btn" @click.stop="removeHalfPizzaModifier(1, modIdx)">❌</button>
@@ -775,7 +773,6 @@
             <div class="form-row">
                 <label>Gusto Base *</label>
                 <input type="text" v-model="tempHalfPizzaItem.gusto2" placeholder="Nome Pizza/Gusto..." required
-                       @input="tempHalfPizzaItem.gusto2 = $event.target.value"
                        list="pizza-suggestions-half2">
                 <datalist id="pizza-suggestions-half2">
                     <option v-for="p in filterPizzas(tempHalfPizzaItem.gusto2)" :value="p.nome" :key="p.nome"></option>
@@ -799,7 +796,7 @@
             <ul style="list-style: none; padding-left: 0; margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 5px;">
                 <li v-for="(mod, modIdx) in tempHalfPizzaItem.modifiers2" :key="modIdx" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                     <span>
-                        <span :class="['mod-icon', catColor(getModifierCategory(mod.nome))]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
+                        <span :class="['mod-icon', getModifierCategory(mod.nome)]" :style="{background: catColor(getModifierCategory(mod.nome)) || '#f97316'}">{{ getModifierIcon(getModifierCategory(mod.nome)) }}</span>
                         {{mod.nome}} <span v-if="mod.prezzo > 0">(+€{{mod.prezzo.toFixed(2)}})</span>
                     </span>
                     <button class="mod-remove-btn" @click.stop="removeHalfPizzaModifier(2, modIdx)">❌</button>
@@ -905,7 +902,7 @@
         // Stato Composizione
         tempMeterItem: null, 
         tempHalfPizzaItem: null, 
-        tempModCat: 'Più', // Unificato: usa questa variabile per i modal di composizione
+        tempModCat: 'Più', 
 
         // Dati per il Modale/Finalizzazione
         modes:[
@@ -981,18 +978,15 @@
         },
         get selectedDriverText() {
             if (this.selectedDriver === 'all_delivery') return 'Totale Consegne (Ricavi Delivery)';
-            if (this.selectedDriver === 'all_asporto') return 'Totale Asporto (Ricavi Asporto)';
-            if (this.selectedDriver === 'all_banco') return 'Totale Banco (Ricavi Banco)';
             if (this.selectedDriver === 'all_sales') return 'Totale Vendite (Ricavi Totali)';
             return `Statistiche di ${this.selectedDriver}`;
         },
 
         // Funzione per ottenere la classe di colore
         catColor(catName) {
-             const color = this.modifierCategoriesColors[catName];
-             if (!color) return 'custom';
+             const colorClass = this.modifierCategoriesColors[catName] || 'custom';
              // Ritorna la classe CSS usata per gli stili
-             return ['green', 'gray', 'yellow', 'blue', 'orange', 'purple'].includes(color.toLowerCase()) ? color.toLowerCase() : 'custom';
+             return ['green', 'gray', 'yellow', 'blue', 'orange', 'purple'].includes(colorClass.toLowerCase()) ? colorClass.toLowerCase() : 'custom';
         },
         // Funzione per le categorie di default (non eliminabili)
         isDefaultModifierCategory(catName) {
@@ -1011,7 +1005,6 @@
             const term = this.searchTerm.toLowerCase().trim();
 
             if (term) {
-                // Ricerca globale in tutte le categorie
                 items = this.allItems.filter(p => p.nome.toLowerCase().includes(term));
             }
             return items;
@@ -1031,8 +1024,7 @@
             return this.menu["Pizze"] && this.menu["Pizze"].length > 0;
         },
         get filteredTempModifiers() {
-            // Usa tempModCat (sincronizzato con activeModCat) per i modal di composizione
-            let mods = this.modifiers[this.tempModCat] || []; 
+            let mods = this.modifiers[this.tempModCat] || [];
             const term = this.gustoSearchTerm.toLowerCase().trim();
             if (term) {
                 mods = mods.filter(m => m.nome.toLowerCase().includes(term));
@@ -1080,9 +1072,9 @@
                 const term = this.activeOrderSearchTerm.toLowerCase().trim();
                 filtered = filtered.filter(o =>
                     o.customer.toLowerCase().includes(term) ||
-                    (o.tableNumber && o.tableNumber.toLowerCase().includes(term)) ||
-                    (o.address && o.address.toLowerCase().includes(term)) ||
-                    (o.notes && o.notes.toLowerCase().includes(term))
+                    o.tableNumber.toLowerCase().includes(term) ||
+                    o.address.toLowerCase().includes(term) ||
+                    o.notes.toLowerCase().includes(term)
                 );
             }
 
@@ -1292,23 +1284,13 @@
         },
         
         loadCustomerData(data) {
-            // Aggiorna tutti i campi del cliente (richiesta di robustezza)
             this.customer = data.customer;
             this.phone = data.phone || '';
+            this.address = data.address || '';
+            this.streetNumber = data.streetNumber || '';
+            this.zoneName = data.zone || '';
             this.town = data.town || '';
-
-            if (this.mode === 'consegna') {
-                this.address = data.address || '';
-                this.streetNumber = data.streetNumber || '';
-                this.zoneName = data.zone || '';
-                this.deliveryCost = data.deliveryCost || 0; 
-            } else {
-                // Pulisce i campi specifici della consegna se la modalità è cambiata
-                this.address = '';
-                this.streetNumber = '';
-                this.zoneName = '';
-                this.deliveryCost = 0;
-            }
+            this.deliveryCost = data.deliveryCost || 0; 
             this.updateDeliveryCost();
             this.filteredCustomerSuggestions = [];
         },
@@ -1354,16 +1336,16 @@
                 mode: this.mode,
                 customer: this.customer.trim(),
                 phone: this.phone.trim(),
-                address: this.mode === 'consegna' ? this.address.trim() : '',
-                streetNumber: this.mode === 'consegna' ? this.streetNumber.trim() : '',
-                zone: this.mode === 'consegna' ? this.zoneName : '', 
-                deliveryCost: this.mode === 'consegna' ? this.deliveryCost : 0, 
-                town: this.mode === 'consegna' ? this.town.trim() : '',
+                address: this.address.trim(),
+                streetNumber: this.streetNumber.trim(),
+                zone: this.zoneName, 
+                deliveryCost: this.deliveryCost, 
+                town: this.town.trim(),
                 notes: this.notes.trim(),
-                tableNumber: this.mode !== 'consegna' ? this.tableNumber.trim() : '', 
+                tableNumber: this.tableNumber.trim(), 
                 date: this.date, 
                 hour: this.hour,
-                driver: this.editingOrderId ? (this.orders.find(o => o.id === this.editingOrderId)?.driver || '') : '',
+                driver: this.mode === 'consegna' ? (this.editingOrderId ? (this.orders.find(o => o.id === this.editingOrderId)?.driver || '') : '') : '',
                 status: this.editingOrderId ? (this.orders.find(o => o.id === this.editingOrderId)?.status || 'In preparazione') : 'In preparazione', 
                 acconto: this.accontoRicevuto || 0 
             };
@@ -1598,7 +1580,7 @@
         addCategory() {
             const name = this.newCategoryName.trim();
             if (name && !this.menu[name]) {
-                this.menu = { [name]: [], ...this.menu }; // Aggiunge la nuova categoria in cima
+                this.menu[name] = [];
                 this.newCategoryName = '';
                 this.activeSettingsCat = name;
                 this.saveData();
@@ -1607,10 +1589,6 @@
             }
         },
         deleteCategory(cat) {
-            if (Object.keys(this.menu).length === 1) {
-                alert("Non puoi eliminare l'ultima categoria!");
-                return;
-            }
             if (confirm(`Sei sicuro di voler eliminare la categoria "${cat}"? Verranno eliminati anche tutti gli articoli al suo interno.`)) {
                 delete this.menu[cat];
                 this.activeSettingsCat = Object.keys(this.menu)[0] || null;
@@ -1809,19 +1787,6 @@
         selectMode(m) {
             this.mode = m;
             this.updateDeliveryCost();
-            // Aggiunge la logica per ripulire campi specifici quando la modalità cambia
-            if (m !== 'consegna') {
-                this.address = '';
-                this.streetNumber = '';
-                this.zoneName = '';
-                this.town = '';
-            }
-            if (m === 'consegna' || m === 'asporto') {
-                // Seleziona un cliente esistente in anagrafica per riempire i dati di contatto
-            }
-            if (m === 'banco') {
-                this.phone = '';
-            }
         },
         updateDeliveryCost() {
             if (this.mode === 'consegna' && this.zoneName) {
@@ -1926,15 +1891,13 @@
             let stats = [];
 
             if (this.selectedDriver === 'all_delivery') {
+                // Tutte le consegne (solo mode=consegna)
                 stats = filtered.filter(o => o.mode === 'consegna');
-            } else if (this.selectedDriver === 'all_asporto') {
-                stats = filtered.filter(o => o.mode === 'asporto');
-            } else if (this.selectedDriver === 'all_banco') {
-                stats = filtered.filter(o => o.mode === 'banco');
             } else if (this.selectedDriver === 'all_sales') {
+                // Tutti gli ordini
                 stats = filtered;
             } else {
-                // Statistiche per un fattorino specifico
+                // Statistiche per un fattorino specifico (assegnato per consegna o asporto/banco)
                 stats = filtered.filter(o => o.driver === this.selectedDriver);
             }
 
@@ -2106,8 +2069,6 @@
             const item = this.order[index];
             if (item && item.isMeter) {
                 this.tempMeterItem = JSON.parse(JSON.stringify(item));
-                this.tempModCat = Object.keys(this.modifiers)[0] || 'Più'; // Sincronizza il mod. predefinito
-                this.gustoSearchTerm = '';
                 this.showMeterModal = true;
                 this.selectedItemIndex = index; 
                 this.lastSelectedItem = null;
@@ -2115,8 +2076,6 @@
             }
             if (item && item.isHalfPizza) {
                 this.tempHalfPizzaItem = JSON.parse(JSON.stringify(item));
-                this.tempModCat = Object.keys(this.modifiers)[0] || 'Più'; // Sincronizza il mod. predefinito
-                this.gustoSearchTerm = '';
                 this.showHalfPizzaModal = true;
                  this.selectedItemIndex = index; 
                  this.lastSelectedItem = null;
@@ -2132,9 +2091,7 @@
             }
         },
         openModal() {
-            if (!this.zoneName) {
-                this.zoneName = this.deliveryZones[0]?.name || ''; 
-            }
+            this.zoneName = this.deliveryZones[0]?.name || ''; 
             this.updateDeliveryCost(); 
             this.showModal = true;
         },
