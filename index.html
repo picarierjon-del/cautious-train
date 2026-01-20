@@ -1,245 +1,217 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestionale Pro</title>
+    <title>Gestionale Pro DARK</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); }
-        .status-dot { transition: all 0.5s ease; }
-        .input-pro { @apply w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        .dark-card { background: #1e293b; border: 1px solid #334155; }
+        .input-dark { background: #0f172a; border: 1px solid #334155; color: white; border-radius: 12px; padding: 12px; outline: none; transition: 0.2s; }
+        .input-dark:focus { border-color: #3b82f6; ring: 2px solid #3b82f6; }
         @media print { .no-print { display: none; } }
     </style>
 </head>
-<body class="bg-[#f8fafc] text-slate-900 pb-10">
+<body class="pb-20">
 
-    <nav class="sticky top-0 z-50 glass px-4 py-3 mb-4 flex justify-between items-center shadow-sm">
-        <h1 class="font-bold text-xl tracking-tight text-blue-600">SmartGestionale<span class="text-slate-400 font-light">PRO</span></h1>
-        <button onclick="resetOggi()" class="text-xs font-semibold bg-red-50 text-red-600 px-3 py-1 rounded-full border border-red-100 uppercase tracking-wider">Reset</button>
+    <nav class="sticky top-0 z-50 bg-[#0f172a]/80 backdrop-blur-md px-4 py-4 border-b border-slate-800 flex justify-between items-center">
+        <div>
+            <h1 class="font-bold text-lg text-blue-400">SmartLog <span class="text-white">v2.0</span></h1>
+            <p id="currentDateDisplay" class="text-[10px] text-slate-500 uppercase font-bold tracking-widest"></p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="exportMonthlyPDF()" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded-lg font-bold transition-all">📄 PDF MESE</button>
+        </div>
     </nav>
 
-    <div class="max-w-md mx-auto px-4 space-y-6">
+    <div class="max-w-md mx-auto px-4 mt-6 space-y-6">
 
-        <div id="statusBg" class="p-5 rounded-3xl shadow-lg border transition-all duration-500">
-            <div class="flex items-center gap-4">
-                <div id="statusIcon" class="text-4xl">🟢</div>
+        <div id="statusCard" class="p-5 rounded-3xl border-l-8 bg-slate-800 transition-all">
+            <h2 id="statusMsg" class="font-bold text-sm italic">Caricamento sistema...</h2>
+        </div>
+
+        <div class="dark-card p-6 rounded-3xl shadow-xl">
+            <label class="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Corrispettivo Lordo Odierno</label>
+            <input type="number" id="total_sales" class="w-full bg-slate-900 border-2 border-blue-500/30 rounded-2xl p-4 text-3xl font-bold text-white outline-none focus:border-blue-500" placeholder="0.00">
+        </div>
+
+        <div class="dark-card p-6 rounded-3xl">
+            <h3 class="text-xs font-bold text-slate-400 uppercase mb-4">Dettaglio Elettronico</h3>
+            <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <p id="statusTag" class="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Stato Operativo</p>
-                    <h2 id="statusMsg" class="text-lg font-bold leading-tight italic">Tutto in ordine per oggi</h2>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">Bancomat</label>
+                    <input type="number" id="pos" class="input-dark w-full mt-1" oninput="calculate()">
                 </div>
-            </div>
-        </div>
-
-        <div class="glass p-5 rounded-3xl shadow-sm">
-            <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">Analisi Incassi</h3>
-            <div class="h-40 w-full">
-                <canvas id="mainChart"></canvas>
-            </div>
-        </div>
-
-        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <div class="flex items-center gap-2 mb-6">
-                <div class="w-1 h-6 bg-blue-500 rounded-full"></div>
-                <h3 class="font-bold text-slate-700">Incassi Giornalieri</h3>
-            </div>
-            
-            <div class="space-y-4">
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-1">Corrispettivo Totale (Lordo)</label>
-                    <input type="number" id="total_sales" class="input-pro font-semibold text-2xl text-blue-700" placeholder="0.00">
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">SumUp</label>
+                    <input type="number" id="sumup" class="input-dark w-full mt-1" oninput="calculate()">
                 </div>
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-1">Bancomat/POS</label>
-                        <input type="number" id="bancomat" class="input-pro text-base" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-1">App/Satispay</label>
-                        <input type="number" id="altri_elettr" class="input-pro text-base" placeholder="0.00">
-                    </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">Satispay</label>
+                    <input type="number" id="satispay" class="input-dark w-full mt-1" oninput="calculate()">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">Just Eat</label>
+                    <input type="number" id="justeat" class="input-dark w-full mt-1" oninput="calculate()">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">Deliveroo</label>
+                    <input type="number" id="deliveroo" class="input-dark w-full mt-1" oninput="calculate()">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">Glovo</label>
+                    <input type="number" id="glovo" class="input-dark w-full mt-1" oninput="calculate()">
                 </div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-2">
-                    <div class="w-1 h-6 bg-orange-500 rounded-full"></div>
-                    <h3 class="font-bold text-slate-700">Uscite Fornitori</h3>
-                </div>
-                <span id="supCount" class="bg-slate-100 text-slate-500 text-[10px] px-2 py-1 rounded-md font-bold text-xs">10 SLOT</span>
-            </div>
-            
-            <div id="suppliersContainer" class="space-y-3 max-h-80 overflow-y-auto pr-2">
+        <div class="dark-card p-6 rounded-3xl">
+            <h3 class="text-xs font-bold text-slate-400 uppercase mb-4">Uscite Fornitori (Cash)</h3>
+            <div id="supplierList" class="space-y-3">
                 </div>
         </div>
 
-        <div class="bg-slate-900 text-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16"></div>
-            
-            <div class="space-y-5 relative z-10">
-                <div class="flex justify-between items-center opacity-70">
-                    <span class="text-sm">Contanti Teorici</span>
-                    <span id="cash_theo" class="font-mono tracking-tighter">€ 0.00</span>
-                </div>
-                <div class="flex justify-between items-center opacity-70 border-b border-white/10 pb-3">
-                    <span class="text-sm">Spese Cash</span>
-                    <span id="sup_cash" class="font-mono text-orange-400">- € 0.00</span>
-                </div>
-                <div class="flex justify-between items-end pt-2">
-                    <div>
-                        <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Disponibile da versare</p>
-                        <h4 class="text-4xl font-bold tracking-tighter">€ <span id="cash_net">0.00</span></h4>
-                    </div>
-                    <button onclick="window.print()" class="no-print bg-white/10 p-3 rounded-2xl hover:bg-white/20 transition-all">
-                        📄
-                    </button>
-                </div>
+        <div class="bg-blue-600 p-6 rounded-[2.5rem] shadow-2xl space-y-4">
+            <div class="flex justify-between text-blue-100 text-sm">
+                <span>Totale Elettronico:</span>
+                <span id="label_ele" class="font-bold">€ 0.00</span>
             </div>
+            <div class="flex justify-between text-blue-100 text-sm">
+                <span>Totale Spese Cash:</span>
+                <span id="label_sup" class="font-bold">€ 0.00</span>
+            </div>
+            <div class="pt-2 border-t border-blue-400 flex justify-between items-center">
+                <span class="font-bold text-white">CONTANTE NETTO</span>
+                <span id="label_net" class="text-3xl font-black text-white italic">€ 0.00</span>
+            </div>
+            <button onclick="saveDay()" class="w-full bg-white text-blue-600 font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all">SALVA GIORNATA</button>
         </div>
+
     </div>
 
     <script>
-        let myChart;
+        const { jsPDF } = window.jspdf;
 
-        // Inizializza l'app
         function init() {
-            renderSuppliers();
-            initChart();
-            loadData();
+            // Data di oggi
+            const d = new Date();
+            document.getElementById('currentDateDisplay').innerText = d.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             
-            // Aggiunge listener a tutti gli input
-            document.querySelectorAll('input').forEach(input => {
-                input.addEventListener('input', () => {
-                    calculate();
-                    saveData();
-                });
-            });
-        }
-
-        function renderSuppliers() {
-            const container = document.getElementById('suppliersContainer');
-            for (let i = 1; i <= 10; i++) {
-                const row = document.createElement('div');
-                row.className = "flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200/50";
-                row.innerHTML = `
-                    <span class="text-[10px] font-bold text-slate-300 w-4">${i}</span>
-                    <input type="number" class="sup-amt bg-transparent w-full outline-none font-semibold text-sm" placeholder="Importo €">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="sup-check w-5 h-5 rounded-full accent-green-500">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Cash</span>
-                    </label>
-                `;
-                container.appendChild(row);
+            // Genera Fornitori
+            const container = document.getElementById('supplierList');
+            for(let i=1; i<=10; i++) {
+                container.innerHTML += `
+                    <div class="flex gap-2 items-center">
+                        <input type="number" class="sup-amt input-dark flex-1 text-sm p-2" placeholder="Fornitore ${i}">
+                        <input type="checkbox" class="sup-check w-6 h-6 accent-green-500" onchange="calculate()">
+                    </div>`;
             }
+            
+            // Listeners
+            document.querySelectorAll('input').forEach(i => i.addEventListener('input', calculate));
+            loadTodayData();
         }
 
         function calculate() {
             const total = parseFloat(document.getElementById('total_sales').value) || 0;
-            const pos = parseFloat(document.getElementById('bancomat').value) || 0;
-            const app = parseFloat(document.getElementById('altri_elettr').value) || 0;
+            const pos = ["pos", "sumup", "satispay", "justeat", "deliveroo", "glovo"]
+                        .reduce((acc, id) => acc + (parseFloat(document.getElementById(id).value) || 0), 0);
             
-            const electronicTotal = pos + app;
-            const cashTheoretical = total - electronicTotal;
-            
-            let supplierCash = 0;
+            let supCash = 0;
             document.querySelectorAll('.sup-amt').forEach((el, i) => {
-                if (document.querySelectorAll('.sup-check')[i].checked) {
-                    supplierCash += parseFloat(el.value) || 0;
-                }
+                if(document.querySelectorAll('.sup-check')[i].checked) supCash += parseFloat(el.value) || 0;
             });
 
-            const netCash = cashTheoretical - supplierCash;
+            const net = (total - pos) - supCash;
 
-            // Update UI
-            document.getElementById('cash_theo').innerText = `€ ${cashTheoretical.toFixed(2)}`;
-            document.getElementById('sup_cash').innerText = `- € ${supplierCash.toFixed(2)}`;
-            document.getElementById('cash_net').innerText = netCash.toFixed(2);
+            document.getElementById('label_ele').innerText = `€ ${pos.toFixed(2)}`;
+            document.getElementById('label_sup').innerText = `€ ${supCash.toFixed(2)}`;
+            document.getElementById('label_net').innerText = `€ ${net.toFixed(2)}`;
 
-            updateStatus(total, electronicTotal, cashTheoretical, netCash);
-            updateChart(cashTheoretical, electronicTotal);
+            updateStatus(total, pos, net);
         }
 
-        function updateStatus(total, elec, theo, net) {
-            const bg = document.getElementById('statusBg');
-            const icon = document.getElementById('statusIcon');
+        function updateStatus(total, pos, net) {
+            const card = document.getElementById('statusCard');
             const msg = document.getElementById('statusMsg');
-
-            if (elec > total || theo < 0) {
-                bg.className = "p-5 rounded-3xl shadow-lg border bg-red-50 border-red-200 text-red-900";
-                icon.innerText = "🚨";
-                msg.innerText = "Dati Incoerenti: l'elettronico supera il totale!";
+            if (pos > total) {
+                card.className = "p-5 rounded-3xl border-l-8 bg-red-900/30 border-red-500 text-red-200";
+                msg.innerText = "ATTENZIONE: L'elettronico è superiore all'incasso totale!";
             } else if (total === 0) {
-                bg.className = "p-5 rounded-3xl shadow-lg border bg-amber-50 border-amber-200 text-amber-900";
-                icon.innerText = "✍️";
-                msg.innerText = "In attesa dei corrispettivi di oggi";
-            } else if (net > 0) {
-                bg.className = "p-5 rounded-3xl shadow-lg border bg-blue-50 border-blue-200 text-blue-900";
-                icon.innerText = "💰";
-                msg.innerText = `Mancano €${net.toFixed(2)} nel sacchetto del versamento`;
+                card.className = "p-5 rounded-3xl border-l-8 bg-slate-800 border-slate-600 text-slate-400";
+                msg.innerText = "Inserisci i dati per analizzare la giornata.";
             } else {
-                bg.className = "p-5 rounded-3xl shadow-lg border bg-green-50 border-green-200 text-green-900";
-                icon.innerText = "✅";
-                msg.innerText = "Tutto perfetto. Corrispettivi allineati.";
+                card.className = "p-5 rounded-3xl border-l-8 bg-green-900/30 border-green-500 text-green-200";
+                msg.innerText = "Operazione bilanciata. Ricordati di versare i contanti.";
             }
         }
 
-        function initChart() {
-            const ctx = document.getElementById('mainChart').getContext('2d');
-            myChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Contanti', 'Elettronico'],
-                    datasets: [{
-                        data: [0, 0],
-                        backgroundColor: ['#3b82f6', '#e2e8f0'],
-                        borderWidth: 0,
-                        cutout: '80%'
-                    }]
-                },
-                options: { plugins: { legend: { display: false } }, maintainAspectRatio: false }
-            });
-        }
-
-        function updateChart(cash, elec) {
-            myChart.data.datasets[0].data = [cash > 0 ? cash : 0, elec];
-            myChart.update();
-        }
-
-        // --- SISTEMA DI SALVATAGGIO ---
-        function saveData() {
+        function saveDay() {
+            const dateKey = new Date().toISOString().split('T')[0];
             const data = {
                 total: document.getElementById('total_sales').value,
-                pos: document.getElementById('bancomat').value,
-                app: document.getElementById('altri_elettr').value,
-                suppliers: Array.from(document.querySelectorAll('.sup-amt')).map(el => el.value),
-                checks: Array.from(document.querySelectorAll('.sup-check')).map(el => el.checked)
+                pos: document.getElementById('pos').value,
+                sumup: document.getElementById('sumup').value,
+                satispay: document.getElementById('satispay').value,
+                justeat: document.getElementById('justeat').value,
+                deliveroo: document.getElementById('deliveroo').value,
+                glovo: document.getElementById('glovo').value,
+                supAmts: Array.from(document.querySelectorAll('.sup-amt')).map(e => e.value),
+                supChecks: Array.from(document.querySelectorAll('.sup-check')).map(e => e.checked)
             };
-            localStorage.setItem('dayData', JSON.stringify(data));
+            localStorage.setItem('day_' + dateKey, JSON.stringify(data));
+            alert("Giornata salvata con successo!");
         }
 
-        function loadData() {
-            const saved = localStorage.getItem('dayData');
-            if (!saved) return;
-            const data = JSON.parse(saved);
-            document.getElementById('total_sales').value = data.total;
-            document.getElementById('bancomat').value = data.pos;
-            document.getElementById('altri_elettr').value = data.app;
-            document.querySelectorAll('.sup-amt').forEach((el, i) => el.value = data.suppliers[i]);
-            document.querySelectorAll('.sup-check').forEach((el, i) => el.checked = data.checks[i]);
-            calculate();
-        }
-
-        function resetOggi() {
-            if(confirm("Vuoi cancellare i dati di oggi?")) {
-                localStorage.clear();
-                location.reload();
+        function loadTodayData() {
+            const dateKey = new Date().toISOString().split('T')[0];
+            const saved = localStorage.getItem('day_' + dateKey);
+            if(saved) {
+                const d = JSON.parse(saved);
+                document.getElementById('total_sales').value = d.total;
+                document.getElementById('pos').value = d.pos;
+                document.getElementById('sumup').value = d.sumup;
+                document.getElementById('satispay').value = d.satispay;
+                document.getElementById('justeat').value = d.justeat;
+                document.getElementById('deliveroo').value = d.deliveroo;
+                document.getElementById('glovo').value = d.glovo;
+                document.querySelectorAll('.sup-amt').forEach((e, i) => e.value = d.supAmts[i]);
+                document.querySelectorAll('.sup-check').forEach((e, i) => e.checked = d.supChecks[i]);
+                calculate();
             }
+        }
+
+        function exportMonthlyPDF() {
+            const doc = new jsPDF();
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const year = now.getFullYear();
+            
+            doc.text(`REGISTRO CORRISPETTIVI: ${month}/${year}`, 14, 15);
+            
+            const rows = [];
+            let grandTotal = 0;
+
+            for(let i=1; i<=31; i++) {
+                const dayStr = `${year}-${String(month).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                const saved = localStorage.getItem('day_' + dayStr);
+                const data = saved ? JSON.parse(saved) : {total: 0};
+                rows.push([i, data.total || 0, ""]);
+                grandTotal += parseFloat(data.total || 0);
+            }
+
+            doc.autoTable({
+                head: [['Giorno', 'Corrispettivo Lordo (€)', 'Note']],
+                body: rows,
+                startY: 25,
+                foot: [['TOTALE', grandTotal.toFixed(2), '']],
+                theme: 'grid'
+            });
+
+            doc.save(`Corrispettivi_${month}_${year}.pdf`);
         }
 
         init();
