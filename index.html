@@ -3,172 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestionale Pro DARK</title>
+    <title>SmartLog Enterprise</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
-        .dark-card { background: #1e293b; border: 1px solid #334155; }
-        .input-dark { background: #0f172a; border: 1px solid #334155; color: white; border-radius: 12px; padding: 12px; outline: none; transition: 0.2s; }
-        .input-dark:focus { border-color: #3b82f6; ring: 2px solid #3b82f6; }
-        @media print { .no-print { display: none; } }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .card-pro { background: #0f172a; border: 1px solid #1e293b; border-radius: 24px; }
+        .input-pro { background: #020617; border: 1px solid #334155; color: white; border-radius: 12px; padding: 10px; outline: none; transition: all 0.2s; font-weight: 600; }
+        .input-pro:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .btn-action { transition: all 0.2s; active: scale(0.95); }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
-<body class="pb-20">
+<body class="pb-24">
 
-    <nav class="sticky top-0 z-50 bg-[#0f172a]/80 backdrop-blur-md px-4 py-4 border-b border-slate-800 flex justify-between items-center">
+    <nav class="sticky top-0 z-50 bg-[#020617]/90 backdrop-blur-xl px-6 py-4 border-b border-slate-800 flex justify-between items-center">
         <div>
-            <h1 class="font-bold text-lg text-blue-400">SmartLog <span class="text-white">v2.0</span></h1>
-            <p id="currentDateDisplay" class="text-[10px] text-slate-500 uppercase font-bold tracking-widest"></p>
+            <h1 class="text-blue-500 font-extrabold text-xl tracking-tighter italic">LOG<span class="text-white">PRO</span></h1>
+            <div id="dateBadge" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5"></div>
         </div>
         <div class="flex gap-2">
-            <button onclick="exportMonthlyPDF()" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded-lg font-bold transition-all">📄 PDF MESE</button>
+            <button onclick="exportMonthlyPDF()" class="btn-action bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase">Report PDF</button>
+            <button onclick="fullReset()" class="btn-action bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] font-black px-3 py-2 rounded-full uppercase">Reset</button>
         </div>
     </nav>
 
-    <div class="max-w-md mx-auto px-4 mt-6 space-y-6">
+    <div class="max-w-md mx-auto px-5 mt-6 space-y-6">
 
-        <div id="statusCard" class="p-5 rounded-3xl border-l-8 bg-slate-800 transition-all">
-            <h2 id="statusMsg" class="font-bold text-sm italic">Caricamento sistema...</h2>
+        <div class="flex items-center justify-between bg-slate-900/50 p-2 rounded-2xl border border-slate-800">
+            <button onclick="changeDay(-1)" class="p-3 hover:bg-slate-800 rounded-xl">◀</button>
+            <div class="text-center">
+                <span id="displayDate" class="font-bold text-sm">Oggi</span>
+            </div>
+            <button onclick="changeDay(1)" class="p-3 hover:bg-slate-800 rounded-xl">▶</button>
         </div>
 
-        <div class="dark-card p-6 rounded-3xl shadow-xl">
-            <label class="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Corrispettivo Lordo Odierno</label>
-            <input type="number" id="total_sales" class="w-full bg-slate-900 border-2 border-blue-500/30 rounded-2xl p-4 text-3xl font-bold text-white outline-none focus:border-blue-500" placeholder="0.00">
+        <div id="statusHero" class="card-pro p-5 border-l-4 border-l-blue-500 transition-all">
+            <p id="statusTag" class="text-[9px] font-black text-slate-500 uppercase mb-1">Analisi Intelligenza Fiscale</p>
+            <h2 id="statusMsg" class="text-base font-bold leading-tight">In attesa di dati...</h2>
         </div>
 
-        <div class="dark-card p-6 rounded-3xl">
-            <h3 class="text-xs font-bold text-slate-400 uppercase mb-4">Dettaglio Elettronico</h3>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="text-[10px] text-slate-500 font-bold uppercase">Bancomat</label>
-                    <input type="number" id="pos" class="input-dark w-full mt-1" oninput="calculate()">
+        <div class="card-pro p-6 shadow-2xl bg-gradient-to-br from-slate-900 to-slate-800">
+            <label class="block text-[10px] font-black text-blue-400 uppercase mb-3 tracking-widest text-center">Corrispettivo Totale del Giorno</label>
+            <input type="number" id="total_sales" class="w-full bg-transparent text-center text-5xl font-black text-white outline-none placeholder-slate-700" placeholder="0.00" step="0.01">
+        </div>
+
+        <div class="card-pro p-6">
+            <h3 class="text-[10px] font-black text-slate-500 uppercase mb-4 tracking-widest">Metodi di Pagamento</h3>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">BANCOMAT/POS</label>
+                    <input type="number" id="pos" class="input-pro w-full" placeholder="0.00">
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-500 font-bold uppercase">SumUp</label>
-                    <input type="number" id="sumup" class="input-dark w-full mt-1" oninput="calculate()">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">SUMUP</label>
+                    <input type="number" id="sumup" class="input-pro w-full" placeholder="0.00">
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-500 font-bold uppercase">Satispay</label>
-                    <input type="number" id="satispay" class="input-dark w-full mt-1" oninput="calculate()">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">SATISPAY</label>
+                    <input type="number" id="satispay" class="input-pro w-full" placeholder="0.00">
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-500 font-bold uppercase">Just Eat</label>
-                    <input type="number" id="justeat" class="input-dark w-full mt-1" oninput="calculate()">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">JUST EAT</label>
+                    <input type="number" id="justeat" class="input-pro w-full" placeholder="0.00">
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-500 font-bold uppercase">Deliveroo</label>
-                    <input type="number" id="deliveroo" class="input-dark w-full mt-1" oninput="calculate()">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">GLOVO/DELIV.</label>
+                    <input type="number" id="delivery" class="input-pro w-full" placeholder="0.00">
                 </div>
-                <div>
-                    <label class="text-[10px] text-slate-500 font-bold uppercase">Glovo</label>
-                    <input type="number" id="glovo" class="input-dark w-full mt-1" oninput="calculate()">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">ALTRO/APP</label>
+                    <input type="number" id="altro" class="input-pro w-full" placeholder="0.00">
                 </div>
             </div>
         </div>
 
-        <div class="dark-card p-6 rounded-3xl">
-            <h3 class="text-xs font-bold text-slate-400 uppercase mb-4">Uscite Fornitori (Cash)</h3>
-            <div id="supplierList" class="space-y-3">
+        <div class="card-pro p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Spese in Contanti (10)</h3>
+                <span id="sumSup" class="text-xs font-bold text-orange-500 mono">€ 0.00</span>
+            </div>
+            <div id="supplierBox" class="space-y-2 max-h-64 overflow-y-auto pr-2">
                 </div>
         </div>
 
-        <div class="bg-blue-600 p-6 rounded-[2.5rem] shadow-2xl space-y-4">
-            <div class="flex justify-between text-blue-100 text-sm">
-                <span>Totale Elettronico:</span>
-                <span id="label_ele" class="font-bold">€ 0.00</span>
+        <div class="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-xl border-t border-slate-800">
+            <div class="max-w-md mx-auto flex justify-between items-center">
+                <div>
+                    <p class="text-[9px] font-black text-blue-400 uppercase tracking-widest">Cassa Netta (Contante)</p>
+                    <div id="finalNet" class="text-2xl font-black italic mono">€ 0.00</div>
+                </div>
+                <button onclick="saveCurrentDay()" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-2xl font-black text-sm btn-action shadow-lg shadow-blue-900/20">
+                    SALVA
+                </button>
             </div>
-            <div class="flex justify-between text-blue-100 text-sm">
-                <span>Totale Spese Cash:</span>
-                <span id="label_sup" class="font-bold">€ 0.00</span>
-            </div>
-            <div class="pt-2 border-t border-blue-400 flex justify-between items-center">
-                <span class="font-bold text-white">CONTANTE NETTO</span>
-                <span id="label_net" class="text-3xl font-black text-white italic">€ 0.00</span>
-            </div>
-            <button onclick="saveDay()" class="w-full bg-white text-blue-600 font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all">SALVA GIORNATA</button>
         </div>
-
     </div>
 
     <script>
         const { jsPDF } = window.jspdf;
+        let activeDate = new Date();
 
         function init() {
-            // Data di oggi
-            const d = new Date();
-            document.getElementById('currentDateDisplay').innerText = d.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            renderSuppliers();
+            updateDateUI();
             
-            // Genera Fornitori
-            const container = document.getElementById('supplierList');
+            // Listeners per calcolo real-time
+            document.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', calculate);
+            });
+            
+            loadDayData(formatDate(activeDate));
+        }
+
+        function renderSuppliers() {
+            const container = document.getElementById('supplierBox');
             for(let i=1; i<=10; i++) {
                 container.innerHTML += `
-                    <div class="flex gap-2 items-center">
-                        <input type="number" class="sup-amt input-dark flex-1 text-sm p-2" placeholder="Fornitore ${i}">
-                        <input type="checkbox" class="sup-check w-6 h-6 accent-green-500" onchange="calculate()">
+                    <div class="flex gap-2 items-center bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <span class="text-[9px] font-bold text-slate-600 w-4">${i}</span>
+                        <input type="number" class="sup-amt bg-transparent flex-1 text-sm outline-none font-bold" placeholder="0.00">
+                        <label class="flex items-center gap-1">
+                            <input type="checkbox" class="sup-check w-5 h-5 accent-blue-500" onchange="calculate()">
+                            <span class="text-[8px] font-black text-slate-500 uppercase">Cash</span>
+                        </label>
                     </div>`;
             }
-            
-            // Listeners
-            document.querySelectorAll('input').forEach(i => i.addEventListener('input', calculate));
-            loadTodayData();
+        }
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function updateDateUI() {
+            const options = { weekday: 'short', day: 'numeric', month: 'short' };
+            document.getElementById('displayDate').innerText = activeDate.toLocaleDateString('it-IT', options).toUpperCase();
+            document.getElementById('dateBadge').innerText = activeDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+        }
+
+        function changeDay(offset) {
+            activeDate.setDate(activeDate.getDate() + offset);
+            updateDateUI();
+            loadDayData(formatDate(activeDate));
         }
 
         function calculate() {
             const total = parseFloat(document.getElementById('total_sales').value) || 0;
-            const pos = ["pos", "sumup", "satispay", "justeat", "deliveroo", "glovo"]
-                        .reduce((acc, id) => acc + (parseFloat(document.getElementById(id).value) || 0), 0);
+            const eleFields = ['pos', 'sumup', 'satispay', 'justeat', 'delivery', 'altro'];
+            const eleTotal = eleFields.reduce((sum, id) => sum + (parseFloat(document.getElementById(id).value) || 0), 0);
             
             let supCash = 0;
             document.querySelectorAll('.sup-amt').forEach((el, i) => {
-                if(document.querySelectorAll('.sup-check')[i].checked) supCash += parseFloat(el.value) || 0;
+                if(document.querySelectorAll('.sup-check')[i].checked) {
+                    supCash += parseFloat(el.value) || 0;
+                }
             });
 
-            const net = (total - pos) - supCash;
+            const net = (total - eleTotal) - supCash;
 
-            document.getElementById('label_ele').innerText = `€ ${pos.toFixed(2)}`;
-            document.getElementById('label_sup').innerText = `€ ${supCash.toFixed(2)}`;
-            document.getElementById('label_net').innerText = `€ ${net.toFixed(2)}`;
+            document.getElementById('sumSup').innerText = `€ ${supCash.toFixed(2)}`;
+            document.getElementById('finalNet').innerText = `€ ${net.toFixed(2)}`;
 
-            updateStatus(total, pos, net);
-        }
-
-        function updateStatus(total, pos, net) {
-            const card = document.getElementById('statusCard');
+            const hero = document.getElementById('statusHero');
             const msg = document.getElementById('statusMsg');
-            if (pos > total) {
-                card.className = "p-5 rounded-3xl border-l-8 bg-red-900/30 border-red-500 text-red-200";
-                msg.innerText = "ATTENZIONE: L'elettronico è superiore all'incasso totale!";
-            } else if (total === 0) {
-                card.className = "p-5 rounded-3xl border-l-8 bg-slate-800 border-slate-600 text-slate-400";
-                msg.innerText = "Inserisci i dati per analizzare la giornata.";
+
+            if (eleTotal > total) {
+                hero.className = "card-pro p-5 border-l-4 border-l-red-500 bg-red-500/5";
+                msg.innerText = "ERRORE: Pagamenti elettronici superiori all'incasso!";
+            } else if (total > 0) {
+                hero.className = "card-pro p-5 border-l-4 border-l-green-500 bg-green-500/5";
+                msg.innerText = "GIORNATA BILANCIATA: Dati pronti per l'archiviazione.";
             } else {
-                card.className = "p-5 rounded-3xl border-l-8 bg-green-900/30 border-green-500 text-green-200";
-                msg.innerText = "Operazione bilanciata. Ricordati di versare i contanti.";
+                hero.className = "card-pro p-5 border-l-4 border-l-slate-700";
+                msg.innerText = "In attesa di inserimento corrispettivi...";
             }
+            return { total, eleTotal, supCash, net };
         }
 
-        function saveDay() {
-            const dateKey = new Date().toISOString().split('T')[0];
+        function saveCurrentDay() {
             const data = {
                 total: document.getElementById('total_sales').value,
                 pos: document.getElementById('pos').value,
                 sumup: document.getElementById('sumup').value,
                 satispay: document.getElementById('satispay').value,
                 justeat: document.getElementById('justeat').value,
-                deliveroo: document.getElementById('deliveroo').value,
-                glovo: document.getElementById('glovo').value,
+                delivery: document.getElementById('delivery').value,
+                altro: document.getElementById('altro').value,
                 supAmts: Array.from(document.querySelectorAll('.sup-amt')).map(e => e.value),
                 supChecks: Array.from(document.querySelectorAll('.sup-check')).map(e => e.checked)
             };
-            localStorage.setItem('day_' + dateKey, JSON.stringify(data));
-            alert("Giornata salvata con successo!");
+            localStorage.setItem('day_' + formatDate(activeDate), JSON.stringify(data));
+            
+            // Effetto feedback
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "SALVATO! ✓";
+            btn.classList.replace('bg-blue-600', 'bg-green-600');
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.classList.replace('bg-green-600', 'bg-blue-600');
+            }, 1500);
         }
 
-        function loadTodayData() {
-            const dateKey = new Date().toISOString().split('T')[0];
-            const saved = localStorage.getItem('day_' + dateKey);
+        function loadDayData(dateStr) {
+            const saved = localStorage.getItem('day_' + dateStr);
+            // Reset campi prima di caricare
+            document.querySelectorAll('input[type="number"]').forEach(i => i.value = "");
+            document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
+            
             if(saved) {
                 const d = JSON.parse(saved);
                 document.getElementById('total_sales').value = d.total;
@@ -176,42 +221,52 @@
                 document.getElementById('sumup').value = d.sumup;
                 document.getElementById('satispay').value = d.satispay;
                 document.getElementById('justeat').value = d.justeat;
-                document.getElementById('deliveroo').value = d.deliveroo;
-                document.getElementById('glovo').value = d.glovo;
+                document.getElementById('delivery').value = d.delivery;
+                document.getElementById('altro').value = d.altro;
                 document.querySelectorAll('.sup-amt').forEach((e, i) => e.value = d.supAmts[i]);
                 document.querySelectorAll('.sup-check').forEach((e, i) => e.checked = d.supChecks[i]);
-                calculate();
             }
+            calculate();
         }
 
         function exportMonthlyPDF() {
             const doc = new jsPDF();
-            const now = new Date();
-            const month = now.getMonth() + 1;
-            const year = now.getFullYear();
-            
-            doc.text(`REGISTRO CORRISPETTIVI: ${month}/${year}`, 14, 15);
+            const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+            const m = activeDate.getMonth();
+            const y = activeDate.getFullYear();
+            const lastDay = new Date(y, m + 1, 0).getDate(); // Calcola giorni reali del mese
+
+            doc.setFontSize(18);
+            doc.text(`RIEPILOGO CORRISPETTIVI: ${monthNames[m].toUpperCase()} ${y}`, 14, 20);
             
             const rows = [];
-            let grandTotal = 0;
+            let totalMese = 0;
 
-            for(let i=1; i<=31; i++) {
-                const dayStr = `${year}-${String(month).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-                const saved = localStorage.getItem('day_' + dayStr);
-                const data = saved ? JSON.parse(saved) : {total: 0};
-                rows.push([i, data.total || 0, ""]);
-                grandTotal += parseFloat(data.total || 0);
+            for(let i=1; i<=lastDay; i++) {
+                const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                const data = JSON.parse(localStorage.getItem('day_' + dStr) || '{"total":0}');
+                rows.push([i, `EUR ${parseFloat(data.total || 0).toFixed(2)}`, ""]);
+                totalMese += parseFloat(data.total || 0);
             }
 
             doc.autoTable({
-                head: [['Giorno', 'Corrispettivo Lordo (€)', 'Note']],
+                head: [['Giorno', 'Incasso Lordo', 'Note']],
                 body: rows,
-                startY: 25,
-                foot: [['TOTALE', grandTotal.toFixed(2), '']],
-                theme: 'grid'
+                startY: 30,
+                foot: [['TOTALE MENSILE', `EUR ${totalMese.toFixed(2)}`, '']],
+                headStyles: { fillColor: [15, 23, 42] },
+                footStyles: { fillColor: [15, 23, 42] }
             });
 
-            doc.save(`Corrispettivi_${month}_${year}.pdf`);
+            doc.save(`Fiscale_${monthNames[m]}_${y}.pdf`);
+        }
+
+        function fullReset() {
+            const choice = confirm("RESET DATI\n\nPremi OK per cancellare TUTTO l'archivio.\nPremi ANNULLA per non fare nulla.");
+            if(choice) {
+                localStorage.clear();
+                location.reload();
+            }
         }
 
         init();
