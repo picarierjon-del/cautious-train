@@ -1,416 +1,351 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Commander Elite Pro - Top Edition</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f1f5f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        .page { display: none; padding-bottom: 120px; }
-        .active-page { display: block; animation: fadeIn 0.15s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.25rem; border: 1px solid #e2e8f0; }
-        input, select { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px; width: 100%; font-size: 16px; transition: border-color 0.2s; }
-        input:focus { border-color: #2563eb; outline: none; background-color: #f8fafc; }
-        .nav-bottom { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 15px 0; z-index: 1000; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        .nav-item.active { color: #2563eb; }
-        #lock-screen { position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        @media print { .no-print { display: none !important; } .page { display: block !important; } table { width: 100% !important; border-collapse: collapse; } th, td { border: 1px solid #000; padding: 8px; text-align: right; } }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Commander Elite Pro - Business Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f1f5f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .page { display: none; padding-bottom: 120px; }
+    .active-page { display: block; animation: fadeIn 0.15s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.25rem; border: 1px solid #e2e8f0; }
+    input, select { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px; width: 100%; font-size: 16px; transition: border-color 0.2s; }
+    input:focus { border-color: #2563eb; outline: none; background-color: #f8fafc; }
+    .nav-bottom { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 15px 0; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .nav-item.active { color: #2563eb; }
+    #lock-screen { position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
+    @media print { .no-print { display: none !important; } .page { display: block !important; } }
+  </style>
 </head>
 <body>
 
-    <div id="lock-screen">
-        <div class="text-center mb-8">
-            <i class="fa-solid fa-shield-halved text-5xl text-blue-500 mb-4"></i>
-            <h1 class="text-2xl font-black tracking-tighter uppercase">Commander Elite <span class="text-blue-500">PRO</span></h1>
-        </div>
-        <div class="w-72 bg-slate-800 p-6 rounded-3xl shadow-2xl">
-            <input type="password" id="pin-input" class="text-center text-3xl tracking-[0.5em] text-slate-900 mb-4 font-bold" maxlength="4" placeholder="****">
-            <button onclick="checkPin()" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-black uppercase transition-all shadow-lg active:scale-95">Sblocca Sistema</button>
-        </div>
+  <div id="lock-screen">
+    <div class="text-center mb-8">
+      <i class="fa-solid fa-shield-halved text-5xl text-blue-500 mb-4"></i>
+      <h1 class="text-2xl font-black tracking-tighter uppercase">Commander Elite <span class="text-blue-500">PRO</span></h1>
     </div>
+    <div class="w-72 bg-slate-800 p-6 rounded-3xl shadow-2xl">
+      <input type="password" id="pin-input" class="text-center text-3xl tracking-[0.5em] text-slate-900 mb-4 font-bold" maxlength="4" placeholder="****">
+      <button onclick="checkPin()" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-black uppercase transition-all shadow-lg active:scale-95">Sblocca Sistema</button>
+    </div>
+  </div>
 
-    <header class="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50 p-4 no-print flex justify-between items-center">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-black italic">C</div>
-            <h1 class="font-black text-slate-800 uppercase tracking-tight text-lg">Commander <span class="text-blue-600">Elite</span></h1>
+  <header class="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50 p-4 no-print flex justify-between items-center">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-black italic">C</div>
+      <h1 class="font-black text-slate-800 uppercase tracking-tight text-lg">Commander <span class="text-blue-600">Elite</span></h1>
+    </div>
+    <button onclick="location.reload()" class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><i class="fa-solid fa-lock"></i></button>
+  </header>
+
+  <main class="max-w-2xl mx-auto p-4">
+
+    <section id="page-oggi" class="page active-page">
+      <div class="card bg-gradient-to-r from-blue-600 to-blue-800 border-none">
+        <label class="text-[10px] font-black text-blue-100 uppercase mb-1 block">Data Operativa</label>
+        <input type="date" id="data-lavoro" class="bg-white/10 border-none text-white font-bold text-lg cursor-pointer" onchange="calcola()">
+      </div>
+
+      <div class="card">
+        <div class="flex items-center gap-2 mb-4 border-b pb-2">
+          <i class="fa-solid fa-receipt text-blue-600"></i>
+          <h3 class="font-black text-slate-700 uppercase text-xs">Incassi e Corrispettivi</h3>
         </div>
-        <button onclick="location.reload()" class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><i class="fa-solid fa-lock"></i></button>
-    </header>
-
-    <main class="max-w-2xl mx-auto p-4">
-
-        <section id="page-oggi" class="page active-page">
-            <div class="card bg-gradient-to-r from-blue-600 to-blue-800 border-none">
-                <label class="text-[10px] font-black text-blue-100 uppercase mb-1 block">Data Operativa</label>
-                <input type="date" id="data-lavoro" class="bg-white/10 border-none text-white font-bold text-lg cursor-pointer" onchange="calcola()">
+        <div class="space-y-4">
+          <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Totale Chiusura Z (Lordo)</label>
+            <input type="number" id="inp-tot" placeholder="0.00" class="text-3xl font-black text-slate-800" oninput="calcola()">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2">
+              <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Aliquota IVA Prevalente</label>
+              <select id="iva-v-base" onchange="calcola()" class="font-bold bg-slate-50">
+                <option value="10">IVA 10% (Ristorazione)</option>
+                <option value="22">IVA 22% (Alcolici/Servizi)</option>
+                <option value="5">IVA 5% (Novità/Altro)</option>
+                <option value="4">IVA 4% (Alimentari base)</option>
+              </select>
             </div>
-
-            <div class="card">
-                <div class="flex items-center gap-2 mb-4 border-b pb-2">
-                    <i class="fa-solid fa-receipt text-blue-600"></i>
-                    <h3 class="font-black text-slate-700 uppercase text-xs">Incassi e Corrispettivi</h3>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Totale Chiusura Z (Lordo)</label>
-                        <input type="number" id="inp-tot" placeholder="0.00" class="text-3xl font-black text-slate-800" oninput="calcola()">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="col-span-2">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Aliquota IVA Vendite</label>
-                            <select id="iva-v-base" onchange="calcola()" class="font-bold bg-slate-50">
-                                <option value="10">IVA 10% (Ristorazione)</option>
-                                <option value="22">IVA 22% (Bevande/Servizi)</option>
-                                <option value="4">IVA 4% (Alimentari)</option>
-                            </select>
-                        </div>
-                        <div><label class="text-[9px] font-bold text-slate-500 uppercase">Bancomat/POS</label>
-                        <input type="number" class="val-e" id="inp-pos" placeholder="0.00" oninput="calcola()"></div>
-                        <div><label class="text-[9px] font-bold text-slate-500 uppercase">Satispay</label>
-                        <input type="number" class="val-e" id="inp-sat" placeholder="0.00" oninput="calcola()"></div>
-                        <div><label class="text-[9px] font-bold text-slate-500 uppercase">Just Eat/Glovo</label>
-                        <input type="number" class="val-e" id="inp-del" placeholder="0.00" oninput="calcola()"></div>
-                        <div><label class="text-[9px] font-bold text-slate-500 uppercase">App/Web</label>
-                        <input type="number" class="val-e" id="inp-tap" placeholder="0.00" oninput="calcola()"></div>
-                    </div>
-                </div>
+            <div>
+              <label class="text-[9px] font-bold text-slate-500 uppercase">POS</label>
+              <input type="number" class="val-e" id="inp-pos" placeholder="0.00" oninput="calcola()">
             </div>
-
-            <div class="card border-l-4 border-red-500">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex items-center gap-2 text-red-600">
-                        <i class="fa-solid fa-truck-ramp-box"></i>
-                        <h3 class="font-black uppercase text-xs text-slate-700">Fornitori e Fatture</h3>
-                    </div>
-                    <button onclick="addFornitore()" class="bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black shadow-sm">+ AGGIUNGI SPESA</button>
-                </div>
-                <div id="fornitori-list" class="space-y-4"></div>
+            <div>
+              <label class="text-[9px] font-bold text-slate-500 uppercase">Satispay</label>
+              <input type="number" class="val-e" id="inp-sat" placeholder="0.00" oninput="calcola()">
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div class="card bg-slate-900 text-white shadow-2xl">
-                <div class="grid grid-cols-2 gap-6 text-xs mb-6">
-                    <div class="border-r border-slate-700">
-                        <p class="text-slate-500 font-bold uppercase mb-1">Tot. Elettronico</p>
-                        <p id="res-ele" class="text-xl font-bold">€ 0,00</p>
-                    </div>
-                    <div>
-                        <p class="text-orange-400 font-bold uppercase mb-1">IVA su Vendite</p>
-                        <p id="res-ivav" class="text-xl font-bold text-orange-400">€ 0,00</p>
-                    </div>
-                </div>
-                <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center border border-white/10">
-                    <span class="font-black text-green-400 uppercase tracking-wider">Netto Contanti</span>
-                    <span id="res-netto" class="text-3xl font-black text-green-400 tracking-tighter">€ 0,00</span>
-                </div>
-                <button onclick="salvaData()" class="w-full mt-6 bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-black uppercase text-sm tracking-widest shadow-lg shadow-blue-900/20 active:scale-95 transition-all">Archivia e Salva</button>
-            </div>
-        </section>
+      <div class="card border-l-4 border-red-500">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-2 text-red-600">
+            <i class="fa-solid fa-truck-ramp-box"></i>
+            <h3 class="font-black uppercase text-xs text-slate-700">Spese e Fornitori</h3>
+          </div>
+          <button onclick="addFornitore()" class="bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black">+ AGGIUNGI SPESA</button>
+        </div>
+        <div id="fornitori-list" class="space-y-4"></div>
+      </div>
 
-        <section id="page-riepilogo" class="page">
-            <h2 class="font-black text-2xl text-slate-800 mb-6 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-blue-600"></i> Analisi Business</h2>
-            
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="card border-t-4 border-blue-500"><p class="text-[10px] font-black text-slate-400 uppercase mb-1">Ultimi 7gg</p><p id="st-w" class="text-xl font-black text-slate-800">€ 0.00</p></div>
-                <div class="card border-t-4 border-blue-500"><p class="text-[10px] font-black text-slate-400 uppercase mb-1">Mese Corrente</p><p id="st-m" class="text-xl font-black text-slate-800">€ 0.00</p></div>
-                <div class="card col-span-2 bg-slate-800 text-white border-none flex justify-between items-center">
-                    <div><p class="text-[10px] font-black text-slate-400 uppercase mb-1">Saldo IVA Mese</p><p id="st-iva-saldo" class="text-2xl font-black text-orange-400">€ 0.00</p></div>
-                    <i class="fa-solid fa-piggy-bank text-4xl opacity-20"></i>
-                </div>
-            </div>
+      <div class="card bg-slate-900 text-white shadow-2xl">
+        <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center border border-white/10">
+          <span class="font-black text-green-400 uppercase tracking-wider">Netto Contanti in Cassa</span>
+          <span id="res-netto" class="text-3xl font-black text-green-400 tracking-tighter">€ 0,00</span>
+        </div>
+        <button onclick="salvaData(this)" class="w-full mt-6 bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-black uppercase text-sm tracking-widest transition-all">Archivia Giornata</button>
+      </div>
+    </section>
 
-            <div class="card">
-                <h3 class="font-black text-xs uppercase mb-4 text-slate-500 border-b pb-2">Ricerca Storica Periodo</h3>
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div class="space-y-1"><label class="text-[9px] font-bold px-1">DAL</label><input type="date" id="s-from"></div>
-                    <div class="space-y-1"><label class="text-[9px] font-bold px-1">AL</label><input type="date" id="s-to"></div>
-                </div>
-                <button onclick="cercaPeriodo()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-black uppercase text-xs transition-all">Elabora Analisi</button>
-                <div id="s-res" class="mt-6 hidden"></div>
-            </div>
-        </section>
+    <section id="page-riepilogo" class="page">
+      <h2 class="font-black text-2xl text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-tighter">
+        <i class="fa-solid fa-chart-pie text-blue-600"></i> Analisi Business
+      </h2>
+      <div class="card">
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <input type="date" id="s-from">
+          <input type="date" id="s-to">
+        </div>
+        <button onclick="cercaPeriodo()" class="w-full bg-slate-800 text-white py-4 rounded-xl font-black uppercase text-xs">Elabora Analisi Periodo</button>
+        <div id="s-res" class="mt-6 hidden"></div>
+      </div>
+    </section>
 
-        <section id="page-stampa" class="page">
-            <div class="card no-print">
-                <h3 class="font-black text-xs uppercase mb-4 text-slate-500 border-b pb-2">Configurazione Export Fiscale</h3>
-                <div class="grid grid-cols-2 gap-3 mb-6">
-                    <div class="space-y-1"><label class="text-[9px] font-bold px-1">DATA INIZIO</label><input type="date" id="p-from"></div>
-                    <div class="space-y-1"><label class="text-[9px] font-bold px-1">DATA FINE</label><input type="date" id="p-to"></div>
-                </div>
-                <button onclick="generaReportProfessionale()" class="w-full bg-blue-700 hover:bg-blue-600 text-white py-5 rounded-2xl font-black uppercase shadow-lg shadow-blue-200 transition-all">Genera Documentazione Ragioniere</button>
-            </div>
-            <div id="area-stampa"></div>
-        </section>
+    <section id="page-stampa" class="page">
+      <div class="card no-print">
+        <h3 class="font-black text-xs uppercase mb-4 text-slate-500 border-b pb-2">Export Fiscale</h3>
+        <div class="grid grid-cols-2 gap-3 mb-6">
+          <input type="date" id="p-from">
+          <input type="date" id="p-to">
+        </div>
+        <button onclick="generaReportProfessionale()" class="w-full bg-blue-700 text-white py-5 rounded-2xl font-black uppercase shadow-lg">Genera Report Ragioniere</button>
+      </div>
+      <div id="area-stampa"></div>
+    </section>
 
-    </main>
+    <section id="page-setup" class="page">
+      <h2 class="font-black text-2xl text-slate-800 mb-6 uppercase tracking-tighter text-red-600">
+        <i class="fa-solid fa-gears"></i> Setup e Manutenzione
+      </h2>
+      <div class="card border-red-200">
+        <h3 class="font-black text-xs uppercase mb-4 text-red-500">Pulizia Archivio (Liberazione Spazio)</h3>
+        <p class="text-xs text-slate-500 mb-4">Seleziona un intervallo di date per eliminare definitivamente i dati salvati e alleggerire la memoria.</p>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <input type="date" id="del-from">
+          <input type="date" id="del-to">
+        </div>
+        <button onclick="pulisciDati()" class="w-full bg-red-600 text-white py-4 rounded-xl font-black uppercase text-xs">Elimina Dati Selezionati</button>
+      </div>
+    </section>
 
-    <nav class="nav-bottom no-print">
-        <button onclick="showPage('oggi')" class="nav-item active" id="btn-oggi"><i class="fa-solid fa-cash-register text-2xl mb-1"></i>Cassa</button>
-        <button onclick="showPage('riepilogo')" class="nav-item" id="btn-riepilogo"><i class="fa-solid fa-chart-line text-2xl mb-1"></i>Analisi</button>
-        <button onclick="showPage('stampa')" class="nav-item" id="btn-stampa"><i class="fa-solid fa-file-invoice-dollar text-2xl mb-1"></i>Fisco</button>
-    </nav>
+  </main>
 
-    <script>
-        // Sistema di precisione decimale
-        const fix = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
-        
-        let db = JSON.parse(localStorage.getItem('ce_v3_top')) || [];
+  <nav class="nav-bottom no-print">
+    <button onclick="showPage('oggi')" class="nav-item active" id="btn-oggi"><i class="fa-solid fa-cash-register text-2xl mb-1"></i>Cassa</button>
+    <button onclick="showPage('riepilogo')" class="nav-item" id="btn-riepilogo"><i class="fa-solid fa-chart-line text-2xl mb-1"></i>Analisi</button>
+    <button onclick="showPage('stampa')" class="nav-item" id="btn-stampa"><i class="fa-solid fa-file-invoice-dollar text-2xl mb-1"></i>Fisco</button>
+    <button onclick="showPage('setup')" class="nav-item" id="btn-setup"><i class="fa-solid fa-screwdriver-wrench text-2xl mb-1"></i>Setup</button>
+  </nav>
 
-        function checkPin() {
-            if(document.getElementById('pin-input').value === "1234") {
-                document.getElementById('lock-screen').style.display = 'none';
-            }
-        }
+  <script>
+    const fix = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+    const euro = (n) => `€ ${fix(n).toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
 
-        function showPage(p) {
-            document.querySelectorAll('.page').forEach(el => el.classList.remove('active-page'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById('page-'+p).classList.add('active-page');
-            document.getElementById('btn-'+p).classList.add('active');
-            if(p === 'riepilogo') aggiornaStatsDash();
-        }
+    let db = JSON.parse(localStorage.getItem('ce_v3_top')) || [];
 
-        function addFornitore() {
-            const container = document.getElementById('fornitori-list');
-            const div = document.createElement('div');
-            div.className = "bg-slate-50 p-4 rounded-2xl border border-slate-200 forn-block animate-fadeIn";
-            div.innerHTML = `
-                <div class="flex gap-2 mb-3">
-                    <input type="text" placeholder="Ragione Sociale Fornitore..." class="flex-1 font-bold text-sm f-name bg-white border-slate-200">
-                    <button onclick="this.parentElement.parentElement.remove(); calcola()" class="w-10 h-10 bg-red-50 text-red-500 rounded-full">✕</button>
-                </div>
-                <div class="space-y-2 r-cont">
-                    <div class="grid grid-cols-3 gap-2 r-item">
-                        <input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()">
-                        <select class="r-iva !p-2 text-[10px] font-bold" onchange="calcola()">
-                            <option value="22">IVA 22%</option>
-                            <option value="10" selected>IVA 10%</option>
-                            <option value="4">IVA 4%</option>
-                            <option value="0">Esente</option>
-                        </select>
-                        <select class="r-tipo !p-2 text-[10px] font-bold bg-blue-50 border-blue-100" onchange="calcola()">
-                            <option value="L">LORDO</option>
-                            <option value="N">NETTO +</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-3 flex justify-between items-center border-t border-slate-200 pt-3">
-                    <button onclick="addRowIVA(this)" class="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-tighter">+ Aggiungi Riga IVA</button>
-                    <label class="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase">
-                        Contanti? <input type="checkbox" class="f-cash w-5 h-5 accent-red-600" onchange="calcola()">
-                    </label>
-                </div>
-            `;
-            container.appendChild(div);
-        }
+    function checkPin() {
+      if (document.getElementById('pin-input').value === "1234") {
+        document.getElementById('lock-screen').style.display = 'none';
+      }
+    }
 
-        function addRowIVA(btn) {
-            const row = document.createElement('div');
-            row.className = "grid grid-cols-3 gap-2 r-item mt-2";
-            row.innerHTML = `<input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()">
-                <select class="r-iva !p-2 text-[10px] font-bold" onchange="calcola()"><option value="22">22%</option><option value="10" selected>10%</option><option value="4">4%</option></select>
-                <button onclick="this.parentElement.remove(); calcola()" class="text-[8px] text-red-500 font-bold uppercase border border-red-200 rounded">Rimuovi</button>`;
-            btn.parentElement.previousElementSibling.appendChild(row);
-        }
+    function showPage(p) {
+      document.querySelectorAll('.page').forEach(el => el.classList.remove('active-page'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.getElementById('page-' + p).classList.add('active-page');
+      document.getElementById('btn-' + p).classList.add('active');
+    }
 
-        function calcola() {
-            const lordoZ = fix(parseFloat(document.getElementById('inp-tot').value) || 0);
-            const ivaVperc = parseFloat(document.getElementById('iva-v-base').value);
-            
-            let totEle = 0;
-            document.querySelectorAll('.val-e').forEach(i => totEle += fix(parseFloat(i.value) || 0));
+    function addFornitore() {
+      const container = document.getElementById('fornitori-list');
+      const div = document.createElement('div');
+      div.className = "bg-slate-50 p-4 rounded-2xl border border-slate-200 forn-block";
+      div.innerHTML = `
+        <div class="flex gap-2 mb-3">
+          <input type="text" placeholder="Nome Fornitore" class="flex-1 font-bold text-sm f-name">
+          <button type="button" onclick="this.parentElement.parentElement.remove(); calcola()" class="w-10 h-10 bg-red-50 text-red-500 rounded-full">✕</button>
+        </div>
+        <div class="space-y-2 r-cont">
+          <div class="grid grid-cols-3 gap-2 r-item">
+            <input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()">
+            <select class="r-iva !p-2 text-[10px] font-bold" onchange="calcola()">
+              <option value="22">IVA 22%</option>
+              <option value="10" selected>IVA 10%</option>
+              <option value="5">IVA 5%</option>
+              <option value="4">IVA 4%</option>
+              <option value="0">0%</option>
+            </select>
+            <select class="r-tipo !p-2 text-[10px] font-bold bg-blue-50" onchange="calcola()">
+              <option value="L">LORDO</option>
+              <option value="N">NETTO+</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-3 flex justify-between items-center border-t pt-3">
+          <button type="button" onclick="addRowIVA(this)" class="text-[10px] font-black text-blue-600 uppercase">+ Riga IVA</button>
+          <label class="flex items-center gap-2 text-[10px] font-black text-slate-500">
+            CASH? <input type="checkbox" class="f-cash w-5 h-5 accent-red-600" onchange="calcola()">
+          </label>
+        </div>
+      `;
+      container.appendChild(div);
+    }
 
-            const impV = fix(lordoZ / (1 + (ivaVperc / 100)));
-            const ivaV = fix(lordoZ - impV);
+    function addRowIVA(btn) {
+      const row = document.createElement('div');
+      row.className = "grid grid-cols-3 gap-2 r-item mt-2";
+      row.innerHTML = `
+        <input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()">
+        <select class="r-iva !p-2 text-[10px] font-bold" onchange="calcola()">
+          <option value="22">22%</option><option value="10" selected>10%</option>
+          <option value="5">5%</option><option value="4">4%</option><option value="0">0%</option>
+        </select>
+        <button type="button" onclick="this.parentElement.remove(); calcola()" class="text-[8px] text-red-500 font-bold uppercase border rounded">Elimina</button>
+      `;
+      btn.parentElement.previousElementSibling.appendChild(row);
+    }
 
-            let uscCash = 0;
-            let totIvaA = 0;
-            let detFornitori = [];
+    function calcola() {
+      const lordoZ = fix(parseFloat(document.getElementById('inp-tot').value) || 0);
+      const ivaVperc = parseFloat(document.getElementById('iva-v-base').value || "10");
+      let totEle = 0;
+      document.querySelectorAll('.val-e').forEach(i => totEle += fix(parseFloat(i.value) || 0));
 
-            document.querySelectorAll('.forn-block').forEach(b => {
-                let fLordo = 0;
-                let fIva = 0;
-                b.querySelectorAll('.r-item').forEach(r => {
-                    const v = fix(parseFloat(r.querySelector('.r-val').value) || 0);
-                    const i = parseFloat(r.querySelector('.r-iva').value) || 0;
-                    const t = r.querySelector('.r-tipo')?.value || 'L';
-                    if(t === 'L') {
-                        fLordo += v;
-                        fIva += fix(v - (v / (1 + (i / 100))));
-                    } else {
-                        const r_iva = fix(v * (i / 100));
-                        fIva += r_iva;
-                        fLordo += (v + r_iva);
-                    }
-                });
-                totIvaA += fix(fIva);
-                if(b.querySelector('.f-cash').checked) uscCash += fix(fLordo);
-                detFornitori.push({ 
-                    nome: b.querySelector('.f-name').value || "Senza Nome", 
-                    lordo: fix(fLordo), 
-                    iva: fix(fIva), 
-                    cash: b.querySelector('.f-cash').checked 
-                });
-            });
+      const impV = fix(lordoZ / (1 + (ivaVperc / 100)));
+      const ivaV = fix(lordoZ - impV);
 
-            const netto = fix((lordoZ - totEle) - uscCash);
+      let uscCash = 0;
+      let totIvaA = 0;
+      let detFornitori = [];
 
-            document.getElementById('res-ele').innerText = `€ ${totEle.toLocaleString('it-IT', {minimumFractionDigits:2})}`;
-            document.getElementById('res-ivav').innerText = `€ ${ivaV.toLocaleString('it-IT', {minimumFractionDigits:2})}`;
-            document.getElementById('res-netto').innerText = `€ ${netto.toLocaleString('it-IT', {minimumFractionDigits:2})}`;
+      document.querySelectorAll('.forn-block').forEach(b => {
+        let fLordo = 0; let fIva = 0; const righe = [];
+        b.querySelectorAll('.r-item').forEach(r => {
+          const v = fix(parseFloat(r.querySelector('.r-val')?.value) || 0);
+          const i = parseFloat(r.querySelector('.r-iva')?.value) || 0;
+          const t = r.querySelector('.r-tipo')?.value || 'L';
+          if (v > 0) {
+             let rLordo, rIva;
+             if (t === 'L') { rLordo = v; rIva = fix(v - (v / (1 + (i / 100)))); }
+             else { rIva = fix(v * (i / 100)); rLordo = v + rIva; }
+             fLordo += rLordo; fIva += rIva;
+             righe.push({ valore: v, ivaPerc: i, tipo: t });
+          }
+        });
+        const isCash = !!b.querySelector('.f-cash')?.checked;
+        if (isCash) uscCash += fix(fLordo);
+        totIvaA += fix(fIva);
+        detFornitori.push({ nome: b.querySelector('.f-name')?.value || "Fornitore", lordo: fix(fLordo), iva: fix(fIva), cash: isCash, righe });
+      });
 
-            return { lordoZ, ivaV, impV, totEle, uscCash, totIvaA, detFornitori, 
-                     pos: fix(parseFloat(document.getElementById('inp-pos').value)||0),
-                     sat: fix(parseFloat(document.getElementById('inp-sat').value)||0),
-                     del: fix(parseFloat(document.getElementById('inp-del').value)||0),
-                     tap: fix(parseFloat(document.getElementById('inp-tap').value)||0) 
-                   };
-        }
+      const netto = fix((lordoZ - totEle) - uscCash);
+      document.getElementById('res-netto').innerText = euro(netto);
 
-        function salvaData() {
-            const data = document.getElementById('data-lavoro').value;
-            if(!data) return alert("⚠️ Seleziona la data prima di salvare!");
-            const dati = calcola();
-            if(dati.lordoZ === 0 && dati.detFornitori.length === 0) return alert("⚠️ Non ci sono dati da salvare.");
+      return { lordoZ, ivaV, impV, totEle, uscCash, totIvaA, detFornitori };
+    }
 
-            db = db.filter(r => r.data !== data);
-            db.push({ data, ...dati });
-            localStorage.setItem('ce_v3_top', JSON.stringify(db));
-            
-            const btn = event.target;
-            btn.innerText = "✅ GIORNATA SALVATA";
-            btn.classList.replace('bg-blue-600', 'bg-green-600');
-            setTimeout(() => {
-                btn.innerText = "ARCHIVIA E SALVA";
-                btn.classList.replace('bg-green-600', 'bg-blue-600');
-            }, 2000);
-        }
+    function salvaData(btn) {
+      const data = document.getElementById('data-lavoro').value;
+      if (!data) return alert("Scegli la data!");
+      const dati = calcola();
+      db = db.filter(r => r.data !== data);
+      db.push({ data, ...dati });
+      localStorage.setItem('ce_v3_top', JSON.stringify(db));
+      btn.innerText = "✅ SALVATO";
+      setTimeout(() => btn.innerText = "ARCHIVIA GIORNATA", 2000);
+    }
 
-        function aggiornaStatsDash() {
-            const now = new Date();
-            const m = now.toISOString().substring(0, 7);
-            let tW=0, tM=0, tIV=0, tIA=0;
-            const weekAgo = new Date(); weekAgo.setDate(now.getDate() - 7);
+    function cercaPeriodo() {
+      const f = document.getElementById('s-from').value;
+      const t = document.getElementById('s-to').value;
+      if (!f || !t) return alert("Scegli le date!");
+      const fil = db.filter(r => r.data >= f && r.data <= t);
+      
+      let entrate = 0, uscite = 0, ivaD = 0, ivaC = 0;
+      fil.forEach(r => {
+        entrate += r.lordoZ;
+        uscite += r.uscCash;
+        ivaD += r.ivaV;
+        ivaC += r.totIvaA;
+      });
 
-            db.forEach(r => {
-                const rd = new Date(r.data);
-                if(rd >= weekAgo) tW += r.lordoZ;
-                if(r.data.startsWith(m)) {
-                    tM += r.lordoZ;
-                    tIV += r.ivaV;
-                    tIA += r.totIvaA;
-                }
-            });
-            document.getElementById('st-w').innerText = `€ ${tW.toLocaleString('it-IT', {minimumFractionDigits:2})}`;
-            document.getElementById('st-m').innerText = `€ ${tM.toLocaleString('it-IT', {minimumFractionDigits:2})}`;
-            document.getElementById('st-iva-saldo').innerText = `€ ${fix(tIV - tIA).toLocaleString('it-IT', {minimumFractionDigits:2})}`;
-        }
+      const res = document.getElementById('s-res');
+      res.classList.remove('hidden');
+      res.innerHTML = `
+        <div class="bg-slate-900 text-white p-5 rounded-3xl space-y-4">
+          <div class="flex justify-between border-b border-white/10 pb-2">
+            <span class="text-slate-400">ENTRATE (Lordo Z)</span>
+            <span class="font-black text-green-400 text-xl">${euro(entrate)}</span>
+          </div>
+          <div class="flex justify-between border-b border-white/10 pb-2">
+            <span class="text-slate-400">USCITE (Cash Fornitori)</span>
+            <span class="font-black text-red-400 text-xl">${euro(uscite)}</span>
+          </div>
+          <div class="flex justify-between font-black text-orange-400 pt-2">
+            <span>IVA DA VERSARE (SALDO)</span>
+            <span class="text-2xl">${euro(ivaD - ivaC)}</span>
+          </div>
+          <p class="text-[10px] text-slate-500 text-center uppercase tracking-widest">Analisi basata su ${fil.length} giorni salvati</p>
+        </div>
+      `;
+    }
 
-        function cercaPeriodo() {
-            const f = document.getElementById('s-from').value;
-            const t = document.getElementById('s-to').value;
-            if(!f || !t) return alert("Scegli le date!");
+    function pulisciDati() {
+      const f = document.getElementById('del-from').value;
+      const t = document.getElementById('del-to').value;
+      if (!f || !t) return alert("Seleziona il periodo da cancellare!");
+      if (confirm(`Sei sicuro di voler eliminare i dati dal ${f} al ${t}? L'operazione è irreversibile.`)) {
+        db = db.filter(r => !(r.data >= f && r.data <= t));
+        localStorage.setItem('ce_v3_top', JSON.stringify(db));
+        alert("Dati eliminati con successo!");
+      }
+    }
 
-            const fil = db.filter(r => r.data >= f && r.data <= t);
-            let totL=0, totE=0, totC=0, tIvaD=0, tIvaC=0;
-            fil.forEach(r => { 
-                totL += r.lordoZ; totE += r.totEle; totC += r.uscCash; 
-                tIvaD += r.ivaV; tIvaC += r.totIvaA;
-            });
-            
-            const res = document.getElementById('s-res');
-            res.classList.remove('hidden');
-            res.innerHTML = `
-                <div class="p-5 bg-slate-900 text-white rounded-3xl space-y-3 shadow-xl">
-                    <h4 class="text-center font-black text-blue-400 text-xs uppercase mb-2">Risultati Intervallo</h4>
-                    <div class="flex justify-between border-b border-white/10 pb-2"><span>Totale Lordo Z:</span> <strong class="text-lg">€ ${totL.toLocaleString('it-IT')}</strong></div>
-                    <div class="flex justify-between text-blue-300"><span>Tot. Pagamenti POS:</span> <span>€ ${totE.toLocaleString('it-IT')}</span></div>
-                    <div class="flex justify-between text-red-400"><span>Tot. Uscite Contanti:</span> <span>€ ${totC.toLocaleString('it-IT')}</span></div>
-                    <div class="pt-3 flex justify-between font-black text-orange-400 border-t border-white/20">
-                        <span>IVA DA VERSARE:</span> <span>€ ${fix(tIvaD - tIvaC).toLocaleString('it-IT')}</span>
-                    </div>
-                </div>`;
-        }
+    function generaReportProfessionale() {
+      const f = document.getElementById('p-from').value;
+      const t = document.getElementById('p-to').value;
+      if (!f || !t) return alert("Seleziona periodo!");
+      const dataFil = db.filter(r => r.data >= f && r.data <= t).sort((a,b)=>a.data.localeCompare(b.data));
+      
+      let sZ = 0, sIV = 0, sIA = 0;
+      dataFil.forEach(r => { sZ += r.lordoZ; sIV += r.ivaV; sIA += r.totIvaA; });
 
-        function generaReportProfessionale() {
-            const f = document.getElementById('p-from').value;
-            const t = document.getElementById('p-to').value;
-            if(!f || !t) return alert("Seleziona il periodo fiscale!");
-            
-            let dataFil = db.filter(r => r.data >= f && r.data <= t).sort((a,b) => a.data.localeCompare(b.data));
-            
-            const mesi = ["GENNAIO","FEBBRAIO","MARZO","APRILE","MAGGIO","GIUGNO","LUGLIO","AGOSTO","SETTEMBRE","OTTOBRE","NOVEMBRE","DICEMBRE"];
-            let titolo = `REPORT FISCALE DAL ${f} AL ${t}`;
-            if(f.substring(0,7) === t.substring(0,7) && f.endsWith("-01")) {
-                titolo = `REGISTRO CORRISPETTIVI E ACQUISTI - ${mesi[new Date(f).getMonth()]} ${new Date(f).getFullYear()}`;
-            }
+      let h = `<div class="bg-white p-6 text-slate-900">
+        <h1 class="font-black text-xl uppercase border-b-2 border-black mb-4 text-center">Riepilogo Fiscale Periodo</h1>
+        <table class="w-full text-xs mb-6 border-collapse">
+          <thead><tr class="bg-slate-100"><th class="border p-2">Data</th><th class="border p-2 text-right">Lordo Z</th><th class="border p-2 text-right">IVA Vend.</th><th class="border p-2 text-right">IVA Acq.</th></tr></thead>
+          <tbody>`;
+      dataFil.forEach(r => {
+        h += `<tr><td class="border p-2">${r.data}</td><td class="border p-2 text-right">${euro(r.lordoZ)}</td><td class="border p-2 text-right">${euro(r.ivaV)}</td><td class="border p-2 text-right">${euro(r.totIvaA)}</td></tr>`;
+      });
+      h += `</tbody></table>
+        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-900">
+          <div class="flex justify-between font-bold"><span>TOTALE LORDO:</span> <span>${euro(sZ)}</span></div>
+          <div class="flex justify-between font-bold text-red-600"><span>TOTALE IVA DEBITO:</span> <span>${euro(sIV)}</span></div>
+          <div class="flex justify-between font-bold text-green-600"><span>TOTALE IVA CREDITO:</span> <span>${euro(sIA)}</span></div>
+          <div class="flex justify-between font-black text-lg border-t-2 border-black mt-2 pt-2 uppercase"><span>IVA Da Versare:</span> <span>${euro(sIV - sIA)}</span></div>
+        </div>
+        <button onclick="window.print()" class="no-print w-full bg-black text-white py-4 mt-6 rounded-xl font-bold">STAMPA PDF</button>
+      </div>`;
+      document.getElementById('area-stampa').innerHTML = h;
+    }
 
-            let h = `<div class="bg-white p-8 text-slate-900 printable-content">
-                <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-8">
-                    <div>
-                        <h1 class="font-black text-3xl italic tracking-tighter uppercase">Commander <span class="text-blue-600">Elite</span></h1>
-                        <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Sistemi di Controllo Fiscale v3.0</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-black text-sm uppercase">${titolo}</p>
-                        <p class="text-[10px] text-slate-400 uppercase">Documento generato il: ${new Date().toLocaleDateString()}</p>
-                    </div>
-                </div>`;
-
-            // Tabella Vendite
-            h += `<div class="mb-10">
-                <h3 class="bg-slate-900 text-white text-[10px] px-3 py-1 font-black uppercase mb-3 inline-block">1. Registro Corrispettivi</h3>
-                <table class="w-full text-[11px]">
-                    <thead class="bg-slate-100"><tr><th class="border p-2">Data</th><th class="border p-2">Lordo Z</th><th class="border p-2">Scorporo IVA</th><th class="border p-2">Elettronico</th><th class="border p-2">Netto Cash</th></tr></thead>
-                    <tbody>`;
-            let sZ=0, sIV=0, sE=0;
-            dataFil.forEach(r => {
-                sZ += r.lordoZ; sIV += r.ivaV; sE += r.totEle;
-                h += `<tr><td class="border p-2 font-bold">${r.data}</td><td class="border p-2 font-black">€${r.lordoZ.toFixed(2)}</td><td class="border p-2 text-red-600">€${r.ivaV.toFixed(2)}</td><td class="border p-2">€${r.totEle.toFixed(2)}</td><td class="border p-2 font-bold">€${(r.lordoZ - r.totEle).toFixed(2)}</td></tr>`;
-            });
-            h += `<tr class="bg-slate-50 font-black italic"><td class="border p-2 uppercase">TOTALI PERIODI</td><td class="border p-2">€${sZ.toFixed(2)}</td><td class="border p-2 text-red-600">€${sIV.toFixed(2)}</td><td class="border p-2">€${sE.toFixed(2)}</td><td class="border p-2">€${(sZ-sE).toFixed(2)}</td></tr></tbody></table></div>`;
-
-            // Tabella Acquisti
-            h += `<div class="mb-10">
-                <h3 class="bg-slate-900 text-white text-[10px] px-3 py-1 font-black uppercase mb-3 inline-block">2. Registro Acquisti e Fornitori</h3>
-                <table class="w-full text-[11px]">
-                    <thead class="bg-slate-100"><tr><th class="border p-2">Fornitore</th><th class="border p-2">Data Doc.</th><th class="border p-2 text-right">IVA Credito</th><th class="border p-2 text-right">Totale Fattura</th><th class="border p-2">Metodo</th></tr></thead>
-                    <tbody>`;
-            let sIA=0, sAL=0;
-            dataFil.forEach(r => {
-                r.detFornitori.forEach(f => {
-                    sIA += f.iva; sAL += f.lordo;
-                    h += `<tr><td class="border p-2 font-bold">${f.nome}</td><td class="border p-2 text-center">${r.data}</td><td class="border p-2 text-green-600 text-right">€${f.iva.toFixed(2)}</td><td class="border p-2 text-right">€${f.lordo.toFixed(2)}</td><td class="border p-2 text-center text-[9px] font-bold">${f.cash ? 'CONTANTI' : 'TRACCIABILE'}</td></tr>`;
-                });
-            });
-            h += `<tr class="bg-slate-50 font-black italic"><td colspan="2" class="border p-2 uppercase">TOTALE IVA DETRAIBILE</td><td class="border p-2 text-green-600 text-right">€${sIA.toFixed(2)}</td><td class="border p-2 text-right">€${sAL.toFixed(2)}</td><td class="border p-2"></td></tr></tbody></table></div>`;
-
-            // Sintesi Finale
-            h += `<div class="grid grid-cols-2 gap-8 items-center border-t-2 border-slate-900 pt-8 mt-12">
-                    <div>
-                        <p class="text-[9px] text-slate-500 uppercase font-black mb-1">Dichiarazione Liquidazione IVA</p>
-                        <p class="text-xs italic text-slate-600">Si dichiara che i dati sopra esposti corrispondono alle chiusure dei registratori di cassa e ai documenti di spesa archiviati.</p>
-                    </div>
-                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                        <div class="flex justify-between text-xs mb-1"><span>IVA a Debito (Vendite):</span> <span class="font-bold">+ €${sIV.toFixed(2)}</span></div>
-                        <div class="flex justify-between text-xs mb-4"><span>IVA a Credito (Acquisti):</span> <span class="font-bold">- €${sIA.toFixed(2)}</span></div>
-                        <div class="flex justify-between font-black text-xl border-t border-slate-300 pt-3">
-                            <span class="text-slate-800 tracking-tighter uppercase text-sm">SALDO IVA:</span>
-                            <span class="text-blue-700 font-black">€${fix(sIV - sIA).toFixed(2)}</span>
-                        </div>
-                    </div>
-                  </div>
-                  <button onclick="window.print()" class="no-print w-full bg-slate-900 text-white py-5 mt-12 rounded-2xl font-black uppercase text-sm tracking-widest shadow-xl">Invia alla Stampa / PDF</button>
-            </div>`;
-            document.getElementById('area-stampa').innerHTML = h;
-        }
-
-        // Imposta data odierna come default
-        document.getElementById('data-lavoro').valueAsDate = new Date();
-    </script>
+    document.getElementById('data-lavoro').valueAsDate = new Date();
+  </script>
 </body>
 </html>
