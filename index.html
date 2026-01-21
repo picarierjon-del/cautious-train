@@ -1,1340 +1,275 @@
 <!DOCTYPE html>
 <html lang="it" class="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>OMNIA COMMANDER — NAVY SEAL EDITION</title>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color:#020617; color:#f8fafc; }
-    .glass-card { background: rgba(15,23,42,0.6); border:1px solid rgba(51,65,85,0.30); border-radius:20px; }
-    .input-pro { background:#0f172a; border:1px solid #1e293b; color:white; border-radius:12px; padding:12px; width:100%; outline:none; text-align:center; font-weight:900; }
-    .tab-btn { flex:1; padding:10px; font-size:10px; font-weight:900; border-radius:12px; color:#64748b; }
-    .tab-btn.active { background:#3b82f6; color:white; box-shadow:0 0 15px rgba(59,130,246,0.30); }
-    .hidden { display:none !important; }
-    .mono { font-family:'JetBrains Mono', monospace; }
-    .mini-btn { background:#0f172a; border:1px solid #1e293b; padding:10px 12px; border-radius:14px; font-weight:900; font-size:10px; }
-    .badge { font-size:10px; font-weight:900; padding:6px 10px; border-radius:999px; border:1px solid rgba(148,163,184,0.25); background: rgba(2,6,23,0.6); }
-    .badge.ok { color:#22c55e; border-color: rgba(34,197,94,0.25); }
-    .badge.warn { color:#f59e0b; border-color: rgba(245,158,11,0.25); }
-    .badge.crit { color:#ef4444; border-color: rgba(239,68,68,0.25); }
-    .soft { color:#94a3b8; }
-    .h-mini { height: 14px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SmartLog Enterprise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .card-pro { background: #0f172a; border: 1px solid #1e293b; border-radius: 24px; }
+        .input-pro { background: #020617; border: 1px solid #334155; color: white; border-radius: 12px; padding: 10px; outline: none; transition: all 0.2s; font-weight: 600; }
+        .input-pro:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .btn-action { transition: all 0.2s; active: scale(0.95); }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
 </head>
+<body class="pb-24">
 
-<body class="pb-56">
-
-  <!-- AUTH -->
-  <div id="authScreen" class="fixed inset-0 z-[9999] bg-[#020617] flex items-center justify-center p-6">
-    <div class="text-center space-y-6 p-10 glass-card w-full max-w-sm border-t-4 border-blue-600">
-      <h1 class="text-3xl font-black italic">OMNIA<span class="text-blue-500">COMMANDER</span></h1>
-      <p class="text-[10px] soft font-black uppercase tracking-wider">Navy Seal Edition • Offline</p>
-      <input type="password" id="pinInput" class="input-pro text-3xl tracking-[0.5em]" placeholder="****" maxlength="4" inputmode="numeric">
-      <button id="btnUnlock" class="w-full bg-blue-600 py-4 rounded-xl font-black uppercase">Sblocca Sistemi</button>
-      <p class="text-[10px] soft">Tip: premi Invio per sbloccare</p>
-    </div>
-  </div>
-
-  <div id="mainUI" class="hidden">
-
-    <!-- TOP NAV -->
-    <nav class="sticky top-0 z-50 bg-[#020617]/95 border-b border-slate-800 p-4 backdrop-blur-md">
-      <div class="flex justify-between items-center">
+    <nav class="sticky top-0 z-50 bg-[#020617]/90 backdrop-blur-xl px-6 py-4 border-b border-slate-800 flex justify-between items-center">
         <div>
-          <p id="topDate" class="text-[10px] font-black text-blue-500 uppercase"></p>
-          <h1 class="text-lg font-black italic uppercase">Dashboard <span class="text-blue-500">Diamond</span></h1>
+            <h1 class="text-blue-500 font-extrabold text-xl tracking-tighter italic">LOG<span class="text-white">PRO</span></h1>
+            <div id="dateBadge" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5"></div>
         </div>
-
-        <div class="flex gap-2 items-center">
-          <button id="btnPdfDay" class="mini-btn text-blue-400">PDF DAY</button>
-          <button id="btnPdfWeek" class="mini-btn text-blue-400">PDF 7GG</button>
-          <button id="btnBackupFile" class="mini-btn text-slate-200">BACKUP</button>
-          <label class="mini-btn text-slate-200 cursor-pointer">
-            RESTORE
-            <input id="restoreFile" type="file" accept="application/json" class="hidden" />
-          </label>
+        <div class="flex gap-2">
+            <button onclick="exportMonthlyPDF()" class="btn-action bg-white text-black text-[10px] font-black px-4 py-2 rounded-full uppercase">Report PDF</button>
+            <button onclick="fullReset()" class="btn-action bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] font-black px-3 py-2 rounded-full uppercase">Reset</button>
         </div>
-      </div>
-
-      <div class="flex flex-wrap gap-2 mt-3">
-        <span id="badgeFood" class="badge">Food: —</span>
-        <span id="badgeDigital" class="badge">Digital: —</span>
-        <span id="badgeCash" class="badge">Cash: —</span>
-        <span id="badgeDrawer" class="badge">Drawer: —</span>
-        <span id="badgeAuto" class="badge ok">Autosave: ON</span>
-      </div>
     </nav>
 
-    <!-- KPIs -->
-    <div class="p-4 grid grid-cols-2 gap-3">
+    <div class="max-w-md mx-auto px-5 mt-6 space-y-6">
 
-      <div class="glass-card p-4 col-span-2 flex justify-between bg-gradient-to-r from-blue-900/20 to-transparent">
-        <div>
-          <p class="text-[8px] font-black text-slate-500 uppercase">Cash Reale Disponibile</p>
-          <h3 id="netCashDisplay" class="text-2xl font-black text-green-400 mono">€ 0.00</h3>
-          <p id="splitInfo" class="text-[9px] font-black soft italic mt-1">—</p>
-        </div>
-        <div class="text-right">
-          <p class="text-[8px] font-black text-red-500 uppercase">Tasse Accantonate</p>
-          <h3 id="taxReserve" class="text-lg font-black text-red-500 mono">€ 0</h3>
-        </div>
-      </div>
-
-      <div class="glass-card p-4">
-        <p class="text-[8px] font-black text-slate-500 uppercase">Target Copertura (mese)</p>
-        <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2">
-          <div id="progressCosts" class="bg-blue-500 h-full transition-all" style="width:0%"></div>
-        </div>
-        <p id="percCosts" class="text-[10px] font-black mt-1 text-blue-400 italic">0%</p>
-      </div>
-
-      <div class="glass-card p-4 text-center">
-        <p class="text-[8px] font-black text-slate-500 uppercase">Scontrino Medio</p>
-        <h3 id="avgTicket" class="text-lg font-black mono text-white">€ 0.00</h3>
-      </div>
-    </div>
-
-    <!-- TABS -->
-    <div class="flex gap-1 p-1 bg-slate-900 mx-4 rounded-xl border border-slate-800">
-      <button data-tab="day" id="t1" class="tab-btn active uppercase">Operativo</button>
-      <button data-tab="bank" id="t2" class="tab-btn uppercase">Banca</button>
-      <button data-tab="stats" id="t3" class="tab-btn uppercase">Analisi</button>
-      <button data-tab="config" id="t4" class="tab-btn uppercase">Setup</button>
-    </div>
-
-    <!-- DAY -->
-    <div id="sec-day" class="p-4 space-y-4">
-
-      <div class="flex gap-2">
-        <button id="btnPrevDay" class="bg-slate-800 p-3 rounded-xl text-blue-500">◀</button>
-        <input type="date" id="datePicker" class="input-pro text-xs">
-        <button id="btnNextDay" class="bg-slate-800 p-3 rounded-xl text-blue-500">▶</button>
-      </div>
-
-      <div class="glass-card p-6 text-center">
-        <span class="text-[10px] font-black text-slate-500 uppercase">Totale Lordo Z (Scontrini)</span>
-        <input type="number" id="total_sales" class="bg-transparent text-5xl font-black text-white w-full text-center outline-none mt-2" placeholder="0.00" inputmode="decimal">
-
-        <div class="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-800">
-          <div>
-            <span class="text-[8px] text-slate-500 font-black uppercase italic">Clienti/Coperti</span>
-            <input type="number" id="n_clients" class="bg-slate-800 w-full text-center rounded-xl p-2 font-black mt-1" inputmode="numeric">
-          </div>
-          <div>
-            <span class="text-[8px] text-orange-500 font-black uppercase italic">Acconti/Caparre</span>
-            <input type="number" id="acconti" class="bg-orange-900/20 w-full text-center rounded-xl p-2 font-black mt-1 border border-orange-900/30" inputmode="decimal">
-          </div>
-        </div>
-      </div>
-
-      <!-- CASH DRAWER -->
-      <div class="glass-card p-4">
-        <div class="flex items-center justify-between mb-3">
-          <h4 class="text-[10px] font-black text-slate-500 uppercase">Cassa NAVY (Drawer Control)</h4>
-          <span class="text-[10px] font-black soft">Over/Short</span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-3">
-            <p class="text-[9px] font-black text-slate-500 uppercase">Cassa Iniziale €</p>
-            <input id="drawer_start" type="number" class="input-pro mt-2 text-xs" placeholder="0.00" inputmode="decimal">
-          </div>
-          <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-3">
-            <p class="text-[9px] font-black text-slate-500 uppercase">Cassa Finale €</p>
-            <input id="drawer_end" type="number" class="input-pro mt-2 text-xs" placeholder="0.00" inputmode="decimal">
-          </div>
-
-          <div class="col-span-2 bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
-            <div>
-              <p class="text-[9px] font-black text-slate-500 uppercase">Differenza (Finale - Atteso)</p>
-              <p id="drawer_diff" class="text-xl font-black mono">€ 0.00</p>
+        <div class="flex items-center justify-between bg-slate-900/50 p-2 rounded-2xl border border-slate-800">
+            <button onclick="changeDay(-1)" class="p-3 hover:bg-slate-800 rounded-xl">◀</button>
+            <div class="text-center">
+                <span id="displayDate" class="font-bold text-sm">Oggi</span>
             </div>
-            <div class="text-right">
-              <p class="text-[9px] font-black text-slate-500 uppercase">Atteso in Cassa</p>
-              <p id="drawer_expected" class="text-xl font-black mono text-blue-300">€ 0.00</p>
+            <button onclick="changeDay(1)" class="p-3 hover:bg-slate-800 rounded-xl">▶</button>
+        </div>
+
+        <div id="statusHero" class="card-pro p-5 border-l-4 border-l-blue-500 transition-all">
+            <p id="statusTag" class="text-[9px] font-black text-slate-500 uppercase mb-1">Analisi Intelligenza Fiscale</p>
+            <h2 id="statusMsg" class="text-base font-bold leading-tight">In attesa di dati...</h2>
+        </div>
+
+        <div class="card-pro p-6 shadow-2xl bg-gradient-to-br from-slate-900 to-slate-800">
+            <label class="block text-[10px] font-black text-blue-400 uppercase mb-3 tracking-widest text-center">Corrispettivo Totale del Giorno</label>
+            <input type="number" id="total_sales" class="w-full bg-transparent text-center text-5xl font-black text-white outline-none placeholder-slate-700" placeholder="0.00" step="0.01">
+        </div>
+
+        <div class="card-pro p-6">
+            <h3 class="text-[10px] font-black text-slate-500 uppercase mb-4 tracking-widest">Metodi di Pagamento</h3>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">BANCOMAT/POS</label>
+                    <input type="number" id="pos" class="input-pro w-full" placeholder="0.00">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">SUMUP</label>
+                    <input type="number" id="sumup" class="input-pro w-full" placeholder="0.00">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">SATISPAY</label>
+                    <input type="number" id="satispay" class="input-pro w-full" placeholder="0.00">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">JUST EAT</label>
+                    <input type="number" id="justeat" class="input-pro w-full" placeholder="0.00">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">GLOVO/DELIV.</label>
+                    <input type="number" id="delivery" class="input-pro w-full" placeholder="0.00">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">ALTRO/APP</label>
+                    <input type="number" id="altro" class="input-pro w-full" placeholder="0.00">
+                </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- DIGITAL -->
-      <div class="glass-card p-4 grid grid-cols-2 gap-3">
-        <div class="col-span-2 text-[9px] font-black text-blue-400 uppercase italic">Digital & Delivery</div>
-        <input type="number" id="p_bancomat" placeholder="Bancomat" class="input-pro text-xs" inputmode="decimal">
-        <input type="number" id="p_sumup" placeholder="SumUp" class="input-pro text-xs" inputmode="decimal">
-        <input type="number" id="p_satispay" placeholder="Satispay" class="input-pro text-xs" inputmode="decimal">
-        <input type="number" id="p_justeat" placeholder="Just Eat" class="input-pro text-xs" inputmode="decimal">
-        <input type="number" id="p_delivery" placeholder="Delivery" class="input-pro text-xs" inputmode="decimal">
-        <input type="number" id="p_app" placeholder="App/Web" class="input-pro text-xs" inputmode="decimal">
-      </div>
-
-      <!-- SUPPLIERS -->
-      <div class="glass-card p-4">
-        <div class="flex items-center justify-between mb-3">
-          <h4 class="text-[10px] font-black text-slate-500 uppercase">Uscite Fornitori (12) • spunta se CASH</h4>
-          <button id="btnEditSuppliers" class="mini-btn text-blue-400">NOMI</button>
         </div>
 
-        <div id="supList" class="space-y-2"></div>
-
-        <div class="grid grid-cols-3 gap-2 mt-4">
-          <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-3 text-center">
-            <p class="text-[9px] font-black text-slate-500 uppercase">Tot Fornitori</p>
-            <p id="supTotal" class="text-lg font-black mono">€ 0.00</p>
-          </div>
-          <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-3 text-center">
-            <p class="text-[9px] font-black text-slate-500 uppercase">Fornitori CASH</p>
-            <p id="supCashTotal" class="text-lg font-black mono text-orange-400">€ 0.00</p>
-          </div>
-          <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-3 text-center">
-            <p class="text-[9px] font-black text-slate-500 uppercase">Food %</p>
-            <p id="foodPctMini" class="text-lg font-black mono text-white">0.0%</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- NOTES -->
-      <div class="glass-card p-4">
-        <h4 class="text-[10px] font-black text-blue-500 uppercase mb-2 italic">Diario del Comandante (Note)</h4>
-        <textarea id="dailyNote" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs italic" rows="3" placeholder="Esempio: Pioggia forte, serata moscia..."></textarea>
-      </div>
-    </div>
-
-    <!-- CONFIG -->
-    <div id="sec-config" class="p-4 hidden space-y-4">
-      <div class="glass-card p-6 space-y-5">
-        <h3 class="text-sm font-black text-blue-500 uppercase italic">Configurazione Business</h3>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="text-[9px] font-black text-slate-500 uppercase">Spese Fisse Mensili €</label>
-            <input type="number" id="fixed_costs" class="input-pro mt-1" value="3000" inputmode="decimal">
-          </div>
-          <div>
-            <label class="text-[9px] font-black text-blue-400 uppercase italic">Costo Personale Mensile €</label>
-            <input type="number" id="labor_costs" class="input-pro mt-1 border-blue-900/50" value="2000" inputmode="decimal">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="text-[9px] font-black text-red-500 uppercase italic">Aliquota Tasse Stimata %</label>
-            <input type="number" id="tax_rate" class="input-pro mt-1" value="25" inputmode="numeric">
-          </div>
-          <div>
-            <label class="text-[9px] font-black text-slate-500 uppercase">Policy: mese (giorni)</label>
-            <input type="number" id="month_days" class="input-pro mt-1" value="30" inputmode="numeric">
-          </div>
-        </div>
-
-        <div class="glass-card p-4 border border-slate-800">
-          <h4 class="text-[10px] font-black text-slate-500 uppercase mb-3">Alert Thresholds</h4>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-[9px] font-black text-slate-500 uppercase">Food warn %</label>
-              <input type="number" id="th_food_warn" class="input-pro mt-1" value="30" inputmode="numeric">
+        <div class="card-pro p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Spese in Contanti (10)</h3>
+                <span id="sumSup" class="text-xs font-bold text-orange-500 mono">€ 0.00</span>
             </div>
-            <div>
-              <label class="text-[9px] font-black text-slate-500 uppercase">Food crit %</label>
-              <input type="number" id="th_food_crit" class="input-pro mt-1" value="40" inputmode="numeric">
-            </div>
-            <div>
-              <label class="text-[9px] font-black text-slate-500 uppercase">Drawer warn €</label>
-              <input type="number" id="th_drawer_warn" class="input-pro mt-1" value="5" inputmode="decimal">
-            </div>
-            <div>
-              <label class="text-[9px] font-black text-slate-500 uppercase">Drawer crit €</label>
-              <input type="number" id="th_drawer_crit" class="input-pro mt-1" value="15" inputmode="decimal">
-            </div>
-          </div>
+            <div id="supplierBox" class="space-y-2 max-h-64 overflow-y-auto pr-2">
+                </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
-          <button id="btnMonthlyReset" class="w-full bg-red-900/20 text-red-500 py-3 rounded-xl text-[10px] font-black uppercase">Svuota Mese Corrente</button>
-          <button id="btnWipeAll" class="w-full bg-red-900/30 text-red-200 py-3 rounded-xl text-[10px] font-black uppercase">WIPE TOTALE</button>
+        <div class="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-xl border-t border-slate-800">
+            <div class="max-w-md mx-auto flex justify-between items-center">
+                <div>
+                    <p class="text-[9px] font-black text-blue-400 uppercase tracking-widest">Cassa Netta (Contante)</p>
+                    <div id="finalNet" class="text-2xl font-black italic mono">€ 0.00</div>
+                </div>
+                <button onclick="saveCurrentDay()" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-2xl font-black text-sm btn-action shadow-lg shadow-blue-900/20">
+                    SALVA
+                </button>
+            </div>
         </div>
-
-        <p class="text-[10px] text-slate-500 leading-relaxed">
-          Autosave salva mentre inserisci. “Salva Giorno” blocca il report come “ufficiale” per i PDF.
-        </p>
-      </div>
     </div>
 
-    <!-- STATS -->
-    <div id="sec-stats" class="p-4 hidden space-y-4">
-      <div class="glass-card p-4 h-64">
-        <canvas id="mainChart"></canvas>
-      </div>
+    <script>
+        const { jsPDF } = window.jspdf;
+        let activeDate = new Date();
 
-      <div class="glass-card p-4 h-64">
-        <canvas id="foodChart"></canvas>
-      </div>
+        function init() {
+            renderSuppliers();
+            updateDateUI();
+            
+            // Listeners per calcolo real-time
+            document.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', calculate);
+            });
+            
+            loadDayData(formatDate(activeDate));
+        }
 
-      <div class="glass-card p-5 text-center space-y-2">
-        <p class="text-[9px] font-black text-slate-500 uppercase">Salute Acquisti (Fornitori Totali / Incasso)</p>
-        <div id="foodCostBar" class="w-full bg-slate-800 h-4 rounded-full overflow-hidden flex"></div>
-        <p id="foodCostLabel" class="text-xs font-black">0%</p>
-        <p id="foodCostHint" class="text-[10px] text-slate-500 italic">—</p>
-      </div>
-    </div>
+        function renderSuppliers() {
+            const container = document.getElementById('supplierBox');
+            for(let i=1; i<=10; i++) {
+                container.innerHTML += `
+                    <div class="flex gap-2 items-center bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <span class="text-[9px] font-bold text-slate-600 w-4">${i}</span>
+                        <input type="number" class="sup-amt bg-transparent flex-1 text-sm outline-none font-bold" placeholder="0.00">
+                        <label class="flex items-center gap-1">
+                            <input type="checkbox" class="sup-check w-5 h-5 accent-blue-500" onchange="calculate()">
+                            <span class="text-[8px] font-black text-slate-500 uppercase">Cash</span>
+                        </label>
+                    </div>`;
+            }
+        }
 
-    <!-- BANK -->
-    <div id="sec-bank" class="p-4 hidden space-y-4">
-      <div class="glass-card p-6 border-l-4 border-green-500 text-center">
-        <p class="text-[10px] font-black text-slate-500 uppercase">Contante da versare (7 giorni)</p>
-        <div id="bankTotal" class="text-4xl font-black italic my-2 mono text-white">€ 0.00</div>
-      </div>
-      <div id="bankHistory" class="space-y-2"></div>
-    </div>
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
 
-    <!-- BOTTOM BAR -->
-    <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#020617]/95 border-t border-slate-800 backdrop-blur-xl flex justify-between items-center z-[100]">
-      <div>
-        <p class="text-[9px] font-black text-slate-500 uppercase italic">Cash Netto Oggi</p>
-        <div id="theoCash" class="text-3xl font-black text-white mono">€ 0.00</div>
-      </div>
-      <div class="flex gap-2">
-        <button id="btnSnap" class="bg-slate-800 text-slate-200 font-black px-5 py-4 rounded-2xl uppercase text-xs">Snapshot</button>
-        <button id="btnSave" class="bg-blue-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl uppercase text-xs">Salva Giorno</button>
-      </div>
-    </div>
+        function updateDateUI() {
+            const options = { weekday: 'short', day: 'numeric', month: 'short' };
+            document.getElementById('displayDate').innerText = activeDate.toLocaleDateString('it-IT', options).toUpperCase();
+            document.getElementById('dateBadge').innerText = activeDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+        }
 
-  </div>
+        function changeDay(offset) {
+            activeDate.setDate(activeDate.getDate() + offset);
+            updateDateUI();
+            loadDayData(formatDate(activeDate));
+        }
 
-  <!-- SUPPLIER MODAL -->
-  <div id="supModal" class="hidden fixed inset-0 z-[9998] bg-black/60 flex items-end">
-    <div class="w-full glass-card rounded-t-3xl p-5 border border-slate-700">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="text-sm font-black text-blue-400 uppercase italic">Setup Fornitori (12)</h3>
-        <button id="btnCloseSupModal" class="mini-btn text-slate-200">CHIUDI</button>
-      </div>
-      <p class="text-[10px] text-slate-400 mb-3">Nome + Categoria. Le righe operative si aggiornano senza perdere importi.</p>
-      <div id="supConfigList" class="space-y-2 max-h-[55vh] overflow-auto pr-1"></div>
-      <button id="btnSaveSupConfig" class="w-full bg-blue-600 py-3 rounded-xl font-black uppercase text-xs mt-4">Salva Nomi</button>
-    </div>
-  </div>
+        function calculate() {
+            const total = parseFloat(document.getElementById('total_sales').value) || 0;
+            const eleFields = ['pos', 'sumup', 'satispay', 'justeat', 'delivery', 'altro'];
+            const eleTotal = eleFields.reduce((sum, id) => sum + (parseFloat(document.getElementById(id).value) || 0), 0);
+            
+            let supCash = 0;
+            document.querySelectorAll('.sup-amt').forEach((el, i) => {
+                if(document.querySelectorAll('.sup-check')[i].checked) {
+                    supCash += parseFloat(el.value) || 0;
+                }
+            });
 
-  <script>
-    // =======================
-    // Utils
-    // =======================
-    function pad2(n){ return String(n).padStart(2,'0'); }
-    function formatLocalDate(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-    function parseYMD(ymd){
-      const [y,m,dd] = (ymd||"").split("-").map(Number);
-      if(!y||!m||!dd) return null;
-      return new Date(y, m-1, dd);
-    }
-    function money(n, dec=2){
-      const v = Number.isFinite(n) ? n : 0;
-      return `€ ${v.toFixed(dec)}`;
-    }
-    function lsGetJSON(key, fallback){
-      try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
-      catch { return fallback; }
-    }
-    function lsSetJSON(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
-    function dl(filename, content, mime="application/json"){
-      const blob = new Blob([content], {type:mime});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-    function escapeHtml(s){
-      return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
-    function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+            const net = (total - eleTotal) - supCash;
 
-    // =======================
-    // State
-    // =======================
-    let activeDate = new Date();
-    const masterPin = "1234";
+            document.getElementById('sumSup').innerText = `€ ${supCash.toFixed(2)}`;
+            document.getElementById('finalNet').innerText = `€ ${net.toFixed(2)}`;
 
-    let chartMain = null;
-    let chartFood = null;
+            const hero = document.getElementById('statusHero');
+            const msg = document.getElementById('statusMsg');
 
-    const SUP_COUNT = 12;
-    const SUP_KEY = "omnia_suppliers_v2";
-    const CFG_KEY = "omnia_cfg_v2";
-    const SNAP_KEY = "omnia_snapshots_v1"; // optional snapshots array
+            if (eleTotal > total) {
+                hero.className = "card-pro p-5 border-l-4 border-l-red-500 bg-red-500/5";
+                msg.innerText = "ERRORE: Pagamenti elettronici superiori all'incasso!";
+            } else if (total > 0) {
+                hero.className = "card-pro p-5 border-l-4 border-l-green-500 bg-green-500/5";
+                msg.innerText = "GIORNATA BILANCIATA: Dati pronti per l'archiviazione.";
+            } else {
+                hero.className = "card-pro p-5 border-l-4 border-l-slate-700";
+                msg.innerText = "In attesa di inserimento corrispettivi...";
+            }
+            return { total, eleTotal, supCash, net };
+        }
 
-    function defaultSuppliers(){
-      return { suppliers: Array.from({length: SUP_COUNT}).map((_,i)=>({ name:`Fornitore ${i+1}`, cat:"Varie" })) };
-    }
-    function getSuppliers(){
-      const s = lsGetJSON(SUP_KEY, null);
-      if(!s || !Array.isArray(s.suppliers) || s.suppliers.length !== SUP_COUNT){
-        const d = defaultSuppliers();
-        lsSetJSON(SUP_KEY, d);
-        return d;
-      }
-      return s;
-    }
-    function setSuppliers(obj){ lsSetJSON(SUP_KEY, obj); }
+        function saveCurrentDay() {
+            const data = {
+                total: document.getElementById('total_sales').value,
+                pos: document.getElementById('pos').value,
+                sumup: document.getElementById('sumup').value,
+                satispay: document.getElementById('satispay').value,
+                justeat: document.getElementById('justeat').value,
+                delivery: document.getElementById('delivery').value,
+                altro: document.getElementById('altro').value,
+                supAmts: Array.from(document.querySelectorAll('.sup-amt')).map(e => e.value),
+                supChecks: Array.from(document.querySelectorAll('.sup-check')).map(e => e.checked)
+            };
+            localStorage.setItem('day_' + formatDate(activeDate), JSON.stringify(data));
+            
+            // Effetto feedback
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "SALVATO! ✓";
+            btn.classList.replace('bg-blue-600', 'bg-green-600');
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.classList.replace('bg-green-600', 'bg-blue-600');
+            }, 1500);
+        }
 
-    function defaultCfg(){
-      return {
-        fixed_costs: 3000,
-        labor_costs: 2000,
-        tax_rate: 25,
-        month_days: 30,
-        th_food_warn: 30,
-        th_food_crit: 40,
-        th_drawer_warn: 5,
-        th_drawer_crit: 15
-      };
-    }
-    function getCfg(){
-      const c = lsGetJSON(CFG_KEY, null);
-      if(!c) { const d = defaultCfg(); lsSetJSON(CFG_KEY, d); return d; }
-      return { ...defaultCfg(), ...c };
-    }
-    function setCfg(c){ lsSetJSON(CFG_KEY, c); }
+        function loadDayData(dateStr) {
+            const saved = localStorage.getItem('day_' + dateStr);
+            // Reset campi prima di caricare
+            document.querySelectorAll('input[type="number"]').forEach(i => i.value = "");
+            document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
+            
+            if(saved) {
+                const d = JSON.parse(saved);
+                document.getElementById('total_sales').value = d.total;
+                document.getElementById('pos').value = d.pos;
+                document.getElementById('sumup').value = d.sumup;
+                document.getElementById('satispay').value = d.satispay;
+                document.getElementById('justeat').value = d.justeat;
+                document.getElementById('delivery').value = d.delivery;
+                document.getElementById('altro').value = d.altro;
+                document.querySelectorAll('.sup-amt').forEach((e, i) => e.value = d.supAmts[i]);
+                document.querySelectorAll('.sup-check').forEach((e, i) => e.checked = d.supChecks[i]);
+            }
+            calculate();
+        }
 
-    // Cached elements
-    const el = {};
-    function cacheEls(){
-      [
-        'authScreen','mainUI','pinInput','btnUnlock',
-        'topDate','datePicker','btnPrevDay','btnNextDay',
-        'total_sales','n_clients','acconti','dailyNote',
-        'drawer_start','drawer_end','drawer_expected','drawer_diff',
-        'p_bancomat','p_sumup','p_satispay','p_justeat','p_delivery','p_app',
-        'supList','supTotal','supCashTotal','foodPctMini','btnEditSuppliers',
-        'fixed_costs','labor_costs','tax_rate','month_days',
-        'th_food_warn','th_food_crit','th_drawer_warn','th_drawer_crit',
-        'btnMonthlyReset','btnWipeAll',
-        'netCashDisplay','taxReserve','avgTicket','theoCash','splitInfo',
-        'progressCosts','percCosts',
-        'foodCostBar','foodCostLabel','foodCostHint',
-        'bankTotal','bankHistory',
-        'mainChart','foodChart',
-        'btnSave','btnSnap',
-        'btnPdfDay','btnPdfWeek','btnBackupFile','restoreFile',
-        'supModal','supConfigList','btnCloseSupModal','btnSaveSupConfig',
-        'badgeFood','badgeDigital','badgeCash','badgeDrawer','badgeAuto'
-      ].forEach(id => el[id] = document.getElementById(id));
-    }
+        function exportMonthlyPDF() {
+            const doc = new jsPDF();
+            const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+            const m = activeDate.getMonth();
+            const y = activeDate.getFullYear();
+            const lastDay = new Date(y, m + 1, 0).getDate(); // Calcola giorni reali del mese
 
-    // =======================
-    // Keys
-    // =======================
-    function dayKey(d=activeDate){ return 'dia_cmdr_' + formatLocalDate(d); }
-    function draftKey(d=activeDate){ return 'dia_cmdr_draft_' + formatLocalDate(d); }
+            doc.setFontSize(18);
+            doc.text(`RIEPILOGO CORRISPETTIVI: ${monthNames[m].toUpperCase()} ${y}`, 14, 20);
+            
+            const rows = [];
+            let totalMese = 0;
 
-    // =======================
-    // Auth
-    // =======================
-    function checkAuth(){
-      if(el.pinInput.value === masterPin){
-        el.authScreen.classList.add('hidden');
-        el.mainUI.classList.remove('hidden');
+            for(let i=1; i<=lastDay; i++) {
+                const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                const data = JSON.parse(localStorage.getItem('day_' + dStr) || '{"total":0}');
+                rows.push([i, `EUR ${parseFloat(data.total || 0).toFixed(2)}`, ""]);
+                totalMese += parseFloat(data.total || 0);
+            }
+
+            doc.autoTable({
+                head: [['Giorno', 'Incasso Lordo', 'Note']],
+                body: rows,
+                startY: 30,
+                foot: [['TOTALE MENSILE', `EUR ${totalMese.toFixed(2)}`, '']],
+                headStyles: { fillColor: [15, 23, 42] },
+                footStyles: { fillColor: [15, 23, 42] }
+            });
+
+            doc.save(`Fiscale_${monthNames[m]}_${y}.pdf`);
+        }
+
+        function fullReset() {
+            const choice = confirm("RESET DATI\n\nPremi OK per cancellare TUTTO l'archivio.\nPremi ANNULLA per non fare nulla.");
+            if(choice) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
         init();
-      } else {
-        alert("PIN ERRATO");
-        el.pinInput.value = "";
-        el.pinInput.focus();
-      }
-    }
-
-    // =======================
-    // Init
-    // =======================
-    function init(){
-      updateDateUI();
-      loadCfgToUI();
-      renderSuppliersRows();
-      loadDateDataPreferDraft();
-      wireEvents();
-      runLogic();
-    }
-
-    function loadCfgToUI(){
-      const c = getCfg();
-      el.fixed_costs.value = c.fixed_costs;
-      el.labor_costs.value = c.labor_costs;
-      el.tax_rate.value = c.tax_rate;
-      el.month_days.value = c.month_days;
-
-      el.th_food_warn.value = c.th_food_warn;
-      el.th_food_crit.value = c.th_food_crit;
-      el.th_drawer_warn.value = c.th_drawer_warn;
-      el.th_drawer_crit.value = c.th_drawer_crit;
-    }
-
-    function saveCfgFromUI(){
-      const c = getCfg();
-      c.fixed_costs = parseFloat(el.fixed_costs.value) || 0;
-      c.labor_costs = parseFloat(el.labor_costs.value) || 0;
-      c.tax_rate = parseFloat(el.tax_rate.value); c.tax_rate = Number.isFinite(c.tax_rate) ? c.tax_rate : 25;
-      c.month_days = parseFloat(el.month_days.value); c.month_days = Number.isFinite(c.month_days) && c.month_days>0 ? c.month_days : 30;
-
-      c.th_food_warn = parseFloat(el.th_food_warn.value) || 30;
-      c.th_food_crit = parseFloat(el.th_food_crit.value) || 40;
-      c.th_drawer_warn = parseFloat(el.th_drawer_warn.value) || 5;
-      c.th_drawer_crit = parseFloat(el.th_drawer_crit.value) || 15;
-
-      setCfg(c);
-    }
-
-    function updateDateUI(){
-      const ymd = formatLocalDate(activeDate);
-      el.datePicker.value = ymd;
-      el.topDate.innerText = activeDate.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
-    }
-
-    // =======================
-    // Autosave (debounced)
-    // =======================
-    let autosaveTimer = null;
-    function scheduleAutosave(){
-      if(autosaveTimer) clearTimeout(autosaveTimer);
-      autosaveTimer = setTimeout(()=> {
-        autosaveTimer = null;
-        saveDraft();
-      }, 450);
-    }
-
-    function collectUIData(){
-      return {
-        total: el.total_sales.value || "",
-        clients: el.n_clients.value || "",
-        acconti: el.acconti.value || "",
-        note: el.dailyNote.value || "",
-        drawer: {
-          start: el.drawer_start.value || "",
-          end: el.drawer_end.value || ""
-        },
-        digital: {
-          b: el.p_bancomat.value || "",
-          s: el.p_sumup.value || "",
-          sat: el.p_satispay.value || "",
-          je: el.p_justeat.value || "",
-          d: el.p_delivery.value || "",
-          a: el.p_app.value || ""
-        },
-        suppliers: {
-          amts: Array.from(document.querySelectorAll('.sup-amt')).map(e=> e.value || ""),
-          cash: Array.from(document.querySelectorAll('.sup-check')).map(e=> !!e.checked),
-          notes: Array.from(document.querySelectorAll('.sup-note')).map(e=> e.value || "")
-        }
-      };
-    }
-
-    function applyUIData(s){
-      el.total_sales.value = s?.total ?? "";
-      el.n_clients.value = s?.clients ?? "";
-      el.acconti.value = s?.acconti ?? "";
-      el.dailyNote.value = s?.note ?? "";
-
-      el.drawer_start.value = s?.drawer?.start ?? "";
-      el.drawer_end.value = s?.drawer?.end ?? "";
-
-      el.p_bancomat.value = s?.digital?.b ?? "";
-      el.p_sumup.value = s?.digital?.s ?? "";
-      el.p_satispay.value = s?.digital?.sat ?? "";
-      el.p_justeat.value = s?.digital?.je ?? "";
-      el.p_delivery.value = s?.digital?.d ?? "";
-      el.p_app.value = s?.digital?.a ?? "";
-
-      const amts = s?.suppliers?.amts || [];
-      const cash = s?.suppliers?.cash || [];
-      const notes = s?.suppliers?.notes || [];
-
-      document.querySelectorAll('.sup-amt').forEach((e,i)=> e.value = amts[i] ?? "");
-      document.querySelectorAll('.sup-check').forEach((e,i)=> e.checked = !!cash[i]);
-      document.querySelectorAll('.sup-note').forEach((e,i)=> e.value = notes[i] ?? "");
-    }
-
-    function saveDraft(){
-      saveCfgFromUI();
-      const data = collectUIData();
-      lsSetJSON(draftKey(), { ...data, _ts: Date.now() });
-      el.badgeAuto.className = "badge ok";
-      el.badgeAuto.textContent = "Autosave: OK";
-      setTimeout(()=> {
-        el.badgeAuto.className = "badge ok";
-        el.badgeAuto.textContent = "Autosave: ON";
-      }, 700);
-    }
-
-    function clearDraft(){
-      localStorage.removeItem(draftKey());
-    }
-
-    // =======================
-    // Suppliers rows (12) + note
-    // =======================
-    function renderSuppliersRows(){
-      const supCfg = getSuppliers();
-      el.supList.innerHTML = "";
-
-      for(let i=0;i<SUP_COUNT;i++){
-        const row = document.createElement('div');
-        row.className = "grid grid-cols-12 gap-2 items-center bg-slate-900/40 p-2 rounded-xl border border-slate-800";
-
-        row.innerHTML = `
-          <div class="col-span-5">
-            <p class="text-[10px] font-black text-slate-200 leading-tight">${escapeHtml(supCfg.suppliers[i].name)}</p>
-            <p class="text-[9px] font-black text-slate-500 uppercase">${escapeHtml(supCfg.suppliers[i].cat)}</p>
-          </div>
-
-          <div class="col-span-3">
-            <input type="number" class="sup-amt bg-transparent w-full text-xs font-black outline-none text-white text-center border border-slate-800 rounded-xl p-2" placeholder="0.00" inputmode="decimal">
-          </div>
-
-          <div class="col-span-2 flex justify-center">
-            <label class="flex items-center gap-2">
-              <input type="checkbox" class="sup-check w-6 h-6 accent-blue-600">
-              <span class="text-[10px] font-black text-slate-300">CASH</span>
-            </label>
-          </div>
-
-          <div class="col-span-2">
-            <input type="text" class="sup-note bg-transparent w-full text-[10px] font-black outline-none text-white text-center border border-slate-800 rounded-xl p-2" placeholder="nota">
-          </div>
-        `;
-        el.supList.appendChild(row);
-      }
-
-      document.querySelectorAll('.sup-amt').forEach(i => i.addEventListener('input', ()=>{ runLogic(); scheduleAutosave(); }));
-      document.querySelectorAll('.sup-check').forEach(i => i.addEventListener('change', ()=>{ runLogic(); scheduleAutosave(); }));
-      document.querySelectorAll('.sup-note').forEach(i => i.addEventListener('input', scheduleAutosave));
-    }
-
-    function getDigitalSum(){
-      const ids = ['p_bancomat','p_sumup','p_satispay','p_justeat','p_delivery','p_app'];
-      return ids.reduce((acc,id)=> acc + (parseFloat(el[id].value)||0), 0);
-    }
-
-    function getSupplierTotals(){
-      const amts = document.querySelectorAll('.sup-amt');
-      const checks = document.querySelectorAll('.sup-check');
-
-      let tot = 0;
-      let cash = 0;
-      amts.forEach((amt, idx)=>{
-        const v = parseFloat(amt.value) || 0;
-        tot += v;
-        if(checks[idx]?.checked) cash += v;
-      });
-
-      return { tot, cash };
-    }
-
-    // =======================
-    // Core logic + alerts
-    // =======================
-    function setBadge(elm, text, level){
-      elm.textContent = text;
-      elm.className = "badge " + (level || "");
-    }
-
-    function runLogic(){
-      // cfg
-      const cfg = getCfg();
-
-      const total = parseFloat(el.total_sales.value) || 0;
-      const clients = parseFloat(el.n_clients.value) || 0;
-      const acconti = parseFloat(el.acconti.value) || 0;
-
-      const fixed = parseFloat(el.fixed_costs.value) || cfg.fixed_costs || 0;
-      const labor = parseFloat(el.labor_costs.value) || cfg.labor_costs || 0;
-      const taxRate = parseFloat(el.tax_rate.value);
-      const taxR = Number.isFinite(taxRate) ? taxRate : (cfg.tax_rate || 25);
-
-      const monthDays = parseFloat(el.month_days.value);
-      const md = Number.isFinite(monthDays) && monthDays > 0 ? monthDays : (cfg.month_days || 30);
-
-      const digSum = getDigitalSum();
-      const sup = getSupplierTotals();
-
-      // Cash Netto: incasso - digitale - fornitori cash + acconti
-      const netCashToday = (total - digSum - sup.cash) + acconti;
-      const taxAccantonata = total * (taxR / 100);
-
-      // Drawer expected = drawer_start + netCashToday (cash netto generato oggi)  (modello pragmatico)
-      const drawerStart = parseFloat(el.drawer_start.value) || 0;
-      const drawerEnd = parseFloat(el.drawer_end.value) || 0;
-      const drawerExpected = drawerStart + netCashToday;
-      const drawerDiff = drawerEnd - drawerExpected;
-
-      el.drawer_expected.textContent = money(drawerExpected, 2);
-      el.drawer_diff.textContent = money(drawerDiff, 2);
-
-      // KPIs
-      el.theoCash.innerText = money(netCashToday, 2);
-      el.netCashDisplay.innerText = money(netCashToday, 2);
-      el.taxReserve.innerText = money(taxAccantonata, 0);
-      el.avgTicket.innerText = clients > 0 ? money(total / clients, 2) : "€ 0.00";
-
-      el.supTotal.innerText = money(sup.tot, 2);
-      el.supCashTotal.innerText = money(sup.cash, 2);
-
-      const foodPct = total > 0 ? (sup.tot / total) * 100 : 0;
-      el.foodPctMini.textContent = `${foodPct.toFixed(1)}%`;
-
-      el.splitInfo.innerText = `Digitale: ${money(digSum,2)} • Fornitori: ${money(sup.tot,2)} (${money(sup.cash,2)} cash) • Drawer diff: ${money(drawerDiff,2)}`;
-
-      // Monthly progress by sales
-      let monthTotal = 0;
-      const y = activeDate.getFullYear();
-      const m = activeDate.getMonth();
-      for(let day=1; day<=31; day++){
-        const d = new Date(y,m,day);
-        if(d.getMonth() !== m) break;
-        const s = lsGetJSON(dayKey(d), { total:0 });
-        monthTotal += (parseFloat(s.total) || 0);
-      }
-      const totalMonthlyCosts = fixed + labor;
-      const perc = totalMonthlyCosts > 0 ? Math.min((monthTotal / totalMonthlyCosts) * 100, 100) : 0;
-      el.progressCosts.style.width = perc + "%";
-      el.percCosts.innerText = `${perc.toFixed(1)}% Copertura (${monthTotal.toFixed(0)} / ${totalMonthlyCosts}) • Target daily: ${(totalMonthlyCosts/md).toFixed(0)}`;
-
-      // Food bar
-      const fcPerc = foodPct;
-      el.foodCostBar.innerHTML =
-        `<div style="width:${Math.min(fcPerc,100)}%" class="${
-          fcPerc > cfg.th_food_crit ? 'bg-red-500' : fcPerc > cfg.th_food_warn ? 'bg-orange-500' : 'bg-green-500'
-        } h-full transition-all"></div>`;
-      el.foodCostLabel.innerText = `${fcPerc.toFixed(1)}% Fornitori/Incasso`;
-      el.foodCostHint.innerText = `Fornitori: ${money(sup.tot,2)} (cash ${money(sup.cash,2)}) • Digitale: ${money(digSum,2)} • Cash netto: ${money(netCashToday,2)}`;
-
-      // Alerts
-      // Food
-      if(fcPerc >= cfg.th_food_crit) setBadge(el.badgeFood, `Food: ${fcPerc.toFixed(1)}%`, "crit");
-      else if(fcPerc >= cfg.th_food_warn) setBadge(el.badgeFood, `Food: ${fcPerc.toFixed(1)}%`, "warn");
-      else setBadge(el.badgeFood, `Food: ${fcPerc.toFixed(1)}%`, "ok");
-
-      // Digital ratio
-      const digPct = total > 0 ? (digSum / total) * 100 : 0;
-      if(digPct >= 60) setBadge(el.badgeDigital, `Digital: ${digPct.toFixed(0)}%`, "warn");
-      else setBadge(el.badgeDigital, `Digital: ${digPct.toFixed(0)}%`, "ok");
-
-      // Cash negative
-      if(netCashToday < 0) setBadge(el.badgeCash, `Cash: ${money(netCashToday,0)}`, "crit");
-      else if(netCashToday < 50 && total > 0) setBadge(el.badgeCash, `Cash: ${money(netCashToday,0)}`, "warn");
-      else setBadge(el.badgeCash, `Cash: ${money(netCashToday,0)}`, "ok");
-
-      // Drawer diff thresholds
-      const absDiff = Math.abs(drawerDiff);
-      if(absDiff >= cfg.th_drawer_crit) setBadge(el.badgeDrawer, `Drawer: ${money(drawerDiff,2)}`, "crit");
-      else if(absDiff >= cfg.th_drawer_warn) setBadge(el.badgeDrawer, `Drawer: ${money(drawerDiff,2)}`, "warn");
-      else setBadge(el.badgeDrawer, `Drawer: ${money(drawerDiff,2)}`, "ok");
-    }
-
-    // =======================
-    // Save / Load
-    // =======================
-    function clearDayInputs(){
-      el.total_sales.value = "";
-      el.n_clients.value = "";
-      el.acconti.value = "";
-      el.dailyNote.value = "";
-
-      el.drawer_start.value = "";
-      el.drawer_end.value = "";
-
-      ['p_bancomat','p_sumup','p_satispay','p_justeat','p_delivery','p_app'].forEach(id=> el[id].value = "");
-      document.querySelectorAll('.sup-amt').forEach(e=> e.value = "");
-      document.querySelectorAll('.sup-check').forEach(e=> e.checked = false);
-      document.querySelectorAll('.sup-note').forEach(e=> e.value = "");
-    }
-
-    function saveDayOfficial(){
-      saveCfgFromUI();
-      const data = collectUIData();
-      lsSetJSON(dayKey(), { ...data, _savedAt: new Date().toISOString() });
-      clearDraft();
-      alert("RAPPORTO GIORNALIERO SALVATO (UFFICIALE)");
-      runLogic();
-    }
-
-    function saveSnapshot(){
-      const arr = lsGetJSON(SNAP_KEY, []);
-      const snap = {
-        when: new Date().toISOString(),
-        date: formatLocalDate(activeDate),
-        data: collectUIData()
-      };
-      arr.unshift(snap);
-      lsSetJSON(SNAP_KEY, arr.slice(0, 50)); // keep last 50
-      alert("Snapshot salvato (max 50).");
-    }
-
-    function loadDateDataPreferDraft(){
-      const official = lsGetJSON(dayKey(), null);
-      const draft = lsGetJSON(draftKey(), null);
-
-      clearDayInputs();
-
-      // prefer draft if it exists and is newer than official
-      if(draft && (!official || (draft._ts && official._savedAt && (draft._ts > Date.parse(official._savedAt))) || (!official._savedAt))){
-        applyUIData(draft);
-      } else if(official){
-        applyUIData(official);
-      }
-
-      runLogic();
-    }
-
-    // =======================
-    // Tabs
-    // =======================
-    function showTab(tab){
-      ['day','bank','stats','config'].forEach(t => document.getElementById('sec-'+t).classList.add('hidden'));
-      document.getElementById('sec-'+tab).classList.remove('hidden');
-
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      const map = { day:'t1', bank:'t2', stats:'t3', config:'t4' };
-      document.getElementById(map[tab]).classList.add('active');
-
-      if(tab === 'bank') renderBankReport();
-      if(tab === 'stats') { updateCharts(); }
-    }
-
-    function renderBankReport(){
-      el.bankHistory.innerHTML = "";
-      let grand = 0;
-
-      for(let i=0;i<7;i++){
-        const d = new Date(activeDate);
-        d.setDate(d.getDate() - i);
-
-        const s = lsGetJSON(dayKey(d), null);
-        if(!s){
-          const row = document.createElement('div');
-          row.className = "flex justify-between p-4 glass-card text-xs";
-          row.innerHTML = `<span>${d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric'})}</span>
-                           <span class="font-black text-slate-500">—</span>`;
-          el.bankHistory.appendChild(row);
-          continue;
-        }
-
-        const total = parseFloat(s.total)||0;
-        const dig = Object.values(s.digital||{}).reduce((a,b)=> a + (parseFloat(b)||0), 0);
-        let supCash = 0;
-        (s.suppliers?.amts || []).forEach((v,idx)=>{ if(s.suppliers?.cash?.[idx]) supCash += (parseFloat(v)||0); });
-        const acconti = parseFloat(s.acconti)||0;
-
-        const dayNet = total - dig - supCash + acconti;
-        if(dayNet > 0) grand += dayNet;
-
-        const row = document.createElement('div');
-        row.className = "flex justify-between p-4 glass-card text-xs";
-        row.innerHTML = `<span>${d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric'})}</span>
-                         <span class="font-black text-blue-400">€ ${dayNet.toFixed(2)}</span>`;
-        el.bankHistory.appendChild(row);
-      }
-
-      el.bankTotal.innerText = money(grand,2);
-    }
-
-    // =======================
-    // Charts (7gg)
-    // =======================
-    function updateCharts(){
-      // main: sales + cash net
-      const labels = [];
-      const sales = [];
-      const cashNet = [];
-      const foodPct = [];
-
-      for(let i=6;i>=0;i--){
-        const d = new Date(activeDate);
-        d.setDate(d.getDate() - i);
-        labels.push(d.toLocaleDateString('it-IT',{weekday:'short'}));
-
-        const s = lsGetJSON(dayKey(d), null);
-        if(!s){
-          sales.push(0); cashNet.push(0); foodPct.push(0);
-          continue;
-        }
-
-        const total = parseFloat(s.total)||0;
-        const dig = Object.values(s.digital||{}).reduce((a,b)=> a + (parseFloat(b)||0), 0);
-        let supTot=0, supCash=0;
-        (s.suppliers?.amts || []).forEach((v,idx)=>{
-          const n = parseFloat(v)||0;
-          supTot += n;
-          if(s.suppliers?.cash?.[idx]) supCash += n;
-        });
-
-        const acc = parseFloat(s.acconti)||0;
-        const net = total - dig - supCash + acc;
-
-        sales.push(total);
-        cashNet.push(net);
-        foodPct.push(total>0 ? (supTot/total)*100 : 0);
-      }
-
-      if(chartMain) chartMain.destroy();
-      chartMain = new Chart(el.mainChart.getContext('2d'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label:'Incasso Lordo', data:sales, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.12)', tension:0.4, fill:true },
-            { label:'Cash Netto', data:cashNet, borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)', tension:0.35, fill:true }
-          ]
-        },
-        options: { maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ grid:{ color:'#1e293b' } }, x:{ grid:{ display:false } } } }
-      });
-
-      if(chartFood) chartFood.destroy();
-      chartFood = new Chart(el.foodChart.getContext('2d'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label:'Food %', data:foodPct, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.10)', tension:0.35, fill:true }
-          ]
-        },
-        options: { maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ grid:{ color:'#1e293b' } }, x:{ grid:{ display:false } } } }
-      });
-    }
-
-    // =======================
-    // Supplier modal config
-    // =======================
-    function openSupModal(){
-      el.supModal.classList.remove('hidden');
-      const supCfg = getSuppliers();
-      el.supConfigList.innerHTML = "";
-
-      supCfg.suppliers.forEach((s, i)=>{
-        const row = document.createElement('div');
-        row.className = "bg-slate-900/50 border border-slate-800 rounded-xl p-3 grid grid-cols-2 gap-2";
-        row.innerHTML = `
-          <div>
-            <p class="text-[9px] font-black text-slate-500 uppercase mb-1">Nome</p>
-            <input data-sup-name="${i}" class="input-pro text-xs !text-left !font-black" value="${escapeHtml(s.name)}" />
-          </div>
-          <div>
-            <p class="text-[9px] font-black text-slate-500 uppercase mb-1">Categoria</p>
-            <input data-sup-cat="${i}" class="input-pro text-xs !text-left !font-black" value="${escapeHtml(s.cat)}" />
-          </div>
-        `;
-        el.supConfigList.appendChild(row);
-      });
-    }
-
-    function closeSupModal(){ el.supModal.classList.add('hidden'); }
-
-    function saveSupModal(){
-      const supCfg = getSuppliers();
-      supCfg.suppliers = supCfg.suppliers.map((old, i)=>{
-        const nameEl = el.supConfigList.querySelector(`[data-sup-name="${i}"]`);
-        const catEl  = el.supConfigList.querySelector(`[data-sup-cat="${i}"]`);
-        const name = (nameEl?.value || "").trim() || `Fornitore ${i+1}`;
-        const cat  = (catEl?.value  || "").trim() || "Varie";
-        return { name, cat };
-      });
-
-      setSuppliers(supCfg);
-      closeSupModal();
-
-      // Preserve current values
-      const prev = collectUIData();
-      renderSuppliersRows();
-      applyUIData(prev);
-
-      runLogic();
-      scheduleAutosave();
-      alert("FORNITORI AGGIORNATI");
-    }
-
-    // =======================
-    // Backup / Restore file
-    // =======================
-    function backupToFile(){
-      const payload = {
-        version: "omnia-navyseal-1",
-        exportedAt: new Date().toISOString(),
-        localStorage: { ...localStorage }
-      };
-      dl(`omnia_navyseal_backup_${formatLocalDate(new Date())}.json`, JSON.stringify(payload, null, 2));
-    }
-
-    function restoreFromFile(evt){
-      const file = evt.target.files?.[0];
-      if(!file) return;
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        try{
-          const payload = JSON.parse(reader.result);
-          const ls = payload?.localStorage;
-          if(!ls || typeof ls !== "object") throw new Error("Formato non valido");
-
-          if(!confirm("Ripristinare questo backup? Sovrascriverà i dati correnti.")) return;
-
-          localStorage.clear();
-          Object.keys(ls).forEach(k => localStorage.setItem(k, ls[k]));
-          alert("BACKUP RIPRISTINATO");
-          location.reload();
-        } catch(e){
-          alert("Errore restore: file non valido.");
-        } finally {
-          evt.target.value = "";
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    // =======================
-    // Reset
-    // =======================
-    function monthlyReset(){
-      if(!confirm("ATTENZIONE: svuoti SOLO i giorni del mese corrente. Procedere?")) return;
-      const y = activeDate.getFullYear();
-      const m = activeDate.getMonth();
-
-      Object.keys(localStorage).forEach(k=>{
-        if(!k.startsWith('dia_cmdr_')) return;
-        // includes draft + official
-        const raw = k.replace('dia_cmdr_', '').replace('draft_','');
-        const d = parseYMD(raw);
-        if(d && d.getFullYear()===y && d.getMonth()===m) localStorage.removeItem(k);
-      });
-
-      alert("Mese corrente svuotato.");
-      loadDateDataPreferDraft();
-      renderBankReport();
-      updateCharts();
-    }
-
-    function wipeAll(){
-      if(!confirm("WIPE TOTALE: cancella TUTTO (anche configurazione e fornitori). Procedere?")) return;
-      localStorage.clear();
-      alert("Dati cancellati.");
-      location.reload();
-    }
-
-    // =======================
-    // Date nav
-    // =======================
-    function changeDate(days){
-      // before switching date, autosave current
-      saveDraft();
-      activeDate.setDate(activeDate.getDate() + days);
-      updateDateUI();
-      loadDateDataPreferDraft();
-    }
-
-    // =======================
-    // PDFs
-    // =======================
-    function getDayForPDF(d=activeDate){
-      const key = formatLocalDate(d);
-      // prefer official, fallback to draft, fallback to current UI
-      const official = lsGetJSON(dayKey(d), null);
-      const draft = lsGetJSON(draftKey(d), null);
-      return { key, data: official || draft || collectUIData() };
-    }
-
-    function exportPDFDay(){
-      const { key, data } = getDayForPDF(activeDate);
-      const cfg = getCfg();
-      const supCfg = getSuppliers();
-
-      const total = parseFloat(data.total)||0;
-      const clients = parseFloat(data.clients)||0;
-      const acconti = parseFloat(data.acconti)||0;
-
-      const dig = Object.values(data.digital||{}).reduce((a,b)=> a + (parseFloat(b)||0), 0);
-
-      let supTot=0, supCash=0;
-      (data.suppliers?.amts || []).forEach((v,idx)=>{
-        const n = parseFloat(v)||0;
-        supTot += n;
-        if(data.suppliers?.cash?.[idx]) supCash += n;
-      });
-
-      const netCash = (total - dig - supCash) + acconti;
-      const tax = total * ((cfg.tax_rate||25)/100);
-
-      const drawerStart = parseFloat(data.drawer?.start)||0;
-      const drawerEnd = parseFloat(data.drawer?.end)||0;
-      const drawerExpected = drawerStart + netCash;
-      const drawerDiff = drawerEnd - drawerExpected;
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit:'pt', format:'a4' });
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(16);
-      doc.text(`OMNIA COMMANDER — NAVY SEAL • Report Giornaliero`, 40, 50);
-      doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`Data: ${activeDate.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} (${key})`, 40, 70);
-
-      doc.setDrawColor(30); doc.line(40, 85, 555, 85);
-
-      doc.setFont('helvetica','bold'); doc.text(`Riepilogo`, 40, 110);
-      doc.setFont('helvetica','normal');
-
-      const rows1 = [
-        ['Incasso Lordo', money(total,2)],
-        ['Digitale/Delivery', money(dig,2)],
-        ['Fornitori Totali', money(supTot,2)],
-        ['Fornitori Cash', money(supCash,2)],
-        ['Acconti/Caparre', money(acconti,2)],
-        ['Cash Netto', money(netCash,2)],
-        ['Tasse stimate', money(tax,0)],
-        ['Drawer start', money(drawerStart,2)],
-        ['Drawer end', money(drawerEnd,2)],
-        ['Drawer expected', money(drawerExpected,2)],
-        ['Drawer diff', money(drawerDiff,2)],
-        ['Scontrino medio', clients>0 ? money(total/clients,2) : "€ 0.00"]
-      ];
-
-      doc.autoTable({
-        startY: 120,
-        head: [['Voce', 'Valore']],
-        body: rows1,
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [15, 23, 42] }
-      });
-
-      const yAfter = doc.lastAutoTable.finalY + 16;
-
-      doc.setFont('helvetica','bold'); doc.text(`Pagamenti digitali`, 40, yAfter);
-      const digRows = [
-        ['Bancomat', money(parseFloat(data.digital?.b)||0,2)],
-        ['SumUp', money(parseFloat(data.digital?.s)||0,2)],
-        ['Satispay', money(parseFloat(data.digital?.sat)||0,2)],
-        ['Just Eat', money(parseFloat(data.digital?.je)||0,2)],
-        ['Delivery', money(parseFloat(data.digital?.d)||0,2)],
-        ['App/Web', money(parseFloat(data.digital?.a)||0,2)]
-      ];
-      doc.autoTable({
-        startY: yAfter + 10,
-        head: [['Canale', 'Valore']],
-        body: digRows,
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [15, 23, 42] }
-      });
-
-      const yAfter2 = doc.lastAutoTable.finalY + 16;
-      doc.setFont('helvetica','bold'); doc.text(`Fornitori (12)`, 40, yAfter2);
-
-      const supRows = supCfg.suppliers.map((sp, i)=>{
-        const amt = parseFloat(data.suppliers?.amts?.[i]) || 0;
-        const isCash = !!data.suppliers?.cash?.[i];
-        const note = (data.suppliers?.notes?.[i] || "").trim();
-        return [sp.name, sp.cat, money(amt,2), isCash ? 'CASH' : 'NON CASH', note || '—'];
-      });
-
-      doc.autoTable({
-        startY: yAfter2 + 10,
-        head: [['Nome', 'Categoria', 'Importo', 'Tipo', 'Nota']],
-        body: supRows,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [15, 23, 42] },
-        columnStyles: { 2: { halign:'right' }, 3:{ halign:'center' } }
-      });
-
-      const yAfter3 = doc.lastAutoTable.finalY + 16;
-      doc.setFont('helvetica','bold'); doc.text(`Note`, 40, yAfter3);
-      doc.setFont('helvetica','normal'); doc.setFontSize(10);
-      const note = (data.note || "").trim() || "—";
-      doc.text(doc.splitTextToSize(note, 515), 40, yAfter3 + 14);
-
-      doc.save(`omnia_navyseal_day_${key}.pdf`);
-    }
-
-    function exportPDFWeek(){
-      const cfg = getCfg();
-      const supCfg = getSuppliers();
-
-      const days = [];
-      for(let i=6;i>=0;i--){
-        const d = new Date(activeDate);
-        d.setDate(d.getDate() - i);
-        const { key, data } = getDayForPDF(d);
-        days.push({ d, key, data });
-      }
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit:'pt', format:'a4' });
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(16);
-      doc.text(`OMNIA COMMANDER — NAVY SEAL • Report 7 Giorni`, 40, 50);
-      doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`Finestra: ultimi 7 giorni fino a ${formatLocalDate(activeDate)}`, 40, 70);
-      doc.setDrawColor(30); doc.line(40, 85, 555, 85);
-
-      // Totals
-      let tSales=0, tDig=0, tSup=0, tSupCash=0, tAcc=0, tNet=0;
-
-      const dailyRows = days.map(({d,key,data})=>{
-        const total = parseFloat(data.total)||0;
-        const acc = parseFloat(data.acconti)||0;
-        const dig = Object.values(data.digital||{}).reduce((a,b)=> a + (parseFloat(b)||0), 0);
-
-        let supTot=0, supCash=0;
-        (data.suppliers?.amts || []).forEach((v,idx)=>{
-          const n = parseFloat(v)||0;
-          supTot += n;
-          if(data.suppliers?.cash?.[idx]) supCash += n;
-        });
-
-        const net = (total - dig - supCash) + acc;
-
-        tSales += total; tDig += dig; tSup += supTot; tSupCash += supCash; tAcc += acc; tNet += net;
-
-        return [
-          d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'}),
-          money(total,0),
-          money(dig,0),
-          money(supTot,0),
-          money(supCash,0),
-          money(acc,0),
-          money(net,0)
-        ];
-      });
-
-      doc.setFont('helvetica','bold'); doc.text(`Riepilogo 7 giorni`, 40, 110);
-      doc.setFont('helvetica','normal');
-
-      doc.autoTable({
-        startY: 120,
-        head: [['Tot Incasso', 'Tot Digitale', 'Tot Fornitori', 'Tot Fornitori Cash', 'Tot Acconti', 'Tot Cash Netto']],
-        body: [[money(tSales,2), money(tDig,2), money(tSup,2), money(tSupCash,2), money(tAcc,2), money(tNet,2)]],
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [15, 23, 42] }
-      });
-
-      let y = doc.lastAutoTable.finalY + 16;
-      doc.setFont('helvetica','bold'); doc.text(`Dettaglio giornaliero`, 40, y);
-
-      doc.autoTable({
-        startY: y + 10,
-        head: [['Giorno', 'Incasso', 'Digitale', 'Fornitori', 'Forn. Cash', 'Acconti', 'Cash Netto']],
-        body: dailyRows,
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [15, 23, 42] }
-      });
-
-      y = doc.lastAutoTable.finalY + 16;
-      doc.setFont('helvetica','bold'); doc.text(`Totali per fornitore (7 giorni)`, 40, y);
-
-      // aggregate suppliers across week
-      const agg = supCfg.suppliers.map((sp, idx)=>({
-        name: sp.name, cat: sp.cat, tot: 0, cash: 0
-      }));
-
-      days.forEach(({data})=>{
-        (data.suppliers?.amts || []).forEach((v,idx)=>{
-          const n = parseFloat(v)||0;
-          agg[idx].tot += n;
-          if(data.suppliers?.cash?.[idx]) agg[idx].cash += n;
-        });
-      });
-
-      const supAggRows = agg.map(a=>[
-        a.name, a.cat, money(a.tot,2), money(a.cash,2)
-      ]);
-
-      doc.autoTable({
-        startY: y + 10,
-        head: [['Nome', 'Categoria', 'Totale', 'Cash']],
-        body: supAggRows,
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [15, 23, 42] },
-        columnStyles: { 2:{ halign:'right' }, 3:{ halign:'right' } }
-      });
-
-      doc.save(`omnia_navyseal_week_ending_${formatLocalDate(activeDate)}.pdf`);
-    }
-
-    // =======================
-    // Wire events
-    // =======================
-    function wireEvents(){
-      // Recalc + autosave
-      const recalcIds = [
-        'total_sales','n_clients','acconti','dailyNote',
-        'drawer_start','drawer_end',
-        'p_bancomat','p_sumup','p_satispay','p_justeat','p_delivery','p_app',
-        'fixed_costs','labor_costs','tax_rate','month_days',
-        'th_food_warn','th_food_crit','th_drawer_warn','th_drawer_crit'
-      ];
-      recalcIds.forEach(id=>{
-        el[id].addEventListener('input', ()=>{
-          runLogic();
-          scheduleAutosave();
-        });
-      });
-
-      el.datePicker.addEventListener('change', ()=>{
-        saveDraft();
-        const d = parseYMD(el.datePicker.value);
-        if(d) activeDate = d;
-        updateDateUI();
-        loadDateDataPreferDraft();
-      });
-
-      el.btnPrevDay.addEventListener('click', ()=>changeDate(-1));
-      el.btnNextDay.addEventListener('click', ()=>changeDate(1));
-
-      // Tabs
-      document.querySelectorAll('[data-tab]').forEach(btn=>{
-        btn.addEventListener('click', ()=>showTab(btn.dataset.tab));
-      });
-
-      // Official save
-      el.btnSave.addEventListener('click', saveDayOfficial);
-      el.btnSnap.addEventListener('click', saveSnapshot);
-
-      // Suppliers config
-      el.btnEditSuppliers.addEventListener('click', openSupModal);
-      el.btnCloseSupModal.addEventListener('click', closeSupModal);
-      el.btnSaveSupConfig.addEventListener('click', saveSupModal);
-
-      // Reset
-      el.btnMonthlyReset.addEventListener('click', monthlyReset);
-      el.btnWipeAll.addEventListener('click', wipeAll);
-
-      // Backup/restore + PDFs
-      el.btnBackupFile.addEventListener('click', backupToFile);
-      el.restoreFile.addEventListener('change', restoreFromFile);
-      el.btnPdfDay.addEventListener('click', exportPDFDay);
-      el.btnPdfWeek.addEventListener('click', exportPDFWeek);
-
-      // Keyboard shortcuts
-      document.addEventListener('keydown', (e)=>{
-        // Ctrl/Cmd+S => save official
-        if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='s'){
-          e.preventDefault();
-          saveDayOfficial();
-        }
-        // Ctrl/Cmd+P => PDF day
-        if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='p'){
-          e.preventDefault();
-          exportPDFDay();
-        }
-      });
-    }
-
-    // =======================
-    // Boot
-    // =======================
-    document.addEventListener('DOMContentLoaded', ()=>{
-      cacheEls();
-
-      el.btnUnlock.addEventListener('click', checkAuth);
-      el.pinInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') checkAuth(); });
-    });
-  </script>
+    </script>
 </body>
 </html>
