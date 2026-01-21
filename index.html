@@ -3,125 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Commander Elite Pro</title>
+    <title>Commander Elite Pro v3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; }
-        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; font-size: 14px; }
+        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; font-size: 14px; }
         .page { display: none; padding-bottom: 120px; }
         .active-page { display: block; animation: fadeIn 0.2s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card { background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.25rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
         input, select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; width: 100%; font-size: 16px; }
         .nav-bottom { position: fixed; bottom: 0; width: 100%; background: white; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 12px 0; z-index: 1000; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 11px; font-weight: 600; }
-        .nav-item.active { color: var(--primary); }
-        #lock-screen { position: fixed; inset: 0; background: #1e293b; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        @media print { .no-print { display: none !important; } .page { display: block !important; } .card { box-shadow: none; border: 1px solid #ccc; } }
+        .nav-item.active { color: #2563eb; }
+        #lock-screen { position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        @media print { 
+            .no-print { display: none !important; } 
+            .page { display: block !important; } 
+            .card { border: none; box-shadow: none; padding: 0; margin-bottom: 2rem; }
+            table { font-size: 10px !important; }
+        }
     </style>
 </head>
 <body>
 
     <div id="lock-screen">
-        <h1 class="text-3xl font-black mb-8 text-blue-400 uppercase tracking-tighter">Commander Elite Pro</h1>
+        <h1 class="text-3xl font-black mb-8 text-blue-500 italic uppercase">Commander Elite Pro</h1>
         <div class="w-64">
-            <input type="password" id="pin-input" class="text-center text-2xl tracking-[1em] text-slate-900 mb-4" maxlength="4" placeholder="****">
-            <button onclick="checkPin()" class="w-full bg-blue-600 py-4 rounded-xl font-bold active:scale-95 transition">SBLOCCA</button>
+            <input type="password" id="pin-input" class="text-center text-2xl tracking-[0.5em] text-slate-900 mb-4" maxlength="4" placeholder="****">
+            <button onclick="checkPin()" class="w-full bg-blue-600 py-4 rounded-xl font-bold uppercase tracking-widest">Entra</button>
         </div>
     </div>
 
     <header class="bg-white border-b sticky top-0 z-50 p-4 no-print flex justify-between items-center">
-        <h1 class="font-black text-blue-600 italic uppercase">Commander <span class="text-slate-800">Elite</span></h1>
-        <button onclick="location.reload()" class="text-slate-400"><i class="fa-solid fa-lock"></i></button>
+        <h1 class="font-black text-blue-600 italic">COMMANDER <span class="text-slate-900 uppercase">Pro</span></h1>
+        <button onclick="location.reload()" class="text-slate-400"><i class="fa-solid fa-power-off"></i></button>
     </header>
 
-    <main class="max-w-md mx-auto p-4">
+    <main class="max-w-2xl mx-auto p-4">
 
         <section id="page-oggi" class="page active-page">
             <div class="card bg-blue-50 border-blue-200">
-                <input type="date" id="data-lavoro" class="bg-transparent border-none font-bold text-blue-700">
+                <label class="text-[10px] font-bold text-blue-500 uppercase">Data Lavoro</label>
+                <input type="date" id="data-lavoro" class="bg-white border-blue-200 font-bold">
             </div>
 
             <div class="card">
-                <h3 class="font-bold text-slate-800 mb-4 border-b pb-2 uppercase text-[10px]">Entrate Corrispettivi Z</h3>
-                <div class="space-y-3">
+                <h3 class="font-black text-slate-700 mb-4 uppercase text-xs border-b pb-2">1. Incassi Corrispettivi (Lordo Z)</h3>
+                <div class="space-y-4">
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400">TOTALE LORDO Z</label>
-                        <input type="number" id="inp-tot" placeholder="0.00" class="text-xl font-black" oninput="calcola()">
+                        <input type="number" id="inp-tot" placeholder="0.00" class="text-2xl font-black text-blue-600" oninput="calcola()">
+                        <div class="flex gap-2 mt-2">
+                            <select id="iva-v-base" onchange="calcola()" class="text-xs font-bold">
+                                <option value="10">IVA VENDITE 10%</option>
+                                <option value="22">IVA VENDITE 22%</option>
+                                <option value="4">IVA VENDITE 4%</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400">IVA VENDITE (SCORPORO)</label>
-                        <select id="iva-corr-base" onchange="calcola()" class="text-sm font-bold">
-                            <option value="10">IVA 10%</option>
-                            <option value="22">IVA 22%</option>
-                            <option value="4">IVA 4%</option>
-                        </select>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div><label class="text-[8px] font-bold text-slate-400">BANCOMAT/SUMUP</label><input type="number" class="val-elettr" id="inp-pos" placeholder="0.00" oninput="calcola()"></div>
-                        <div><label class="text-[8px] font-bold text-slate-400">SATISPAY</label><input type="number" class="val-elettr" id="inp-sat" placeholder="0.00" oninput="calcola()"></div>
-                        <div><label class="text-[8px] font-bold text-slate-400">DELIVERY (JUSTEAT/GLOVO)</label><input type="number" class="val-elettr" id="inp-del" placeholder="0.00" oninput="calcola()"></div>
-                        <div><label class="text-[8px] font-bold text-slate-400">APP / ALTRO</label><input type="number" class="val-elettr" id="inp-tap" placeholder="0.00" oninput="calcola()"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Bancomat/SumUp</label>
+                        <input type="number" class="val-e" id="inp-pos" placeholder="0.00" oninput="calcola()"></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Satispay</label>
+                        <input type="number" class="val-e" id="inp-sat" placeholder="0.00" oninput="calcola()"></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Just Eat/Delivery</label>
+                        <input type="number" class="val-e" id="inp-del" placeholder="0.00" oninput="calcola()"></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">App/Altro</label>
+                        <input type="number" class="val-e" id="inp-tap" placeholder="0.00" oninput="calcola()"></div>
                     </div>
                 </div>
             </div>
 
             <div class="card border-l-4 border-red-500">
                 <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-[10px] uppercase">Fornitori e Fatture</h3>
-                    <button onclick="addFornitore()" class="text-blue-600 font-bold text-[10px]">+ AGGIUNGI</button>
+                    <h3 class="font-black text-slate-700 uppercase text-xs">2. Fornitori e Spese</h3>
+                    <button onclick="addFornitore()" class="bg-red-50 text-red-600 px-3 py-1 rounded text-[10px] font-bold">+ AGGIUNGI FATTURA</button>
                 </div>
                 <div id="fornitori-list" class="space-y-4"></div>
             </div>
 
             <div class="card bg-slate-900 text-white">
-                <div class="space-y-2 text-sm">
-                    <div class="flex justify-between text-slate-400"><span>Elettronico Totale:</span> <span id="res-elettr">€ 0.00</span></div>
-                    <div class="flex justify-between text-orange-400"><span>Iva su Vendite:</span> <span id="res-iva-v">€ 0.00</span></div>
-                    <div class="flex justify-between text-red-400 border-b border-slate-700 pb-2"><span>Uscite Cash:</span> <span id="res-cash-uscita">€ 0.00</span></div>
-                    <div class="flex justify-between text-xl font-black text-green-400 pt-1"><span>NETTO DA VERSARE:</span> <span id="res-netto">€ 0.00</span></div>
+                <div class="grid grid-cols-2 gap-4 text-xs mb-4">
+                    <div class="border-r border-slate-700">
+                        <p class="opacity-50">TOT. ELETTRONICO</p>
+                        <p id="res-ele" class="text-lg font-bold">€ 0.00</p>
+                    </div>
+                    <div>
+                        <p class="opacity-50">IVA VENDITE</p>
+                        <p id="res-ivav" class="text-lg font-bold text-orange-400">€ 0.00</p>
+                    </div>
                 </div>
-                <button onclick="salvaTutto()" class="w-full mt-4 bg-blue-600 py-3 rounded-xl font-bold uppercase">Archivia Giornata</button>
+                <div class="flex justify-between items-center border-t border-slate-700 pt-4">
+                    <span class="font-black text-green-400 uppercase">Netto Cash da Versare</span>
+                    <span id="res-netto" class="text-2xl font-black text-green-400">€ 0.00</span>
+                </div>
+                <button onclick="salvaData()" class="w-full mt-6 bg-blue-600 py-4 rounded-xl font-black uppercase hover:bg-blue-500 transition">Salva Giornata</button>
             </div>
         </section>
 
         <section id="page-riepilogo" class="page">
-            <h2 class="font-bold text-xl mb-4">Analisi Periodica</h2>
-            <div class="grid grid-cols-1 gap-3 mb-6">
-                <div class="card bg-blue-600 text-white">
-                    <p class="text-[10px] uppercase font-bold opacity-80">Mese Corrente (Lordo)</p>
-                    <p id="stat-month" class="text-2xl font-black">€ 0.00</p>
-                </div>
-                <div class="card bg-white border-t-4 border-orange-500">
-                    <p class="text-[10px] uppercase font-bold text-slate-400">IVA da Versare (Saldo Mese)</p>
-                    <p id="stat-iva-saldo" class="text-2xl font-black text-slate-800">€ 0.00</p>
-                </div>
+            <h2 class="font-black text-xl mb-4">Dashboard Analitica</h2>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="card"><p class="text-[9px] font-bold text-slate-400 uppercase">Settimana</p><p id="st-w" class="text-lg font-black text-blue-600">€ 0.00</p></div>
+                <div class="card"><p class="text-[9px] font-bold text-slate-400 uppercase">Mese</p><p id="st-m" class="text-lg font-black text-blue-600">€ 0.00</p></div>
+                <div class="card col-span-2"><p class="text-[9px] font-bold text-slate-400 uppercase">Anno Corrente</p><p id="st-y" class="text-xl font-black text-slate-800">€ 0.00</p></div>
             </div>
 
             <div class="card">
-                <h3 class="font-bold text-xs uppercase mb-3">Ricerca Storica Intervallo</h3>
-                <div class="space-y-2">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="date" id="s-from">
-                        <input type="date" id="s-to">
-                    </div>
-                    <button onclick="cercaPeriodo()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold">CERCA DATI</button>
+                <h3 class="font-bold text-xs uppercase mb-3">Ricerca Avanzata Periodo</h3>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <input type="date" id="s-from">
+                    <input type="date" id="s-to">
                 </div>
-                <div id="search-result" class="mt-4 hidden p-3 bg-slate-50 rounded-xl border text-sm"></div>
+                <button onclick="cercaPeriodo()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold">FILTRA DATI</button>
+                <div id="s-res" class="mt-4 hidden animate-pulse"></div>
             </div>
         </section>
 
         <section id="page-stampa" class="page">
             <div class="card no-print">
-                <h3 class="font-bold mb-4 uppercase text-xs">Esportazione Fiscale</h3>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="date" id="p-from">
-                        <input type="date" id="p-to">
-                    </div>
-                    <button onclick="generaReportPro()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold uppercase">Genera Documento Fiscale</button>
+                <h3 class="font-bold text-xs uppercase mb-4">Export per Ragioniere</h3>
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <input type="date" id="p-from">
+                    <input type="date" id="p-to">
                 </div>
+                <button onclick="generaReportProfessionale()" class="w-full bg-blue-700 text-white py-4 rounded-xl font-bold uppercase">Genera Report Completo</button>
             </div>
             <div id="area-stampa"></div>
         </section>
@@ -135,11 +142,10 @@
     </nav>
 
     <script>
-        const PIN_CORRETTO = "1234";
-        let database = JSON.parse(localStorage.getItem('ce_pro_db_final') || '[]');
+        let db = JSON.parse(localStorage.getItem('ce_v3_final') || '[]');
 
         function checkPin() {
-            if(document.getElementById('pin-input').value === PIN_CORRETTO) {
+            if(document.getElementById('pin-input').value === "1234") {
                 document.getElementById('lock-screen').style.display = 'none';
             }
         }
@@ -149,188 +155,197 @@
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.getElementById('page-'+p).classList.add('active-page');
             document.getElementById('btn-'+p).classList.add('active');
-            if(p === 'riepilogo') updateQuickStats();
+            if(p === 'riepilogo') aggiornaStatsDash();
         }
 
         function addFornitore() {
             const container = document.getElementById('fornitori-list');
             const div = document.createElement('div');
-            div.className = "bg-slate-50 p-3 rounded-xl border border-slate-200 forn-block";
+            div.className = "bg-slate-50 p-3 rounded-xl border forn-block";
             div.innerHTML = `
                 <div class="flex gap-2 mb-2">
-                    <input type="text" placeholder="Fornitore / Descrizione Fattura" class="flex-1 font-bold text-sm name-f">
-                    <button onclick="this.parentElement.parentElement.remove(); calcola()" class="text-red-400 px-1">✕</button>
+                    <input type="text" placeholder="Nome Fornitore (es. Macelleria Rossi)" class="flex-1 font-bold text-sm f-name bg-white">
+                    <button onclick="this.parentElement.parentElement.remove(); calcola()" class="text-red-400">✕</button>
                 </div>
-                <div class="rows-area space-y-2">
-                    <div class="row-item grid grid-cols-3 gap-1">
-                        <input type="number" placeholder="Importo" class="val-r !p-1 text-sm" oninput="calcola()">
-                        <select class="iva-r !p-1 text-[10px]" onchange="calcola()">
+                <div class="space-y-2 r-cont">
+                    <div class="grid grid-cols-3 gap-1 r-item">
+                        <input type="number" placeholder="Importo" class="r-val !p-1 text-sm" oninput="calcola()">
+                        <select class="r-iva !p-1 text-[10px]" onchange="calcola()">
                             <option value="22">IVA 22%</option>
                             <option value="10" selected>IVA 10%</option>
                             <option value="4">IVA 4%</option>
-                            <option value="0">Esente</option>
                         </select>
-                        <select class="tipo-r !p-1 text-[10px]" onchange="calcola()">
-                            <option value="lordo">Lordo</option>
-                            <option value="netto">Netto</option>
+                        <select class="r-tipo !p-1 text-[10px]" onchange="calcola()">
+                            <option value="L">Lordo</option>
+                            <option value="N">Netto</option>
                         </select>
                     </div>
                 </div>
                 <div class="mt-2 flex justify-between items-center border-t pt-2">
-                    <button onclick="addRowToForn(this)" class="text-[9px] font-black text-blue-600 uppercase">+ riga IVA</button>
-                    <label class="flex items-center gap-1 text-[9px] font-bold uppercase">Contanti? <input type="checkbox" class="is-cash w-4 h-4 accent-red-500" onchange="calcola()"></label>
+                    <button onclick="addRowIVA(this)" class="text-[9px] font-black text-blue-600">+ RIGA IVA</button>
+                    <label class="text-[10px] font-bold">PAGATO CONTANTI? <input type="checkbox" class="f-cash w-4 h-4 accent-red-500" onchange="calcola()"></label>
                 </div>
             `;
             container.appendChild(div);
         }
 
-        function addRowToForn(btn) {
+        function addRowIVA(btn) {
             const row = document.createElement('div');
-            row.className = "row-item grid grid-cols-3 gap-1";
-            row.innerHTML = `
-                <input type="number" placeholder="Importo" class="val-r !p-1 text-sm" oninput="calcola()">
-                <select class="iva-r !p-1 text-[10px]" onchange="calcola()">
-                    <option value="22">IVA 22%</option>
-                    <option value="10" selected>IVA 10%</option>
-                    <option value="4">IVA 4%</option>
-                </select>
-                <button onclick="this.parentElement.remove(); calcola()" class="text-[8px] text-red-500 uppercase font-bold">✕</button>
-            `;
+            row.className = "grid grid-cols-3 gap-1 r-item mt-1";
+            row.innerHTML = `<input type="number" placeholder="Importo" class="r-val !p-1 text-sm" oninput="calcola()">
+                <select class="r-iva !p-1 text-[10px]" onchange="calcola()"><option value="22">22%</option><option value="10" selected>10%</option><option value="4">4%</option></select>
+                <button onclick="this.parentElement.remove(); calcola()" class="text-[8px] text-red-500 uppercase">Rimuovi</button>`;
             btn.parentElement.previousElementSibling.appendChild(row);
         }
 
         function calcola() {
-            const totLordo = parseFloat(document.getElementById('inp-tot').value) || 0;
-            const ivaPercCorr = parseFloat(document.getElementById('iva-corr-base').value);
+            const lordoZ = parseFloat(document.getElementById('inp-tot').value) || 0;
+            const ivaVperc = parseFloat(document.getElementById('iva-v-base').value);
             
-            let ele = 0;
-            document.querySelectorAll('.val-elettr').forEach(i => ele += parseFloat(i.value) || 0);
+            let totEle = 0;
+            document.querySelectorAll('.val-e').forEach(i => totEle += parseFloat(i.value) || 0);
 
-            const imponibileV = totLordo / (1 + (ivaPercCorr / 100));
-            const ivaV = totLordo - imponibileV;
+            const impV = lordoZ / (1 + (ivaVperc / 100));
+            const ivaV = lordoZ - impV;
 
-            let totaleUsciteCash = 0;
-            let totaleIvaAcquisti = 0;
+            let uscCash = 0;
+            let totIvaA = 0;
+            let detFornitori = [];
 
-            document.querySelectorAll('.forn-block').forEach(block => {
-                const isCash = block.querySelector('.is-cash').checked;
-                block.querySelectorAll('.row-item').forEach(row => {
-                    const val = parseFloat(row.querySelector('.val-r').value) || 0;
-                    const iva = parseFloat(row.querySelector('.iva-r').value) || 0;
-                    const tipo = row.querySelector('.tipo-r')?.value || 'lordo';
-
-                    let r_lordo = 0, r_iva = 0;
-                    if(tipo === 'lordo') {
-                        r_lordo = val;
-                        r_iva = val - (val / (1 + (iva / 100)));
+            document.querySelectorAll('.forn-block').forEach(b => {
+                let fLordo = 0;
+                let fIva = 0;
+                b.querySelectorAll('.r-item').forEach(r => {
+                    const v = parseFloat(r.querySelector('.r-val').value) || 0;
+                    const i = parseFloat(r.querySelector('.r-iva').value) || 0;
+                    const t = r.querySelector('.r-tipo')?.value || 'L';
+                    if(t === 'L') {
+                        fLordo += v;
+                        fIva += v - (v / (1 + (i / 100)));
                     } else {
-                        r_iva = val * (iva / 100);
-                        r_lordo = val + r_iva;
+                        const r_iva = v * (i / 100);
+                        fIva += r_iva;
+                        fLordo += (v + r_iva);
                     }
-                    totaleIvaAcquisti += r_iva;
-                    if(isCash) totaleUsciteCash += r_lordo;
                 });
+                totIvaA += fIva;
+                if(b.querySelector('.f-cash').checked) uscCash += fLordo;
+                detFornitori.push({ nome: b.querySelector('.f-name').value, lordo: fLordo, iva: fIva, cash: b.querySelector('.f-cash').checked });
             });
 
-            const netto = (totLordo - ele) - totaleUsciteCash;
+            const netto = (lordoZ - totEle) - uscCash;
 
-            document.getElementById('res-elettr').innerText = `€ ${ele.toFixed(2)}`;
-            document.getElementById('res-iva-v').innerText = `€ ${ivaV.toFixed(2)}`;
-            document.getElementById('res-cash-uscita').innerText = `€ ${totaleUsciteCash.toFixed(2)}`;
+            document.getElementById('res-ele').innerText = `€ ${totEle.toFixed(2)}`;
+            document.getElementById('res-ivav').innerText = `€ ${ivaV.toFixed(2)}`;
             document.getElementById('res-netto').innerText = `€ ${netto.toFixed(2)}`;
 
-            return { totLordo, ivaV, imponibileV, totaleIvaAcquisti, totaleUsciteCash, netto };
+            return { lordoZ, ivaV, impV, totEle, uscCash, totIvaA, detFornitori, 
+                     pos: parseFloat(document.getElementById('inp-pos').value)||0,
+                     sat: parseFloat(document.getElementById('inp-sat').value)||0,
+                     del: parseFloat(document.getElementById('inp-del').value)||0,
+                     tap: parseFloat(document.getElementById('inp-tap').value)||0 
+                   };
         }
 
-        function salvaTutto() {
-            const d = document.getElementById('data-lavoro').value;
-            if(!d) return alert("Data mancante!");
+        function salvaData() {
+            const data = document.getElementById('data-lavoro').value;
+            if(!data) return alert("Inserisci la data!");
             const dati = calcola();
-            const record = {
-                data: d,
-                ...dati,
-                pos: parseFloat(document.getElementById('inp-pos').value) || 0,
-                sat: parseFloat(document.getElementById('inp-sat').value) || 0,
-                del: parseFloat(document.getElementById('inp-del').value) || 0,
-                tap: parseFloat(document.getElementById('inp-tap').value) || 0
-            };
-            database = database.filter(r => r.data !== d);
-            database.push(record);
-            localStorage.setItem('ce_pro_db_final', JSON.stringify(database));
-            alert("✅ Salvataggio Completato!");
+            db = db.filter(r => r.data !== data);
+            db.push({ data, ...dati });
+            localStorage.setItem('ce_v3_final', JSON.stringify(db));
+            alert("✅ Archiviato con successo!");
         }
 
-        function updateQuickStats() {
-            const m = new Date().toISOString().substring(0, 7);
-            let tL = 0, tIV = 0, tIA = 0;
-            database.forEach(r => {
-                if(r.data.startsWith(m)) {
-                    tL += r.totLordo; tIV += r.ivaV; tIA += r.totaleIvaAcquisti;
-                }
+        function aggiornaStatsDash() {
+            const now = new Date();
+            const m = now.toISOString().substring(0, 7);
+            const y = now.getFullYear().toString();
+            const w = new Date(); w.setDate(now.getDate() - 7);
+
+            let tW=0, tM=0, tY=0;
+            db.forEach(r => {
+                const rd = new Date(r.data);
+                if(rd >= w) tW += r.lordoZ;
+                if(r.data.startsWith(m)) tM += r.lordoZ;
+                if(r.data.startsWith(y)) tY += r.lordoZ;
             });
-            document.getElementById('stat-month').innerText = `€ ${tL.toFixed(2)}`;
-            document.getElementById('stat-iva-saldo').innerText = `€ ${(tIV - tIA).toFixed(2)}`;
+            document.getElementById('st-w').innerText = `€ ${tW.toFixed(2)}`;
+            document.getElementById('st-m').innerText = `€ ${tM.toFixed(2)}`;
+            document.getElementById('st-y').innerText = `€ ${tY.toFixed(2)}`;
         }
 
         function cercaPeriodo() {
-            const from = document.getElementById('s-from').value;
-            const to = document.getElementById('s-to').value;
-            if(!from || !to) return alert("Seleziona date!");
-
-            let filtrati = database.filter(r => r.data >= from && r.data <= to);
-            let sL=0, sE=0, sC=0, sIV=0, sIA=0;
+            const f = document.getElementById('s-from').value;
+            const t = document.getElementById('s-to').value;
+            const fil = db.filter(r => r.data >= f && r.data <= t);
+            let totL=0, totE=0, totC=0, tIva=0;
+            fil.forEach(r => { totL += r.lordoZ; totE += r.totEle; totC += r.uscCash; tIva += (r.ivaV - r.totIvaA); });
             
-            filtrati.forEach(r => {
-                sL+=r.totLordo; sE+=(r.pos+r.sat+r.del+r.tap); sC+=r.totaleUsciteCash; sIV+=r.ivaV; sIA+=r.totaleIvaAcquisti;
-            });
-
-            const res = document.getElementById('search-result');
+            const res = document.getElementById('s-res');
             res.classList.remove('hidden');
-            res.innerHTML = `
-                <h4 class="font-bold border-b mb-2 uppercase text-[10px]">Riepilogo dal ${from} al ${to}</h4>
-                <div class="space-y-1">
-                    <div class="flex justify-between"><span>Incasso Lordo:</span> <strong>€ ${sL.toFixed(2)}</strong></div>
-                    <div class="flex justify-between text-blue-600"><span>Elettronico:</span> <span>€ ${sE.toFixed(2)}</span></div>
-                    <div class="flex justify-between text-red-600"><span>Uscite Cash:</span> <span>€ ${sC.toFixed(2)}</span></div>
-                    <div class="flex justify-between pt-2 border-t font-bold"><span>Saldo IVA da Versare:</span> <span class="text-orange-600">€ ${(sIV - sIA).toFixed(2)}</span></div>
-                </div>`;
+            res.innerHTML = `<div class="p-4 bg-slate-800 text-white rounded-xl space-y-2">
+                <div class="flex justify-between"><span>Lordo Z:</span> <strong>€ ${totL.toFixed(2)}</strong></div>
+                <div class="flex justify-between text-blue-300"><span>Tot. Elettronico:</span> <span>€ ${totE.toFixed(2)}</span></div>
+                <div class="flex justify-between text-red-400"><span>Uscite Cash:</span> <span>€ ${totC.toFixed(2)}</span></div>
+                <div class="border-t pt-2 flex justify-between font-bold text-orange-400"><span>Saldo IVA Periodo:</span> <span>€ ${tIva.toFixed(2)}</span></div>
+            </div>`;
         }
 
-        function generaReportPro() {
-            const from = document.getElementById('p-from').value;
-            const to = document.getElementById('p-to').value;
-            if(!from || !to) return alert("Inserisci il periodo");
-
-            let filtrati = database.filter(r => r.data >= from && r.data <= to).sort((a,b) => a.data.localeCompare(b.data));
+        function generaReportProfessionale() {
+            const f = document.getElementById('p-from').value;
+            const t = document.getElementById('p-to').value;
+            if(!f || !t) return alert("Scegli le date!");
             
-            let titolo = `Report Fiscale dal ${from} al ${to}`;
-            if(from.endsWith("-01") && (to.endsWith("-30") || to.endsWith("-31"))) {
+            let dataFil = db.filter(r => r.data >= f && r.data <= t).sort((a,b) => a.data.localeCompare(b.data));
+            
+            let titolo = `REPORT FISCALE DAL ${f} AL ${t}`;
+            if(f.endsWith("-01") && (t.endsWith("-30") || t.endsWith("-31"))) {
                 const mesi = ["GENNAIO","FEBBRAIO","MARZO","APRILE","MAGGIO","GIUGNO","LUGLIO","AGOSTO","SETTEMBRE","OTTOBRE","NOVEMBRE","DICEMBRE"];
-                titolo = `CORRISPETTIVI MESE DI ${mesi[new Date(from).getMonth()]}`;
+                titolo = `REGISTRO CORRISPETTIVI E ACQUISTI - MESE DI ${mesi[new Date(f).getMonth()]}`;
             }
 
-            let h = `<div class="card">
-                <h2 class="text-center font-black text-xl mb-1 uppercase">Commander Elite Pro</h2>
-                <h3 class="text-center font-bold text-blue-600 mb-6 uppercase text-sm">${titolo}</h3>
-                <table class="w-full text-[11px] border-collapse">
-                    <thead><tr class="bg-slate-100"><th class="p-2 border">Data</th><th class="p-2 border text-right">Lordo Z</th><th class="p-2 border text-right">IVA Debito</th><th class="p-2 border text-right">IVA Credito</th></tr></thead>
-                    <tbody>`;
-            
-            let sL=0, sIV=0, sIA=0;
-            filtrati.forEach(r => {
-                sL+=r.totLordo; sIV+=r.ivaV; sIA+=r.totaleIvaAcquisti;
-                h += `<tr><td class="p-2 border">${r.data}</td><td class="p-2 border text-right font-bold">€${r.totLordo.toFixed(2)}</td><td class="p-2 border text-right text-red-600">€${r.ivaV.toFixed(2)}</td><td class="p-2 border text-right text-green-600">€${r.totaleIvaAcquisti.toFixed(2)}</td></tr>`;
-            });
+            let h = `<div class="bg-white p-4">
+                <h1 class="text-center font-black text-xl mb-1">COMMANDER ELITE PRO</h1>
+                <h2 class="text-center font-bold text-blue-600 mb-8 uppercase text-sm">${titolo}</h2>`;
 
-            h += `<tr class="bg-slate-900 text-white font-bold"><td class="p-2 border">TOTALI</td><td class="p-2 border text-right">€${sL.toFixed(2)}</td><td class="p-2 border text-right">€${sIV.toFixed(2)}</td><td class="p-2 border text-right">€${sIA.toFixed(2)}</td></tr>
-                </tbody></table>
-                <div class="mt-6 p-4 bg-orange-50 border-2 border-orange-200 rounded-xl">
-                    <div class="flex justify-between font-black text-slate-800">
-                        <span>LIQUIDAZIONE IVA DA VERSARE:</span>
-                        <span>€ ${(sIV - sIA).toFixed(2)}</span>
+            // Tabella A: Vendite
+            h += `<h3 class="font-bold text-[10px] mb-2 uppercase border-b">A. Registro Corrispettivi (Vendite)</h3>
+                <table class="w-full mb-8 border-collapse">
+                    <thead class="bg-slate-100"><tr><th class="border p-1 text-left">Data</th><th class="border p-1 text-right">Lordo Z</th><th class="border p-1 text-right">IVA Debito</th><th class="border p-1 text-right">POS/Elettr.</th><th class="border p-1 text-right">Cash Teorico</th></tr></thead>
+                    <tbody>`;
+            let sZ=0, sIV=0, sE=0;
+            dataFil.forEach(r => {
+                sZ += r.lordoZ; sIV += r.ivaV; sE += r.totEle;
+                h += `<tr><td class="border p-1">${r.data}</td><td class="border p-1 text-right">€${r.lordoZ.toFixed(2)}</td><td class="border p-1 text-right text-red-600">€${r.ivaV.toFixed(2)}</td><td class="border p-1 text-right">€${r.totEle.toFixed(2)}</td><td class="border p-1 text-right font-bold">€${(r.lordoZ - r.totEle).toFixed(2)}</td></tr>`;
+            });
+            h += `<tr class="bg-slate-50 font-black"><td class="border p-1">TOTALI</td><td class="border p-1 text-right">€${sZ.toFixed(2)}</td><td class="border p-1 text-right">€${sIV.toFixed(2)}</td><td class="border p-1 text-right">€${sE.toFixed(2)}</td><td class="border p-1 text-right">€${(sZ-sE).toFixed(2)}</td></tr></tbody></table>`;
+
+            // Tabella B: Acquisti
+            h += `<h3 class="font-bold text-[10px] mb-2 uppercase border-b">B. Registro Acquisti e Fornitori</h3>
+                <table class="w-full mb-8 border-collapse">
+                    <thead class="bg-slate-100"><tr><th class="border p-1 text-left">Fornitore</th><th class="border p-1 text-right">Imponibile</th><th class="border p-1 text-right">IVA Credito</th><th class="border p-1 text-right">Tot. Fattura</th><th class="border p-1 text-center">Pagamento</th></tr></thead>
+                    <tbody>`;
+            let sIA=0, sAL=0;
+            dataFil.forEach(r => {
+                r.detFornitori.forEach(f => {
+                    sIA += f.iva; sAL += f.lordo;
+                    h += `<tr><td class="border p-1">${f.nome}</td><td class="border p-1 text-right">€${(f.lordo-f.iva).toFixed(2)}</td><td class="border p-1 text-right text-green-600">€${f.iva.toFixed(2)}</td><td class="border p-1 text-right">€${f.lordo.toFixed(2)}</td><td class="border p-1 text-center text-[8px]">${f.cash ? 'CONTANTI' : 'BONIFICO/ELETTR.'}</td></tr>`;
+                });
+            });
+            h += `<tr class="bg-slate-50 font-black"><td class="border p-1">TOTALI</td><td class="border p-1 text-right">€${(sAL-sIA).toFixed(2)}</td><td class="border p-1 text-right">€${sIA.toFixed(2)}</td><td class="border p-1 text-right">€${sAL.toFixed(2)}</td><td class="border p-1"></td></tr></tbody></table>`;
+
+            // Tabella C: Sintesi Fiscale
+            h += `<div class="border-2 border-slate-800 p-4 rounded-lg bg-slate-50">
+                    <h3 class="font-black text-center mb-4 uppercase">Riepilogo Liquidazione IVA</h3>
+                    <div class="flex justify-between mb-1"><span>Totale IVA su Vendite (A):</span> <span class="text-red-600 font-bold">+ €${sIV.toFixed(2)}</span></div>
+                    <div class="flex justify-between mb-3"><span>Totale IVA su Acquisti (B):</span> <span class="text-green-600 font-bold">- €${sIA.toFixed(2)}</span></div>
+                    <div class="flex justify-between border-t border-slate-400 pt-2 font-black text-lg">
+                        <span>IVA DA VERSARE NEL PERIODO:</span>
+                        <span class="text-blue-700">€${(sIV - sIA).toFixed(2)}</span>
                     </div>
-                </div>
-                <button onclick="window.print()" class="no-print w-full bg-blue-600 text-white py-4 rounded-xl mt-4 font-black">STAMPA PDF RAGIONIERE</button>
+                  </div>
+                  <button onclick="window.print()" class="no-print w-full bg-blue-600 text-white py-4 mt-8 rounded-xl font-black">STAMPA PDF PER RAGIONIERE</button>
             </div>`;
             document.getElementById('area-stampa').innerHTML = h;
         }
