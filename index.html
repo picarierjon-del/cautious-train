@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>OMNIA COMMANDER - Pro Edition</title>
+  <title>OMNIA COMMANDER - Absolute Edition</title>
 
   <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22OmniaCommander%22,%22short_name%22:%22Omnia%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#020617%22,%22theme_color%22:%22#020617%22}">
 
@@ -16,6 +16,7 @@
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=JetBrains+Mono:wght@500;800&display=swap');
+    
     body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; -webkit-tap-highlight-color: transparent; }
     .glass-card { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(51, 65, 85, 0.3); border-radius: 20px; }
     .input-pro { background: #0f172a; border: 1px solid #1e293b; color: white; border-radius: 12px; padding: 12px; width: 100%; outline: none; text-align: center; font-weight: bold; transition: border 0.2s; }
@@ -25,6 +26,11 @@
     .hidden { display: none !important; }
     .mono { font-family: 'JetBrains Mono', monospace; }
     .mini-btn { background:#0f172a; border:1px solid #1e293b; padding:8px 12px; border-radius:12px; font-weight:900; font-size:10px; text-transform: uppercase; }
+    
+    /* Scrollbar personalizzata */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #020617; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
   </style>
 </head>
 
@@ -33,9 +39,12 @@
   <div id="authScreen" class="fixed inset-0 z-[9999] bg-[#020617] flex items-center justify-center p-6">
     <div class="text-center space-y-6 p-10 glass-card w-full max-w-sm border-t-4 border-blue-600 shadow-2xl">
       <h1 class="text-3xl font-black italic tracking-tighter">OMNIA<span class="text-blue-500">COMMANDER</span></h1>
-      <input type="password" id="pinInput" class="input-pro text-3xl tracking-[0.5em]" placeholder="****" maxlength="4" inputmode="numeric">
-      <button id="btnUnlock" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black uppercase shadow-lg">Sblocca</button>
-      <p class="text-[9px] text-slate-600 uppercase tracking-widest">Secure Access v2.2</p>
+      <div class="space-y-2">
+        <p class="text-[10px] text-slate-500 uppercase font-bold">Inserire Codice Accesso</p>
+        <input type="password" id="pinInput" class="input-pro text-3xl tracking-[0.5em]" placeholder="****" maxlength="4" inputmode="numeric">
+      </div>
+      <button id="btnUnlock" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black uppercase transition-all transform active:scale-95">Sblocca Sistemi</button>
+      <p class="text-[9px] text-slate-600 uppercase tracking-widest">Offline Secure Storage v2.0</p>
     </div>
   </div>
 
@@ -43,30 +52,47 @@
 
     <nav class="sticky top-0 z-50 bg-[#020617]/90 border-b border-slate-800 p-4 flex justify-between items-center backdrop-blur-md">
       <div>
-        <p id="topDate" class="text-[9px] font-black text-blue-500 uppercase"></p>
-        <h1 class="text-lg font-black italic uppercase">Dashboard <span class="text-blue-500">Pro</span></h1>
+        <p id="topDate" class="text-[9px] font-black text-blue-500 uppercase tracking-tighter"></p>
+        <h1 class="text-lg font-black italic uppercase">Dashboard <span class="text-blue-500 underline decoration-2">Diamond</span></h1>
       </div>
       <div class="flex gap-2">
         <button id="btnPdf" class="mini-btn text-blue-400">PDF</button>
-        <button id="btnWhatsapp" class="mini-btn text-green-500">WA</button>
+        <button id="btnBackupFile" class="mini-btn text-slate-400">Export</button>
+        <label class="mini-btn text-slate-400 cursor-pointer">
+          Import
+          <input id="restoreFile" type="file" accept="application/json" class="hidden" />
+        </label>
       </div>
     </nav>
 
     <div class="p-4 grid grid-cols-2 gap-3">
       <div class="glass-card p-4 col-span-2 flex justify-between items-center bg-gradient-to-br from-blue-900/20 to-transparent">
         <div>
-          <p class="text-[8px] font-bold text-slate-500 uppercase mb-1 tracking-widest">Netto Cassa Reale</p>
-          <h3 id="netCashDisplay" class="text-3xl font-black text-green-400 mono">€ 0.00</h3>
-          <p id="splitInfo" class="text-[9px] font-medium text-slate-500 italic mt-2">Attendendo input...</p>
+          <p class="text-[8px] font-bold text-slate-500 uppercase mb-1 tracking-widest">Cash Netto Teorico</p>
+          <h3 id="netCashDisplay" class="text-3xl font-black text-green-400 mono leading-none">€ 0.00</h3>
+          <p id="splitInfo" class="text-[9px] font-medium text-slate-500 italic mt-2">Dati pronti per il calcolo</p>
         </div>
         <div class="text-right">
-          <p class="text-[8px] font-bold text-red-500 uppercase">Tasse</p>
-          <h3 id="taxReserve" class="text-lg font-black text-red-500 mono">€ 0</h3>
+          <p class="text-[8px] font-bold text-red-500 uppercase mb-1">Tax Reserve</p>
+          <h3 id="taxReserve" class="text-lg font-black text-red-500/80 mono leading-none">€ 0</h3>
         </div>
+      </div>
+
+      <div class="glass-card p-4">
+        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Copertura Costi</p>
+        <div class="w-full bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+          <div id="progressCosts" class="bg-blue-500 h-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <p id="percCosts" class="text-[10px] font-black mt-1 text-blue-400 italic">0%</p>
+      </div>
+
+      <div class="glass-card p-4 text-center">
+        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Ticket Medio</p>
+        <h3 id="avgTicket" class="text-xl font-black mono text-white mt-1">€ 0.00</h3>
       </div>
     </div>
 
-    <div class="flex gap-1 p-1 bg-slate-900 mx-4 rounded-2xl border border-slate-800 shadow-inner">
+    <div class="flex gap-1 p-1 bg-slate-900/80 mx-4 rounded-2xl border border-slate-800 shadow-inner">
       <button data-tab="day" id="t1" class="tab-btn active uppercase">Operativo</button>
       <button data-tab="bank" id="t2" class="tab-btn uppercase">Cassa</button>
       <button data-tab="stats" id="t3" class="tab-btn uppercase">Trend</button>
@@ -75,164 +101,314 @@
 
     <div id="sec-day" class="p-4 space-y-4">
       <div class="flex gap-2 items-center">
-        <button id="btnPrevDay" class="bg-slate-800 p-3 rounded-xl text-blue-500">◀</button>
+        <button id="btnPrevDay" class="bg-slate-800 hover:bg-slate-700 p-3 rounded-xl text-blue-500 transition-colors">◀</button>
         <input type="date" id="datePicker" class="input-pro text-xs grow">
-        <button id="btnNextDay" class="bg-slate-800 p-3 rounded-xl text-blue-500">▶</button>
+        <button id="btnNextDay" class="bg-slate-800 hover:bg-slate-700 p-3 rounded-xl text-blue-500 transition-colors">▶</button>
       </div>
 
       <div class="glass-card p-6 text-center border-b-4 border-blue-600/30">
-        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Totale Lordo (Z)</span>
-        <input type="number" id="total_sales" class="bg-transparent text-5xl font-black text-white w-full text-center outline-none mt-2" placeholder="0.00" inputmode="decimal">
-        
+        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Totale Lordo Z (Chiusura)</span>
+        <div class="relative mt-2">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-black">€</span>
+            <input type="number" id="total_sales" class="bg-transparent text-5xl font-black text-white w-full text-center outline-none" placeholder="0.00" inputmode="decimal">
+        </div>
+
         <div class="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-800/50">
-          <input type="number" id="n_clients" class="bg-slate-800/50 rounded-xl p-3 font-bold text-center border border-slate-700" placeholder="Clienti" inputmode="numeric">
-          <input type="number" id="acconti" class="bg-orange-900/10 rounded-xl p-3 font-bold text-center border border-orange-900/30 text-orange-400" placeholder="Acconti €" inputmode="decimal">
+          <div>
+            <span class="text-[8px] text-slate-500 font-bold uppercase italic tracking-widest">Clienti Totali</span>
+            <input type="number" id="n_clients" class="bg-slate-800/50 w-full text-center rounded-xl p-3 font-bold mt-1 border border-slate-700" placeholder="0" inputmode="numeric">
+          </div>
+          <div>
+            <span class="text-[8px] text-orange-500 font-bold uppercase italic tracking-widest">Acconti Ricevuti</span>
+            <input type="number" id="acconti" class="bg-orange-900/10 w-full text-center rounded-xl p-3 font-bold mt-1 border border-orange-900/30 text-orange-400" placeholder="0.00" inputmode="decimal">
+          </div>
         </div>
       </div>
 
-      <div class="glass-card p-4 grid grid-cols-2 gap-3">
-        <div class="col-span-2 text-[9px] font-black text-blue-400 uppercase italic">Pagamenti Digitali</div>
-        <input type="number" id="p_bancomat" class="input-pro text-xs" placeholder="Bancomat" inputmode="decimal">
-        <input type="number" id="p_sumup" class="input-pro text-xs" placeholder="Altro POS" inputmode="decimal">
-        <input type="number" id="p_satispay" class="input-pro text-xs" placeholder="Satispay" inputmode="decimal">
-        <input type="number" id="p_delivery_tot" class="input-pro text-xs" placeholder="Delivery" inputmode="decimal">
+      <div class="glass-card p-4">
+        <div class="text-[9px] font-black text-blue-400 uppercase italic mb-3 tracking-widest">Incassi Non-Cash (POS / Delivery)</div>
+        <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-1">
+                <label class="text-[8px] text-slate-500 uppercase ml-2">Bancomat</label>
+                <input type="number" id="p_bancomat" class="input-pro text-xs" placeholder="0.00" inputmode="decimal">
+            </div>
+            <div class="space-y-1">
+                <label class="text-[8px] text-slate-500 uppercase ml-2">SumUp/Altro</label>
+                <input type="number" id="p_sumup" class="input-pro text-xs" placeholder="0.00" inputmode="decimal">
+            </div>
+            <div class="space-y-1">
+                <label class="text-[8px] text-slate-500 uppercase ml-2">Satispay</label>
+                <input type="number" id="p_satispay" class="input-pro text-xs" placeholder="0.00" inputmode="decimal">
+            </div>
+            <div class="space-y-1">
+                <label class="text-[8px] text-slate-500 uppercase ml-2">App/Web</label>
+                <input type="number" id="p_app" class="input-pro text-xs" placeholder="0.00" inputmode="decimal">
+            </div>
+            <div class="space-y-1 col-span-2">
+                <label class="text-[8px] text-slate-500 uppercase ml-2 italic text-blue-400">Total Delivery (Glovo/Deliveroo/JE)</label>
+                <input type="number" id="p_delivery_tot" class="input-pro text-xs border-blue-900/30" placeholder="0.00" inputmode="decimal">
+            </div>
+        </div>
       </div>
 
       <div class="glass-card p-4">
         <div class="flex items-center justify-between mb-4">
-          <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Uscite Fornitori</h4>
-          <button id="btnEditSuppliers" class="mini-btn text-blue-400">Modifica Nomi</button>
+          <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Uscite Fornitori / Acquisti</h4>
+          <button id="btnEditSuppliers" class="mini-btn text-blue-400 bg-blue-400/5 border-blue-400/20">Gestisci Nomi</button>
         </div>
-        <div id="supList" class="space-y-2"></div>
+        
+        <div id="supList" class="space-y-2">
+            </div>
+
+        <div class="grid grid-cols-2 gap-2 mt-4">
+          <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-3 text-center">
+            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Fornitori Tot.</p>
+            <p id="supTotal" class="text-lg font-black mono italic">€ 0.00</p>
+          </div>
+          <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-3 text-center border-orange-900/20">
+            <p class="text-[8px] font-black text-orange-500 uppercase mb-1">Uscite Cash</p>
+            <p id="supCashTotal" class="text-lg font-black mono text-orange-400">€ 0.00</p>
+          </div>
+        </div>
       </div>
 
-      <textarea id="dailyNote" class="w-full bg-[#0f172a] border border-slate-800 rounded-xl p-3 text-xs italic text-slate-300 outline-none glass-card" rows="2" placeholder="Note sulla giornata..."></textarea>
+      <div class="glass-card p-4">
+        <h4 class="text-[10px] font-black text-blue-500 uppercase mb-2 italic tracking-widest">Diario di Bordo</h4>
+        <textarea id="dailyNote" class="w-full bg-[#0f172a] border border-slate-800 rounded-xl p-3 text-xs italic text-slate-300 outline-none focus:border-blue-500" rows="3" placeholder="Note sulla serata, meteo, eventi..."></textarea>
+      </div>
     </div>
 
     <div id="sec-config" class="p-4 hidden space-y-4">
       <div class="glass-card p-6 space-y-5">
-        <h3 class="text-sm font-black text-blue-500 uppercase italic">Parametri Mensili</h3>
-        <input type="number" id="fixed_costs" class="input-pro" placeholder="Spese Fisse €">
-        <input type="number" id="labor_costs" class="input-pro" placeholder="Stipendi €">
-        <input type="number" id="tax_rate" class="input-pro" placeholder="Aliquota %" value="25">
-        
-        <div class="grid grid-cols-2 gap-2 pt-6">
-          <button id="btnExport" class="mini-btn text-slate-200 py-3">Backup JSON</button>
-          <label class="mini-btn text-slate-200 py-3 text-center cursor-pointer">Import<input id="restoreFile" type="file" class="hidden"></label>
+        <h3 class="text-sm font-black text-blue-500 uppercase italic tracking-widest">Parametri Business</h3>
+
+        <div class="grid gap-4">
+            <div>
+              <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Costi Fissi Mensili (Affitto, Luce, etc)</label>
+              <input type="number" id="fixed_costs" class="input-pro mt-1" value="3000" inputmode="decimal">
+            </div>
+            <div>
+              <label class="text-[9px] font-bold text-blue-400 uppercase ml-1 italic">Payroll (Stipendi + Contributi)</label>
+              <input type="number" id="labor_costs" class="input-pro mt-1 border-blue-900/50" value="2000" inputmode="decimal">
+            </div>
+            <div>
+              <label class="text-[9px] font-bold text-red-500 uppercase ml-1 italic">Aliquota Tasse Stimata (%)</label>
+              <input type="number" id="tax_rate" class="input-pro mt-1 border-red-900/30" value="25" inputmode="numeric">
+            </div>
         </div>
-        <button id="btnWipeAll" class="w-full bg-red-900/20 text-red-500 py-3 rounded-xl text-[10px] font-black uppercase">Cancella Tutto</button>
+
+        <div class="pt-4 space-y-2">
+            <button id="btnWipeAll" class="w-full bg-red-900/20 text-red-500 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-900/20">Formatta Tutti i Dati</button>
+        </div>
+
+        <p class="text-[9px] text-slate-500 leading-relaxed text-center px-4">
+          I dati vengono salvati esclusivamente sul tuo dispositivo (LocalStorage). Effettua backup periodici.
+        </p>
       </div>
     </div>
 
     <div id="sec-stats" class="p-4 hidden space-y-4">
-        <div class="glass-card p-4 h-64"><canvas id="mainChart"></canvas></div>
-    </div>
-    
-    <div id="sec-bank" class="p-4 hidden space-y-4">
-        <div class="glass-card p-6 border-l-4 border-green-500">
-            <p class="text-[10px] font-black text-slate-500 uppercase">Totale Cash Settimanale</p>
-            <div id="bankTotal" class="text-4xl font-black mono">€ 0.00</div>
-        </div>
-        <div id="bankHistory" class="space-y-2"></div>
+      <div class="glass-card p-4 h-72 shadow-2xl">
+        <canvas id="mainChart"></canvas>
+      </div>
+
+      <div class="glass-card p-5 text-center space-y-3">
+        <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Analisi Food/Drink Cost (Acquisti su Incasso)</p>
+        <div id="foodCostBar" class="w-full bg-slate-800 h-5 rounded-full overflow-hidden flex border border-slate-700"></div>
+        <p id="foodCostLabel" class="text-xs font-black">0%</p>
+        <p id="foodCostHint" class="text-[10px] text-slate-500 italic px-4 leading-snug"></p>
+      </div>
     </div>
 
-    <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#020617]/95 border-t border-slate-800 backdrop-blur-xl flex justify-between items-center z-[100]">
-      <div>
-        <p class="text-[8px] font-black text-slate-500 uppercase">Cash Netto Oggi</p>
-        <div id="theoCash" class="text-3xl font-black text-white mono">€ 0.00</div>
+    <div id="sec-bank" class="p-4 hidden space-y-4">
+      <div class="glass-card p-6 border-l-4 border-green-500 bg-gradient-to-r from-green-500/5 to-transparent">
+        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contante Netto Accumulato (7gg)</p>
+        <div id="bankTotal" class="text-4xl font-black italic my-2 mono text-white">€ 0.00</div>
+        <p class="text-[9px] text-slate-500 uppercase">Somma del cash netto degli ultimi 7 giorni</p>
       </div>
-      <button id="btnSave" class="bg-blue-600 text-white font-black px-12 py-5 rounded-2xl shadow-xl uppercase text-xs tracking-widest active:scale-95">Archivia</button>
+      
+      <h4 class="text-[10px] font-black text-slate-500 uppercase ml-2 mt-6">Storico Recente</h4>
+      <div id="bankHistory" class="space-y-2"></div>
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#020617]/95 border-t border-slate-800 backdrop-blur-xl flex justify-between items-center z-[100] shadow-2xl">
+      <div>
+        <p class="text-[8px] font-black text-slate-500 uppercase italic tracking-tighter">Netto del Giorno</p>
+        <div id="theoCash" class="text-3xl font-black text-white mono leading-none tracking-tighter">€ 0.00</div>
+      </div>
+      <button id="btnSave" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-12 py-5 rounded-2xl shadow-[0_0_20px_rgba(59,130,246,0.4)] uppercase text-xs tracking-widest transition-all active:scale-90">Archivia</button>
     </div>
 
   </div>
 
   <div id="supModal" class="hidden fixed inset-0 z-[9998] bg-black/80 flex items-end">
-    <div class="w-full glass-card rounded-t-[40px] p-8 border border-slate-700 animate-in slide-in-from-bottom">
-      <h3 class="text-lg font-black text-blue-400 uppercase italic mb-4">Gestione Nomi Fornitori</h3>
-      <div class="max-h-[40vh] overflow-auto space-y-2 mb-6" id="supConfigList"></div>
-      <div class="grid grid-cols-2 gap-3">
-          <button id="btnAddSup" class="bg-slate-800 py-4 rounded-xl font-black text-[10px]">+ AGGIUNGI</button>
-          <button id="btnSaveSupConfig" class="bg-blue-600 py-4 rounded-xl font-black text-[10px]">SALVA</button>
+    <div class="w-full glass-card rounded-t-[40px] p-8 border border-slate-700 animate-in slide-in-from-bottom duration-300">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-lg font-black text-blue-400 uppercase italic italic">Gestione Fornitori</h3>
+        <button id="btnCloseSupModal" class="p-2 text-slate-500">✕</button>
       </div>
-      <button id="btnCloseSupModal" class="w-full mt-4 text-slate-500 text-[10px] uppercase font-bold">Chiudi</button>
+      
+      <div class="max-h-[50vh] overflow-auto space-y-3 mb-6 pr-2" id="supConfigList">
+        </div>
+
+      <div class="grid grid-cols-2 gap-3">
+          <button id="btnAddSup" class="bg-slate-800 py-4 rounded-xl font-black uppercase text-[10px] text-blue-400">+ Aggiungi</button>
+          <button id="btnSaveSupConfig" class="bg-blue-600 py-4 rounded-xl font-black uppercase text-[10px] text-white">Salva Tutti</button>
+      </div>
     </div>
   </div>
 
   <script>
+    /**
+     * OMNIA COMMANDER - LOGIC ENGINE v2.1
+     */
+
+    // --- UTILITIES ---
+    const fDate = (d) => d.toISOString().split('T')[0];
+    const money = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
+    const parseVal = (v) => {
+        let n = parseFloat(v);
+        return isNaN(n) ? 0 : n;
+    };
+
+    // --- STATE ---
     let activeDate = new Date();
+    const MASTER_PIN = "1234"; // Consigliato: Hash in produzione
     let chartInstance = null;
-    const DB_KEY = 'omnia_v2_';
-    const SUP_KEY = 'omnia_suppliers_v2';
+
+    const DB_KEYS = {
+        SUP: 'omnia_suppliers_v2',
+        DATA_PREFIX: 'omnia_day_',
+        CONFIG: ['fixed_costs', 'labor_costs', 'tax_rate']
+    };
 
     const el = {};
-    const ids = ['authScreen','mainUI','pinInput','btnUnlock','topDate','datePicker','btnPrevDay','btnNextDay','total_sales','n_clients','acconti','dailyNote','p_bancomat','p_sumup','p_satispay','p_delivery_tot','supList','supTotal','supCashTotal','btnEditSuppliers','fixed_costs','labor_costs','tax_rate','btnWipeAll','netCashDisplay','taxReserve','avgTicket','theoCash','splitInfo','bankTotal','bankHistory','mainChart','btnSave','btnPdf','btnWhatsapp','supModal','supConfigList','btnCloseSupModal','btnSaveSupConfig','btnAddSup','btnExport','restoreFile'];
-    ids.forEach(id => el[id] = document.getElementById(id));
-
-    // Utils
-    const fD = (d) => d.toISOString().split('T')[0];
-    const money = (v) => new Intl.NumberFormat('it-IT', { style:'currency', currency:'EUR'}).format(v || 0);
-    const parse = (v) => parseFloat(v) || 0;
-
-    // Supplier Management
-    function getSups() {
-        return JSON.parse(localStorage.getItem(SUP_KEY)) || [{name:"Bevande"},{name:"Cibo"},{name:"Consumo"}];
+    function cacheElements() {
+        const ids = [
+            'authScreen','mainUI','pinInput','btnUnlock','topDate','datePicker','btnPrevDay','btnNextDay',
+            'total_sales','n_clients','acconti','dailyNote','p_bancomat','p_sumup','p_satispay','p_app','p_delivery_tot',
+            'supList','supTotal','supCashTotal','btnEditSuppliers','fixed_costs','labor_costs','tax_rate','btnWipeAll',
+            'netCashDisplay','taxReserve','avgTicket','theoCash','splitInfo','progressCosts','percCosts',
+            'foodCostBar','foodCostLabel','foodCostHint','bankTotal','bankHistory','mainChart','btnSave',
+            'btnPdf','btnBackupFile','restoreFile','supModal','supConfigList','btnCloseSupModal','btnSaveSupConfig','btnAddSup'
+        ];
+        ids.forEach(id => el[id] = document.getElementById(id));
     }
 
-    function renderSuppliers() {
-        const sups = getSups();
+    // --- SUPPLIER SYSTEM (DYNAMIC) ---
+    function getStoredSuppliers() {
+        let saved = localStorage.getItem(DB_KEYS.SUP);
+        return saved ? JSON.parse(saved) : [{name: "Bevande", cat: "Fornitore"}, {name: "Carni", cat: "Fornitore"}];
+    }
+
+    function renderSuppliersUI() {
+        const suppliers = getStoredSuppliers();
         el.supList.innerHTML = "";
-        sups.forEach((s, i) => {
+        suppliers.forEach((s, idx) => {
             const div = document.createElement('div');
             div.className = "flex gap-2 items-center bg-slate-900/40 p-3 rounded-xl border border-slate-800/50";
             div.innerHTML = `
-                <div class="flex-1 text-[10px] font-black uppercase text-slate-300">${s.name}</div>
-                <input type="number" step="0.01" class="sup-amt bg-slate-950 w-24 text-xs font-black border border-slate-800 rounded-lg p-2 text-center" placeholder="€" data-idx="${i}">
-                <label class="flex items-center gap-1"><input type="checkbox" class="sup-check accent-orange-500 w-5 h-5" data-idx="${i}"></label>
+                <div class="flex-1">
+                    <p class="text-[10px] font-black text-slate-200 uppercase tracking-tighter">${s.name}</p>
+                    <p class="text-[8px] font-bold text-slate-500 uppercase">${s.cat}</p>
+                </div>
+                <input type="number" step="0.01" class="sup-amt bg-slate-950 w-24 text-xs font-black border border-slate-800 rounded-lg p-2 text-center text-white" placeholder="0.00" data-idx="${idx}">
+                <label class="flex items-center gap-1 bg-slate-950 p-2 rounded-lg border border-slate-800">
+                    <span class="text-[8px] font-bold text-orange-500">CASH</span>
+                    <input type="checkbox" class="sup-check accent-orange-500 w-4 h-4" data-idx="${idx}">
+                </label>
             `;
             el.supList.appendChild(div);
         });
-        document.querySelectorAll('.sup-amt, .sup-check').forEach(i => i.addEventListener('input', calc));
+
+        // Attach events to new inputs
+        document.querySelectorAll('.sup-amt, .sup-check').forEach(i => i.addEventListener('input', runCalculations));
     }
 
-    function calc() {
-        const total = parse(el.total_sales.value);
-        const acconti = parse(el.acconti.value);
-        const digital = ['p_bancomat','p_sumup','p_satispay','p_delivery_tot'].reduce((acc,id)=> acc + parse(el[id].value), 0);
-        
+    // --- CORE LOGIC ---
+    function runCalculations() {
+        const total = parseVal(el.total_sales.value);
+        const clients = parseVal(el.n_clients.value);
+        const acconti = parseVal(el.acconti.value);
+        const taxRate = parseVal(el.tax_rate.value) || 25;
+
+        // Digital sum
+        const digSum = ['p_bancomat','p_sumup','p_satispay','p_app','p_delivery_tot'].reduce((acc, id) => acc + parseVal(el[id].value), 0);
+
+        // Supplier sum
         let sTot = 0, sCash = 0;
         document.querySelectorAll('.sup-amt').forEach((input, i) => {
-            const v = parse(input.value);
-            sTot += v;
-            if(document.querySelectorAll('.sup-check')[i].checked) sCash += v;
+            const val = parseVal(input.value);
+            const isCash = document.querySelectorAll('.sup-check')[i].checked;
+            sTot += val;
+            if(isCash) sCash += val;
         });
 
-        const net = (total - digital - sCash) + acconti;
-        el.theoCash.innerText = money(net);
-        el.netCashDisplay.innerText = money(net);
-        el.taxReserve.innerText = money(total * (parse(el.tax_rate.value)/100));
-        el.splitInfo.innerText = `Pos: ${money(digital)} • Uscite: ${money(sTot)}`;
+        // Net Cash Formula
+        const netToday = (total - digSum - sCash) + acconti;
+        const taxReserve = total * (taxRate / 100);
+
+        // UI Update
+        el.theoCash.innerText = money(netToday);
+        el.netCashDisplay.innerText = money(netToday);
+        el.taxReserve.innerText = money(taxReserve);
+        el.avgTicket.innerText = clients > 0 ? money(total / clients) : "€ 0.00";
+        el.supTotal.innerText = money(sTot);
+        el.supCashTotal.innerText = money(sCash);
+        el.splitInfo.innerText = `Pos/Deliv: ${money(digSum)} • Acquisti: ${money(sTot)}`;
+
+        // Monthly Progress
+        updateProgress(total);
+        
+        // Food Cost Proxy
+        const fc = total > 0 ? (sTot / total) * 100 : 0;
+        el.foodCostBar.innerHTML = `<div style="width:${Math.min(fc, 100)}%" class="${fc > 35 ? 'bg-red-500' : fc > 28 ? 'bg-orange-500' : 'bg-green-500'} h-full transition-all duration-700 shadow-[0_0_10px_rgba(0,0,0,0.5)]"></div>`;
+        el.foodCostLabel.innerText = `${fc.toFixed(1)}% Rapporto Acquisti/Incasso`;
+        el.foodCostHint.innerText = fc > 35 ? "ATTENZIONE: Costi troppo alti rispetto all'incasso." : "Rapporto ottimale per la categoria.";
     }
 
-    // Save & Load
-    function save() {
+    function updateProgress(todayVal) {
+        const fixed = parseVal(el.fixed_costs.value);
+        const labor = parseVal(el.labor_costs.value);
+        const target = fixed + labor;
+
+        // In un'app reale qui calcoleresti la somma del mese dal localStorage
+        // Per semplicità simuliamo con il dato odierno e i parametri salvati
+        const perc = target > 0 ? Math.min((todayVal / (target / 26)) * 100, 100) : 0; // Media su 26gg lavorativi
+        el.progressCosts.style.width = perc + "%";
+        el.percCosts.innerText = `${perc.toFixed(1)}% Copertura Target Giornaliero`;
+    }
+
+    // --- DATA MANAGEMENT ---
+    function saveDay() {
         const data = {
             total: el.total_sales.value,
             clients: el.n_clients.value,
             acconti: el.acconti.value,
             note: el.dailyNote.value,
-            digital: { b: el.p_bancomat.value, s: el.p_sumup.value, sat: el.p_satispay.value, del: el.p_delivery_tot.value },
+            digital: {
+                b: el.p_bancomat.value, s: el.p_sumup.value, sat: el.p_satispay.value, 
+                app: el.p_app.value, del: el.p_delivery_tot.value
+            },
             supAmts: Array.from(document.querySelectorAll('.sup-amt')).map(i => i.value),
             supChecks: Array.from(document.querySelectorAll('.sup-check')).map(i => i.checked)
         };
-        localStorage.setItem(DB_KEY + fD(activeDate), JSON.stringify(data));
-        ['fixed_costs','labor_costs','tax_rate'].forEach(k => localStorage.setItem(k, el[k].value));
-        alert("DATI ARCHIVIATI");
-        calc();
+        localStorage.setItem(DB_KEYS.DATA_PREFIX + fDate(activeDate), JSON.stringify(data));
+        
+        // Salva anche i config
+        DB_KEYS.CONFIG.forEach(k => localStorage.setItem(k, el[k].value));
+        
+        alert("SISTEMA AGGIORNATO CON SUCCESSO");
+        runCalculations();
     }
 
-    function load() {
-        const raw = localStorage.getItem(DB_KEY + fD(activeDate));
-        renderSuppliers();
+    function loadDay() {
+        const raw = localStorage.getItem(DB_KEYS.DATA_PREFIX + fDate(activeDate));
+        
+        // Reset inputs
+        ['total_sales','n_clients','acconti','dailyNote','p_bancomat','p_sumup','p_satispay','p_app','p_delivery_tot'].forEach(id => el[id].value = "");
+        renderSuppliersUI();
+
         if(raw) {
             const d = JSON.parse(raw);
             el.total_sales.value = d.total || "";
@@ -242,82 +418,188 @@
             el.p_bancomat.value = d.digital?.b || "";
             el.p_sumup.value = d.digital?.s || "";
             el.p_satispay.value = d.digital?.sat || "";
+            el.p_app.value = d.digital?.app || "";
             el.p_delivery_tot.value = d.digital?.del || "";
-            const amts = document.querySelectorAll('.sup-amt'), chks = document.querySelectorAll('.sup-check');
-            (d.supAmts || []).forEach((v, i) => { if(amts[i]) amts[i].value = v; });
-            (d.supChecks || []).forEach((v, i) => { if(chks[i]) chks[i].checked = v; });
-        } else {
-            ['total_sales','n_clients','acconti','dailyNote','p_bancomat','p_sumup','p_satispay','p_delivery_tot'].forEach(id => el[id].value="");
+
+            const amtInputs = document.querySelectorAll('.sup-amt');
+            const chkInputs = document.querySelectorAll('.sup-check');
+            (d.supAmts || []).forEach((v, i) => { if(amtInputs[i]) amtInputs[i].value = v; });
+            (d.supChecks || []).forEach((v, i) => { if(chkInputs[i]) chkInputs[i].checked = v; });
         }
-        calc();
+        runCalculations();
     }
 
-    // WhatsApp Export
-    el.btnWhatsapp.onclick = () => {
-        const dateStr = activeDate.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
-        const text = `*OMNIA COMMANDER REPORT*%0A📅 ${dateStr.toUpperCase()}%0A%0A💰 *INCASSI*%0A- Lordo Z: ${money(parse(el.total_sales.value))}%0A- Acconti: ${money(parse(el.acconti.value))}%0A%0A💳 *DIGITALE*%0A- Totale POS/Delivery: ${money(['p_bancomat','p_sumup','p_satispay','p_delivery_tot'].reduce((acc,id)=>acc+parse(el[id].value),0))}%0A%0A💸 *USCITE CASH*%0A- Fornitori: ${el.theoCash.innerText}%0A%0A📝 *NOTE*%0A${el.dailyNote.value || "Nessuna nota."}`;
-        window.open(`https://wa.me/?text=${text}`, '_blank');
-    };
+    // --- CHART & BANK ---
+    function renderBankReport() {
+        el.bankHistory.innerHTML = "";
+        let totalCash7 = 0;
 
-    // PDF Export
-    el.btnPdf.onclick = () => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setFontSize(18);
-        doc.text("OMNIA COMMANDER REPORT", 10, 20);
-        doc.setFontSize(12);
-        doc.text(`Data: ${activeDate.toLocaleDateString()}`, 10, 30);
-        doc.text(`Lordo Z: ${money(parse(el.total_sales.value))}`, 10, 45);
-        doc.text(`Cash Netto: ${el.theoCash.innerText}`, 10, 55);
-        doc.text(`Note: ${el.dailyNote.value || "-"}`, 10, 70);
-        doc.save(`report_${fD(activeDate)}.pdf`);
-    };
+        for(let i=0; i<7; i++) {
+            let d = new Date(activeDate);
+            d.setDate(d.getDate() - i);
+            let key = DB_KEYS.DATA_PREFIX + fDate(d);
+            let raw = localStorage.getItem(key);
+            
+            let net = 0;
+            if(raw) {
+                let s = JSON.parse(raw);
+                let dig = Object.values(s.digital || {}).reduce((a,b) => a + parseVal(b), 0);
+                let sCash = (s.supAmts || []).reduce((acc, v, idx) => acc + (s.supChecks[idx] ? parseVal(v) : 0), 0);
+                net = (parseVal(s.total) - dig - sCash) + parseVal(s.acconti);
+            }
+            
+            totalCash7 += net;
+            const div = document.createElement('div');
+            div.className = "flex justify-between p-4 glass-card text-xs border-l-2 " + (net >= 0 ? 'border-green-500' : 'border-red-500');
+            div.innerHTML = `<span class="font-bold opacity-60">${d.toLocaleDateString('it-IT', {weekday:'short', day:'numeric'})}</span>
+                             <span class="font-black text-white">${money(net)}</span>`;
+            el.bankHistory.appendChild(div);
+        }
+        el.bankTotal.innerText = money(totalCash7);
+    }
 
-    // Init
-    el.btnUnlock.onclick = () => { if(el.pinInput.value === "1234"){ el.authScreen.classList.add('hidden'); el.mainUI.classList.remove('hidden'); boot(); } };
-    
-    function boot() {
-        ['fixed_costs','labor_costs','tax_rate'].forEach(k => { if(localStorage.getItem(k)) el[k].value = localStorage.getItem(k); });
-        el.datePicker.onchange = (e) => { activeDate = new Date(e.target.value); updateUI(); };
-        el.btnPrevDay.onclick = () => { activeDate.setDate(activeDate.getDate()-1); updateUI(); };
-        el.btnNextDay.onclick = () => { activeDate.setDate(activeDate.getDate()+1); updateUI(); };
-        el.btnSave.onclick = save;
-        el.btnEditSuppliers.onclick = () => {
-            el.supModal.classList.remove('hidden');
-            el.supConfigList.innerHTML = "";
-            getSups().forEach(s => addSupRow(s.name));
-        };
-        el.btnAddSup.onclick = () => addSupRow("");
-        el.btnSaveSupConfig.onclick = () => {
-            const newS = Array.from(document.querySelectorAll('.cfg-name')).map(i => ({name: i.value}));
-            localStorage.setItem(SUP_KEY, JSON.stringify(newS));
-            el.supModal.classList.add('hidden');
-            load();
-        };
-        el.btnCloseSupModal.onclick = () => el.supModal.classList.add('hidden');
+    // --- INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+        cacheElements();
         
-        document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
-            document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
-            b.classList.add('active');
-            ['day','bank','stats','config'].forEach(s => el['sec-'+s].classList.add('hidden'));
-            el['sec-'+b.dataset.tab].classList.remove('hidden');
-        });
+        // Auth
+        el.btnUnlock.onclick = () => {
+            if(el.pinInput.value === MASTER_PIN) {
+                el.authScreen.classList.add('hidden');
+                el.mainUI.classList.remove('hidden');
+                bootApp();
+            } else {
+                alert("ACCESSO NEGATO");
+                el.pinInput.value = "";
+            }
+        };
 
-        updateUI();
+        function bootApp() {
+            // Load Configs
+            DB_KEYS.CONFIG.forEach(k => {
+                let v = localStorage.getItem(k);
+                if(v) el[k].value = v;
+            });
+
+            // Events
+            el.datePicker.onchange = (e) => { 
+                activeDate = new Date(e.target.value); 
+                updateDateDisplay();
+                loadDay(); 
+            };
+            el.btnPrevDay.onclick = () => { activeDate.setDate(activeDate.getDate()-1); updateDateDisplay(); loadDay(); };
+            el.btnNextDay.onclick = () => { activeDate.setDate(activeDate.getDate()+1); updateDateDisplay(); loadDay(); };
+            el.btnSave.onclick = saveDay;
+            
+            // Tab switch
+            document.querySelectorAll('[data-tab]').forEach(btn => {
+                btn.onclick = () => {
+                    const tab = btn.dataset.tab;
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    ['day','bank','stats','config'].forEach(s => el['sec-'+s].classList.add('hidden'));
+                    el['sec-'+tab].classList.remove('hidden');
+                    
+                    if(tab === 'bank') renderBankReport();
+                    if(tab === 'stats') updateTrendChart();
+                };
+            });
+
+            // Supplier Setup
+            el.btnEditSuppliers.onclick = openSupplierConfig;
+            el.btnSaveSupConfig.onclick = saveSupplierConfig;
+            el.btnAddSup.onclick = () => addSupConfigRow("", "Fornitore");
+            el.btnCloseSupModal.onclick = () => el.supModal.classList.add('hidden');
+
+            updateDateDisplay();
+            loadDay();
+        }
+    });
+
+    function updateDateDisplay() {
+        el.datePicker.value = fDate(activeDate);
+        el.topDate.innerText = activeDate.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
     }
 
-    function addSupRow(name) {
+    // --- DYNAMIC SUPPLIER CONFIG ---
+    function openSupplierConfig() {
+        el.supModal.classList.remove('hidden');
+        el.supConfigList.innerHTML = "";
+        const current = getStoredSuppliers();
+        current.forEach(s => addSupConfigRow(s.name, s.cat));
+    }
+
+    function addSupConfigRow(name, cat) {
         const div = document.createElement('div');
-        div.className = "flex gap-2";
-        div.innerHTML = `<input class="cfg-name input-pro flex-1 !text-left" value="${name}"><button onclick="this.parentElement.remove()" class="text-red-500 px-2">✕</button>`;
+        div.className = "flex gap-2 items-center bg-slate-800/40 p-2 rounded-xl border border-slate-700";
+        div.innerHTML = `
+            <input class="cfg-name input-pro !text-left !p-2 text-xs flex-1" value="${name}" placeholder="Nome (es. Carni)">
+            <input class="cfg-cat input-pro !text-left !p-2 text-xs w-24" value="${cat}" placeholder="Tipo">
+            <button class="text-red-500 px-2" onclick="this.parentElement.remove()">✕</button>
+        `;
         el.supConfigList.appendChild(div);
     }
 
-    function updateUI() {
-        el.datePicker.value = fD(activeDate);
-        el.topDate.innerText = activeDate.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
-        load();
+    function saveSupplierConfig() {
+        const names = document.querySelectorAll('.cfg-name');
+        const cats = document.querySelectorAll('.cfg-cat');
+        const newCfg = [];
+        names.forEach((n, i) => {
+            if(n.value.trim()) newCfg.push({ name: n.value.trim(), cat: cats[i].value.trim() });
+        });
+        localStorage.setItem(DB_KEYS.SUP, JSON.stringify(newCfg));
+        el.supModal.classList.add('hidden');
+        renderSuppliersUI();
+        alert("LISTA FORNITORI AGGIORNATA");
     }
+
+    function updateTrendChart() {
+        const ctx = el.mainChart.getContext('2d');
+        const labels = [], dataSales = [], dataNet = [];
+
+        for(let i=6; i>=0; i--) {
+            let d = new Date(activeDate);
+            d.setDate(d.getDate() - i);
+            labels.push(d.toLocaleDateString('it-IT', {weekday:'short'}));
+            
+            let raw = localStorage.getItem(DB_KEYS.DATA_PREFIX + fDate(d));
+            if(raw) {
+                let s = JSON.parse(raw);
+                let dig = Object.values(s.digital || {}).reduce((a,b) => a + parseVal(b), 0);
+                let sCash = (s.supAmts || []).reduce((acc, v, idx) => acc + (s.supChecks[idx] ? parseVal(v) : 0), 0);
+                dataSales.push(parseVal(s.total));
+                dataNet.push((parseVal(s.total) - dig - sCash) + parseVal(s.acconti));
+            } else {
+                dataSales.push(0); dataNet.push(0);
+            }
+        }
+
+        if(chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label:'Lordo', data:dataSales, borderColor:'#3b82f6', tension:0.4, fill:true, backgroundColor:'rgba(59,130,246,0.1)' },
+                    { label:'Netto Cash', data:dataNet, borderColor:'#22c55e', tension:0.4, fill:true, backgroundColor:'rgba(34,197,94,0.1)' }
+                ]
+            },
+            options: { 
+                maintainAspectRatio:false, 
+                plugins:{ legend:{display:false} },
+                scales: { y:{ grid:{color:'#1e293b'}}, x:{ grid:{display:false}} }
+            }
+        });
+    }
+
+    // --- WIPE ALL ---
+    el.btnWipeAll.onclick = () => {
+        if(confirm("SEI SICURO? Questa azione cancellerà ogni dato salvato permanentemente.")) {
+            localStorage.clear();
+            location.reload();
+        }
+    };
+
   </script>
 </body>
 </html>
