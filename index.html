@@ -184,7 +184,44 @@
 
     <!-- PAGINA STAMPA / SETUP -->
     <section id="page-stampa" class="page">
+<!-- DAL: SETUP PIN -->
+<div class="card no-print border-l-4 border-slate-800">
+  <div class="flex items-center gap-2 mb-4 border-b pb-2">
+    <i class="fa-solid fa-shield-keyhole text-slate-800"></i>
+    <h3 class="font-black text-slate-700 uppercase text-xs">Setup - Sicurezza PIN</h3>
+  </div>
 
+  <div class="space-y-3">
+    <div class="space-y-1">
+      <label class="text-[9px] font-bold px-1">PIN ATTUALE</label>
+      <input type="password" id="pin-current" maxlength="4" inputmode="numeric" placeholder="****">
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="space-y-1">
+        <label class="text-[9px] font-bold px-1">NUOVO PIN</label>
+        <input type="password" id="pin-new" maxlength="4" inputmode="numeric" placeholder="****">
+      </div>
+      <div class="space-y-1">
+        <label class="text-[9px] font-bold px-1">CONFERMA PIN</label>
+        <input type="password" id="pin-new2" maxlength="4" inputmode="numeric" placeholder="****">
+      </div>
+    </div>
+
+    <button type="button" onclick="changePin()" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-xs transition-all">
+      Cambia PIN
+    </button>
+
+    <button type="button" onclick="resetPinToDefault()" class="w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-black uppercase text-xs transition-all">
+      Reset PIN (1234)
+    </button>
+
+    <p class="text-[11px] text-slate-500 leading-4">
+      Blocco automatico dopo 5 minuti di inattività. Blocco per 5 minuti dopo 5 tentativi errati.
+    </p>
+  </div>
+</div>
+<!-- AL: SETUP PIN -->
       <div class="card no-print">
         <h3 class="font-black text-xs uppercase mb-4 text-slate-500 border-b pb-2">Configurazione Export Fiscale</h3>
         <div class="grid grid-cols-2 gap-3 mb-6">
@@ -358,12 +395,140 @@
     }
 
     // ===== Security =====
-    function checkPin() {
-      if (document.getElementById('pin-input').value === "1234") {
-        document.getElementById('lock-screen').style.display = 'none';
-      }
-    }
+// DAL: SECURITY PIN + BLOCCO (5 minuti) + 5 tentativi
+const LS_PIN = 'ce_pin_v1';
+const LS_FAILS = 'ce_pin_fails_v1';
+const LS_LOCK_UNTIL = 'ce_pin_lock_until_v1';
 
+const DEFAULT_PIN = "1234";
+const MAX_FAILS = 5;
+const LOCKOUT_MS = 5 * 60 * 1000;   // 5 minuti
+const IDLE_LOCK_MS = 5 * 60 * 1000; // 5 minuti
+
+let _idleTimer = null;
+
+function getPin() {
+  const p = String(localStorage.getItem(LS_PIN) || DEFAULT_PIN).trim();
+  return (/^\d{4}$/.test(p)) ? p : DEFAULT_PIN;
+}
+function setPin(p) { localStorage.setItem(LS_PIN, String(p).trim()); }
+
+function getFails() { return parseInt(localStorage.getItem(LS_FAILS) || "0", 10) || 0; }
+function setFails(n) { localStorage.setItem(LS_FAILS, String(Math.max(0, n|0))); }
+
+function getLockUntil() { return parseInt(localStorage.getItem(LS_LOCK_UNTIL) || "0", 10) || 0; }
+function setLockUntil(ts) { localStorage.setItem(LS_LOCK_UNTIL, String(ts|0)); }
+
+function isLockedOut() { return Date.now() < getLockUntil(); }
+function remainingLockSeconds() { return Math.ceil(Math.max(0, getLockUntil() - Date.now()) / 1000); }
+
+function lockSystem() {
+  const ls = document.getElementById('lock-screen');
+  if (ls) ls.style.display = 'flex';
+  const pinInp = document.getElementById('pin-input');
+  if (pinInp) pinInp.value = "";
+  stopIdleTimer();
+}
+
+function unlockSystem() {
+  const ls = document.getElementById('lock-screen');
+  if (ls) ls.style.display = 'none';
+  setFails(0);
+  setLockUntil(0);
+  resetIdleTimer();
+}
+
+// ✅ SOSTITUISCE la vecchia checkPin()
+function checkPin() {
+  if (isLockedOut()) {
+    alert(`⚠️ Troppi tentativi. Riprova tra ${remainingLockSeconds()} secondi.`);
+    return;
+  }
+
+  const inserted = String(document.getElementById('pin-input').value || "").trim();
+  if (inserted === getPin()) {
+    unlockSystem();
+    return;
+  }
+
+  const f = getFails() + 1;
+  setFails(f);
+
+  if (f >= MAX_FAILS) {
+    setLockUntil(Date.now() + LOCKOUT_MS);
+    alert("⛔ Troppi tentativi. Blocco attivo per 5 minuti.");
+    lockSystem();
+    return;
+  }
+
+  alert(`❌ PIN errato. Tentativi rimasti: ${MAX_FAILS - f}`);
+}
+
+// ===== Cambio PIN =====
+function changePin() {
+  if (isLockedOut()) {
+    alert(`⚠️ Sistema bloccato. Riprova tra ${remainingLockSeconds()} secondi.`);
+    return;
+  }
+
+  const cur = String(document.getElementById('pin-current')?.value || "").trim();
+  const n1  = String(document.getElementById('pin-new')?.value || "").trim();
+  const n2  = String(document.getElementById('pin-new2')?.value || "").trim();
+
+  if (cur !== getPin()) return alert("⚠️ PIN attuale errato.");
+  if (!/^\d{4}$/.test(n1)) return alert("⚠️ Il nuovo PIN deve essere di 4 cifre.");
+  if (n1 !== n2) return alert("⚠️ Conferma PIN non coincide.");
+
+  setPin(n1);
+  setFails(0);
+  setLockUntil(0);
+
+  document.getElementById('pin-current').value = "";
+  document.getElementById('pin-new').value = "";
+  document.getElementById('pin-new2').value = "";
+
+  alert("✅ PIN aggiornato.");
+}
+
+// ===== Reset PIN =====
+function resetPinToDefault() {
+  const ok = confirm("Confermi RESET PIN? Verrà ripristinato a 1234.");
+  if (!ok) return;
+
+  setPin(DEFAULT_PIN);
+  setFails(0);
+  setLockUntil(0);
+
+  if (document.getElementById('pin-current')) document.getElementById('pin-current').value = "";
+  if (document.getElementById('pin-new')) document.getElementById('pin-new').value = "";
+  if (document.getElementById('pin-new2')) document.getElementById('pin-new2').value = "";
+
+  alert("✅ PIN resettato a 1234.");
+}
+
+// ===== Blocco automatico dopo 5 minuti di inattività =====
+function stopIdleTimer() {
+  if (_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = null;
+}
+
+function resetIdleTimer() {
+  stopIdleTimer();
+  // parte solo se lock-screen è nascosta
+  const ls = document.getElementById('lock-screen');
+  if (!ls || ls.style.display !== 'none') return;
+
+  _idleTimer = setTimeout(() => {
+    lockSystem();
+  }, IDLE_LOCK_MS);
+}
+
+function hookActivityListeners() {
+  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(ev => {
+    window.addEventListener(ev, () => resetIdleTimer(), { passive: true });
+  });
+}
+// AL: SECURITY PIN + BLOCCO (5 minuti) + 5 tentativi
     // ===== Navigation =====
     function showPage(p) {
       document.querySelectorAll('.page').forEach(el => el.classList.remove('active-page'));
@@ -1246,7 +1411,8 @@ function addRowIVA(btn) {
       calcola();
 
       // load today if exists
-      onChangeData();
+    hookActivityListeners();
+     onChangeData();
     })();
 
     // ===== Override salvaData to include iva percent in record (for reload consistency) =====
