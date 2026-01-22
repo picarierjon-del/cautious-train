@@ -71,7 +71,7 @@
         <div class="space-y-4">
           <div>
             <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Totale Chiusura Z (Lordo)</label>
-            <input type="number" id="inp-tot" placeholder="0.00" class="text-3xl font-black text-slate-800" oninput="calcola()">
+            <input type="number" id="inp-tot" placeholder="0.00" class="text-3xl font-black text-slate-800" oninput="calcola()" inputmode="decimal" step="0.01">
           </div>
 
           <div>
@@ -252,6 +252,34 @@
         </p>
       </div>
 
+      <!-- BACKUP / IMPORT DATI (AGGIUNTA) -->
+      <div class="card no-print border-l-4 border-blue-700">
+        <div class="flex items-center gap-2 mb-4 border-b pb-2">
+          <i class="fa-solid fa-database text-blue-700"></i>
+          <h3 class="font-black text-slate-700 uppercase text-xs">Backup & Import Dati</h3>
+        </div>
+
+        <div class="space-y-3">
+          <button type="button" onclick="exportBackupFile()" class="w-full bg-blue-700 hover:bg-blue-600 text-white py-4 rounded-xl font-black uppercase text-xs transition-all">
+            Esporta Backup (JSON)
+          </button>
+
+          <input type="file" id="import-file" accept=".json,application/json" class="hidden" onchange="handleImportFile(this.files && this.files[0])">
+
+          <button type="button" onclick="document.getElementById('import-file').click()" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-xl font-black uppercase text-xs transition-all">
+            Importa Backup (JSON)
+          </button>
+
+          <button type="button" onclick="restoreFromLocalBackup()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 py-4 rounded-xl font-black uppercase text-xs transition-all border border-slate-200">
+            Ripristina da Backup Automatico (dispositivo)
+          </button>
+
+          <p class="text-[11px] text-slate-500 leading-4">
+            Suggerimento: esporta spesso un backup JSON e salvalo su Drive/PC. L’import sovrascrive l’archivio sul dispositivo.
+          </p>
+        </div>
+      </div>
+
       <div id="area-stampa"></div>
     </section>
 
@@ -367,7 +395,7 @@
             `}
           </div>
           <div class="col-span-4">
-            <input type="number" class="pay-val font-bold text-sm !p-2" placeholder="0.00" oninput="calcola()">
+            <input type="number" class="pay-val font-bold text-sm !p-2" placeholder="0.00" oninput="calcola()" inputmode="decimal" step="0.01">
           </div>
           <div class="col-span-1 flex justify-end">
             <button type="button" class="w-9 h-9 bg-red-50 text-red-500 rounded-full font-black" onclick="this.closest('.pay-row').remove(); calcola()">✕</button>
@@ -421,7 +449,7 @@
 
         <div class="space-y-2 r-cont">
           <div class="grid grid-cols-3 gap-2 r-item">
-            <input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()">
+            <input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()" inputmode="decimal" step="0.01">
             <select class="r-iva !p-2 text-[10px] font-bold" onchange="calcola()">
               <option value="22">IVA 22%</option>
               <option value="10" selected>IVA 10%</option>
@@ -468,7 +496,7 @@
             if (last) {
               last.querySelector('.r-val').value = rr.valore ?? "";
               last.querySelector('.r-iva').value = String(rr.ivaPerc ?? 10);
-              // last row (added) has remove button instead of r-tipo; we keep it LORDO only there
+              last.querySelector('.r-tipo').value = (rr.tipo === 'N') ? 'N' : 'L';
             }
           });
         }
@@ -481,7 +509,7 @@
       const row = document.createElement('div');
       row.className = "grid grid-cols-3 gap-2 r-item mt-2";
       row.innerHTML = `
-        <input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()">
+        <input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()" inputmode="decimal" step="0.01">
         <select class="r-iva !p-2 text-[10px] font-bold" onchange="calcola()">
           <option value="22">22%</option>
           <option value="10" selected>10%</option>
@@ -489,9 +517,13 @@
           <option value="4">4%</option>
           <option value="0">0%</option>
         </select>
-        <button type="button" onclick="this.parentElement.remove(); calcola()" class="text-[8px] text-red-500 font-bold uppercase border border-red-200 rounded">
-          Rimuovi
-        </button>
+        <div class="flex gap-2 items-center">
+          <select class="r-tipo !p-2 text-[10px] font-bold bg-blue-50 border-blue-100" onchange="calcola()">
+            <option value="L">LORDO</option>
+            <option value="N">NETTO +</option>
+          </select>
+          <button type="button" onclick="this.closest('.r-item').remove(); calcola()" class="w-10 h-10 bg-red-50 text-red-500 rounded-full font-black flex items-center justify-center">✕</button>
+        </div>
       `;
       btn.parentElement.previousElementSibling.appendChild(row);
     }
@@ -1261,6 +1293,163 @@
         }, 2000);
       }
     };
+
+    // ===========================
+    // BACKUP / IMPORT (AGGIUNTA)
+    // ===========================
+
+    // Chiavi backup locale (aggiunte)
+    const LS_BACKUP_LATEST = 'ce_v3_backup_latest';
+    const LS_BACKUP_LATEST_TS = 'ce_v3_backup_latest_ts';
+
+    function buildBackupPayload() {
+      return {
+        meta: {
+          app: "Commander Elite PRO",
+          schema: "ce_backup_v1",
+          createdAt: new Date().toISOString()
+        },
+        data: {
+          db: Array.isArray(db) ? db : [],
+          payments: getPaymentNames(),
+          suppliers: getSupplierNames()
+        }
+      };
+    }
+
+    function saveLocalLatestBackup() {
+      try {
+        const payload = buildBackupPayload();
+        localStorage.setItem(LS_BACKUP_LATEST, JSON.stringify(payload));
+        localStorage.setItem(LS_BACKUP_LATEST_TS, payload.meta.createdAt);
+        return true;
+      } catch (e) {
+        console.warn("Backup locale fallito:", e);
+        return false;
+      }
+    }
+
+    function downloadJson(filename, obj) {
+      const json = JSON.stringify(obj, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportBackupFile() {
+      // salva anche copia "latest" sul device
+      saveLocalLatestBackup();
+
+      const payload = buildBackupPayload();
+      const ts = new Date();
+      const yyyy = ts.getFullYear();
+      const mm = String(ts.getMonth() + 1).padStart(2, '0');
+      const dd = String(ts.getDate()).padStart(2, '0');
+      const hh = String(ts.getHours()).padStart(2, '0');
+      const mi = String(ts.getMinutes()).padStart(2, '0');
+      const filename = `commander_elite_backup_${yyyy}-${mm}-${dd}_${hh}-${mi}.json`;
+
+      downloadJson(filename, payload);
+      alert("✅ Backup esportato. (Una copia è stata anche salvata come backup automatico sul dispositivo.)");
+    }
+
+    function validateBackupPayload(payload) {
+      if (!payload || typeof payload !== "object") return { ok: false, msg: "File non valido." };
+      if (!payload.meta || payload.meta.schema !== "ce_backup_v1") {
+        return { ok: false, msg: "Schema backup non riconosciuto." };
+      }
+      if (!payload.data || typeof payload.data !== "object") {
+        return { ok: false, msg: "Struttura dati mancante." };
+      }
+      if (!Array.isArray(payload.data.db)) {
+        return { ok: false, msg: "Archivio (db) non valido." };
+      }
+      return { ok: true };
+    }
+
+    function applyBackupPayload(payload) {
+      const v = validateBackupPayload(payload);
+      if (!v.ok) return alert("⚠️ Import fallito: " + v.msg);
+
+      const incomingDB = Array.isArray(payload.data.db) ? payload.data.db : [];
+      const incomingPayments = Array.isArray(payload.data.payments) ? payload.data.payments : [];
+      const incomingSuppliers = Array.isArray(payload.data.suppliers) ? payload.data.suppliers : [];
+
+      // Sovrascrive i dati sul dispositivo
+      db = incomingDB;
+      persistDB();
+
+      // Sovrascrive le liste setup
+      setPaymentNames(incomingPayments);
+      setSupplierNames(incomingSuppliers);
+      refreshDatalistSuppliers();
+
+      // Aggiorna UI del giorno selezionato
+      onChangeData();
+
+      // Salva anche un latest backup post-import
+      saveLocalLatestBackup();
+
+      alert("✅ Import completato con successo.");
+    }
+
+    function handleImportFile(file) {
+      if (!file) return;
+
+      const ok = confirm("⚠️ Importando un backup sovrascriverai l'archivio attuale su questo dispositivo. Vuoi continuare?");
+      if (!ok) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const txt = String(e.target.result || "");
+          const payload = JSON.parse(txt);
+          applyBackupPayload(payload);
+        } catch (err) {
+          console.error(err);
+          alert("⚠️ File non valido o JSON corrotto.");
+        } finally {
+          // reset input per poter re-importare lo stesso file
+          const inp = document.getElementById('import-file');
+          if (inp) inp.value = "";
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function restoreFromLocalBackup() {
+      const raw = localStorage.getItem(LS_BACKUP_LATEST);
+      const ts = localStorage.getItem(LS_BACKUP_LATEST_TS);
+
+      if (!raw) return alert("Nessun backup automatico trovato su questo dispositivo.");
+
+      const ok = confirm(`Vuoi ripristinare il backup automatico${ts ? " (" + ts + ")" : ""}? Sovrascriverà i dati attuali.`);
+      if (!ok) return;
+
+      try {
+        const payload = JSON.parse(raw);
+        applyBackupPayload(payload);
+      } catch (e) {
+        console.error(e);
+        alert("⚠️ Backup automatico corrotto. Ti consiglio di importare un file JSON esportato.");
+      }
+    }
+
+    // Aggancio automatico: ogni volta che persistDB salva, crea anche backup latest
+    (function hookPersistDBForBackup() {
+      const _persistDB = persistDB;
+      persistDB = function() {
+        _persistDB();
+        saveLocalLatestBackup();
+      };
+    })();
+
   </script>
 
 </body>
