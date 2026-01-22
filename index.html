@@ -145,7 +145,58 @@
         <i class="fa-solid fa-chart-pie text-blue-600"></i> Analisi Business
       </h2>
 
-      <div class="grid grid-cols-2 gap-4 mb-6">
+   <!-- DAL: DASHBOARD ANALISI PRO -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+
+  <div class="card border-t-4 border-blue-500">
+    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Ultimi 7gg</p>
+    <p id="st-w" class="text-xl font-black text-slate-800">€ 0.00</p>
+    <p class="text-[10px] font-bold text-slate-400 mt-1">
+      Prec. 7gg: <span id="st-w-prev">€ 0.00</span> • Δ <span id="st-w-delta">0%</span>
+    </p>
+  </div>
+
+  <div class="card border-t-4 border-blue-500">
+    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Mese Corrente</p>
+    <p id="st-m" class="text-xl font-black text-slate-800">€ 0.00</p>
+    <p class="text-[10px] font-bold text-slate-400 mt-1">
+      Media/giorno: <span id="st-avg-day">€ 0.00</span>
+    </p>
+  </div>
+
+  <div class="card col-span-2 bg-slate-800 text-white border-none flex justify-between items-center">
+    <div>
+      <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Saldo IVA Mese</p>
+      <p id="st-iva-saldo" class="text-2xl font-black text-orange-400">€ 0.00</p>
+      <p class="text-[10px] font-bold text-slate-300 mt-1">
+        Spese/Incasso: <span id="st-spese-inc">0%</span>
+      </p>
+    </div>
+    <i class="fa-solid fa-piggy-bank text-4xl opacity-20"></i>
+  </div>
+
+  <div class="card col-span-2 border-t-4 border-blue-500">
+    <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Filtri rapidi</p>
+    <div class="grid grid-cols-2 gap-2">
+      <button type="button" onclick="setQuickRange('month')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Questo mese</button>
+      <button type="button" onclick="setQuickRange('lastMonth')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Mese scorso</button>
+      <button type="button" onclick="setQuickRange('last30')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Ultimi 30</button>
+      <button type="button" onclick="setQuickRange('last90')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Ultimi 90</button>
+    </div>
+    <p class="text-[11px] text-slate-500 mt-3 leading-4">
+      Imposta automaticamente DAL/AL e lancia l’analisi del periodo.
+    </p>
+  </div>
+
+  <div class="card col-span-2 border-t-4 border-blue-500">
+    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Top fornitori (mese)</p>
+    <div id="st-top-sup" class="text-[11px] text-slate-700 font-bold leading-5">
+      Nessun dato
+    </div>
+  </div>
+
+</div>
+<!-- AL: DASHBOARD ANALISI PRO -->
         <div class="card border-t-4 border-blue-500">
           <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Ultimi 7gg</p>
           <p id="st-w" class="text-xl font-black text-slate-800">€ 0.00</p>
@@ -944,237 +995,449 @@ function addRowIVA(btn) {
       add("App/Web", rec.tap);
       return out;
     }
+// DAL: ANALISI PRO HELPERS + QUICK RANGE
+function fmtPerc(x) {
+  if (!isFinite(x)) return "0%";
+  return `${(x * 100).toFixed(1)}%`;
+}
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
+function startOfMonth(d) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+function endOfMonth(d) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+function toISODate(d) {
+  const z = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+  return z.toISOString().slice(0, 10);
+}
+function daysInclusive(fromISO, toISO) {
+  const a = new Date(fromISO);
+  const b = new Date(toISO);
+  a.setHours(0,0,0,0);
+  b.setHours(0,0,0,0);
+  const diff = Math.round((b - a) / 86400000);
+  return diff >= 0 ? (diff + 1) : 0;
+}
+
+function getRangeRecords(fromISO, toISO) {
+  return db
+    .filter(r => (r.data >= fromISO && r.data <= toISO))
+    .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+}
+
+function getRangeAgg(fromISO, toISO) {
+  const recs = getRangeRecords(fromISO, toISO);
+  let lordo = 0, ele = 0, uscCash = 0, ivaD = 0, ivaA = 0, spese = 0;
+
+  const payAgg = {};
+  const supAgg = {};
+
+  let activeDays = 0;
+
+  recs.forEach(r => {
+    const l = fix(r.lordoZ || 0);
+    const e = fix(r.totEle || 0);
+    const u = fix(r.uscCash || 0);
+    const iv = fix(r.ivaV || 0);
+    const ia = fix(r.totIvaA || 0);
+
+    lordo += l; ele += e; uscCash += u; ivaD += iv; ivaA += ia;
+
+    const hasActivity = (l > 0) || (e > 0) || (u > 0) || ((r.detFornitori || []).some(x => (x.lordo || 0) > 0));
+    if (hasActivity) activeDays++;
+
+    const pd = Array.isArray(r.payDet) ? r.payDet : legacyPayDet(r);
+    pd.forEach(p => {
+      const nome = String(p.nome || "").trim() || "Senza Nome";
+      const val = fix(p.valore || 0);
+      payAgg[nome] = fix((payAgg[nome] || 0) + val);
+    });
+
+    (r.detFornitori || []).forEach(fx => {
+      const n = String(fx.nome || "Senza Nome").trim() || "Senza Nome";
+      const lfx = fix(fx.lordo || 0);
+      const ifx = fix(fx.iva || 0);
+      spese += lfx;
+
+      if (!supAgg[n]) supAgg[n] = { lordo: 0, iva: 0, cash: 0, tr: 0 };
+      supAgg[n].lordo = fix(supAgg[n].lordo + lfx);
+      supAgg[n].iva = fix(supAgg[n].iva + ifx);
+      if (fx.cash) supAgg[n].cash = fix(supAgg[n].cash + lfx);
+      else supAgg[n].tr = fix(supAgg[n].tr + lfx);
+    });
+  });
+
+  lordo = fix(lordo); ele = fix(ele); uscCash = fix(uscCash); ivaD = fix(ivaD); ivaA = fix(ivaA); spese = fix(spese);
+
+  const days = daysInclusive(fromISO, toISO);
+  const avgDay = days ? fix(lordo / days) : 0;
+
+  return {
+    recs,
+    days,
+    activeDays,
+    lordo, ele, uscCash,
+    ivaD, ivaA,
+    spese,
+    payAgg,
+    supAgg
+  };
+}
+
+function setQuickRange(type) {
+  const now = new Date();
+  let from, to;
+
+  if (type === 'month') {
+    from = startOfMonth(now);
+    to = now;
+  } else if (type === 'lastMonth') {
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    from = startOfMonth(d);
+    to = endOfMonth(d);
+  } else if (type === 'last30') {
+    to = now;
+    from = new Date(now);
+    from.setDate(now.getDate() - 29);
+  } else if (type === 'last90') {
+    to = now;
+    from = new Date(now);
+    from.setDate(now.getDate() - 89);
+  } else {
+    return;
+  }
+
+  const f = toISODate(from);
+  const t = toISODate(to);
+
+  const elF = document.getElementById('s-from');
+  const elT = document.getElementById('s-to');
+  if (elF) elF.value = f;
+  if (elT) elT.value = t;
+
+  cercaPeriodo();
+}
+
+function recordAnomalies(r, avgLordo = null) {
+  const issues = [];
+  const lordo = fix(r.lordoZ || 0);
+  const ele = fix(r.totEle || 0);
+  const usc = fix(r.uscCash || 0);
+
+  if (ele > lordo + 0.01) issues.push("Elettronico > Lordo");
+  if (lordo === 0 && ((r.detFornitori || []).some(x => (x.lordo || 0) > 0))) issues.push("Spese con incasso 0");
+
+  const entCash = fix(lordo - ele);
+  const diffCash = fix(entCash - usc);
+  if (diffCash < -0.01) issues.push("Differenza contanti negativa");
+
+  // outlier semplice: se avgLordo noto, segnala giornate molto alte/basse
+  if (avgLordo !== null && avgLordo > 0) {
+    if (lordo > avgLordo * 1.8) issues.push("Incasso molto sopra media");
+    if (lordo > 0 && lordo < avgLordo * 0.3) issues.push("Incasso molto sotto media");
+  }
+
+  return issues;
+}
+// AL: ANALISI PRO HELPERS + QUICK RANGE
     // ===== Dashboard stats =====
-    function aggiornaStatsDash() {
-      const now = new Date();
-      const m = now.toISOString().substring(0, 7);
-      let tW = 0, tM = 0, tIV = 0, tIA = 0;
-      const weekAgo = new Date();
-      weekAgo.setDate(now.getDate() - 7);
+// DAL: aggiornaStatsDash PRO
+function aggiornaStatsDash() {
+  const now = new Date();
 
-      db.forEach(r => {
-        const rd = new Date(r.data);
-        if (rd >= weekAgo) tW += (r.lordoZ || 0);
-        if ((r.data || "").startsWith(m)) {
-          tM += (r.lordoZ || 0);
-          tIV += (r.ivaV || 0);
-          tIA += (r.totIvaA || 0);
-        }
-      });
+  // Ultimi 7gg (incluso oggi) e 7gg precedenti
+  const to7 = toISODate(now);
+  const from7d = new Date(now); from7d.setDate(now.getDate() - 6);
+  const from7 = toISODate(from7d);
 
-      document.getElementById('st-w').innerText = euro(tW);
-      document.getElementById('st-m').innerText = euro(tM);
-      document.getElementById('st-iva-saldo').innerText = euro(fix(tIV - tIA));
+  const prevToD = new Date(from7d); prevToD.setDate(from7d.getDate() - 1);
+  const prevFromD = new Date(prevToD); prevFromD.setDate(prevToD.getDate() - 6);
+  const prevFrom = toISODate(prevFromD);
+  const prevTo = toISODate(prevToD);
+
+  const a7 = getRangeAgg(from7, to7);
+  const p7 = getRangeAgg(prevFrom, prevTo);
+
+  const delta = (p7.lordo > 0) ? ((a7.lordo - p7.lordo) / p7.lordo) : (a7.lordo > 0 ? 1 : 0);
+
+  // Mese corrente
+  const mFrom = toISODate(startOfMonth(now));
+  const mTo = toISODate(now);
+  const am = getRangeAgg(mFrom, mTo);
+
+  // Saldo IVA mese
+  const saldoIva = fix(am.ivaD - am.ivaA);
+
+  // Spese/Incasso mese
+  const speseInc = (am.lordo > 0) ? (am.spese / am.lordo) : 0;
+
+  // Top fornitori (mese) - top 5
+  const topSup = Object.entries(am.supAgg || {})
+    .sort((a, b) => (b[1].lordo - a[1].lordo))
+    .slice(0, 5);
+
+  // Render
+  const elW = document.getElementById('st-w');
+  if (elW) elW.innerText = euro(a7.lordo);
+
+  const elWPrev = document.getElementById('st-w-prev');
+  if (elWPrev) elWPrev.innerText = euro(p7.lordo);
+
+  const elWD = document.getElementById('st-w-delta');
+  if (elWD) {
+    const sign = delta > 0 ? "+" : "";
+    elWD.innerText = `${sign}${(delta * 100).toFixed(1)}%`;
+  }
+
+  const elM = document.getElementById('st-m');
+  if (elM) elM.innerText = euro(am.lordo);
+
+  const elAvg = document.getElementById('st-avg-day');
+  if (elAvg) elAvg.innerText = euro(am.days ? fix(am.lordo / am.days) : 0);
+
+  const elIva = document.getElementById('st-iva-saldo');
+  if (elIva) elIva.innerText = euro(saldoIva);
+
+  const elSI = document.getElementById('st-spese-inc');
+  if (elSI) elSI.innerText = fmtPerc(speseInc);
+
+  const elTop = document.getElementById('st-top-sup');
+  if (elTop) {
+    if (!topSup.length) {
+      elTop.innerHTML = `Nessun dato`;
+    } else {
+      elTop.innerHTML = topSup
+        .map(([n, v]) => `• ${escapeHtml(n)} — <span class="font-black">${euro(v.lordo)}</span>`)
+        .join("<br>");
     }
+  }
+}
+// AL: aggiornaStatsDash PRO
 
     // ===== Analisi per periodo (dettagli: pagamenti + fornitori + giornaliero) =====
-    function cercaPeriodo() {
-      const f = document.getElementById('s-from').value;
-      const t = document.getElementById('s-to').value;
-      if (!f || !t) return alert("Scegli le date!");
-      if (f > t) return alert("⚠️ Intervallo non valido: DAL è dopo AL.");
+// DAL: cercaPeriodo PRO
+function cercaPeriodo() {
+  const f = document.getElementById('s-from').value;
+  const t = document.getElementById('s-to').value;
+  if (!f || !t) return alert("Scegli le date!");
+  if (f > t) return alert("⚠️ Intervallo non valido: DAL è dopo AL.");
 
-      const fil = db
-        .filter(r => r.data >= f && r.data <= t)
-        .sort((a, b) => a.data.localeCompare(b.data));
+  const agg = getRangeAgg(f, t);
+  const fil = agg.recs;
 
-      let totL = 0, totEle = 0, totUscCash = 0, tIvaD = 0, tIvaC = 0;
-      let entCash = 0, diffCash = 0;
+  let totL = agg.lordo;
+  let totEle = agg.ele;
+  let totUscCash = agg.uscCash;
+  let tIvaD = agg.ivaD;
+  let tIvaC = agg.ivaA;
 
-      // breakdown payments
-      const payByName = {};
-      // suppliers grouping
-      const fornByName = {};
-      let fornCash = 0, fornTr = 0, fornIva = 0;
+  const entCash = fix(totL - totEle);
+  const diffCash = fix(entCash - totUscCash);
 
-      fil.forEach(r => {
-        const lordo = fix(r.lordoZ || 0);
-        const ele = fix(r.totEle || 0);
-        const usc = fix(r.uscCash || 0);
+  const days = agg.days || 0;
+  const activeDays = agg.activeDays || 0;
 
-        totL += lordo;
-        totEle += ele;
-        totUscCash += usc;
+  const avgLordoDay = days ? fix(totL / days) : 0;
+  const avgEleDay = days ? fix(totEle / days) : 0;
+  const avgCashInDay = days ? fix(entCash / days) : 0;
 
-        tIvaD += fix(r.ivaV || 0);
-        tIvaC += fix(r.totIvaA || 0);
+  const speseTot = fix(agg.spese || 0);
+  const speseInc = (totL > 0) ? (speseTot / totL) : 0;
 
-        entCash += fix(lordo - ele);
+  // payments breakdown + %
+  const payByName = agg.payAgg || {};
+  const payTotal = fix(Object.values(payByName).reduce((s, v) => s + fix(v || 0), 0));
 
-        const pd = Array.isArray(r.payDet) ? r.payDet : legacyPayDet(r);
-        pd.forEach(p => {
-          const nome = String(p.nome || "").trim() || "Senza Nome";
-          const val = fix(p.valore || 0);
-          if (!payByName[nome]) payByName[nome] = 0;
-          payByName[nome] += val;
-        });
+  const payRows = Object.entries(payByName)
+    .sort((a, b) => b[1] - a[1])
+    .map(([nome, v]) => {
+      const perc = payTotal > 0 ? (fix(v) / payTotal) : 0;
+      return `
+        <tr class="border-b border-white/10">
+          <td class="py-2 text-left font-bold">${escapeHtml(nome)}</td>
+          <td class="py-2 text-right">${euro(v)}</td>
+          <td class="py-2 text-right text-slate-300">${fmtPerc(perc)}</td>
+        </tr>
+      `;
+    }).join("");
 
-        (r.detFornitori || []).forEach(ff => {
-          const nome = String(ff.nome || "Senza Nome").trim() || "Senza Nome";
-          if (!fornByName[nome]) fornByName[nome] = { lordo: 0, iva: 0, cashLordo: 0, trLordo: 0 };
+  // suppliers breakdown + top5
+  const supAgg = agg.supAgg || {};
+  const topSup = Object.entries(supAgg)
+    .sort((a, b) => (b[1].lordo - a[1].lordo))
+    .slice(0, 5);
 
-          const lord = fix(ff.lordo || 0);
-          const iva = fix(ff.iva || 0);
+  const topSupHtml = topSup.length
+    ? topSup.map(([n, v]) => `• <span class="font-bold">${escapeHtml(n)}</span> — ${euro(v.lordo)}`).join("<br>")
+    : `<span class="text-slate-300">Nessun fornitore nel periodo</span>`;
 
-          fornByName[nome].lordo += lord;
-          fornByName[nome].iva += iva;
+  const fornRows = Object.entries(supAgg)
+    .sort((a, b) => (b[1].lordo - a[1].lordo))
+    .map(([nome, v]) => `
+      <tr class="border-b border-white/10">
+        <td class="py-2 text-left font-bold">${escapeHtml(nome)}</td>
+        <td class="py-2 text-right">${euro(v.lordo)}</td>
+        <td class="py-2 text-right text-green-300">${euro(v.iva)}</td>
+        <td class="py-2 text-right text-red-300">${euro(v.cash || 0)}</td>
+        <td class="py-2 text-right text-blue-200">${euro(v.tr || 0)}</td>
+      </tr>
+    `).join("");
 
-          fornIva += iva;
+  // anomalie: lista compatta
+  const anomalies = [];
+  fil.forEach(r => {
+    const issues = recordAnomalies(r, avgLordoDay || null);
+    if (issues.length) anomalies.push({ data: r.data, issues });
+  });
 
-          if (ff.cash) {
-            fornCash += lord;
-            fornByName[nome].cashLordo += lord;
-          } else {
-            fornTr += lord;
-            fornByName[nome].trLordo += lord;
-          }
-        });
-      });
+  const anomaliesHtml = anomalies.length
+    ? anomalies.slice(0, 10).map(a => `• <span class="font-bold">${escapeHtml(a.data)}</span> — ${escapeHtml(a.issues.join(", "))}`).join("<br>")
+    : `<span class="text-slate-300">Nessuna anomalia rilevata</span>`;
 
-      totL = fix(totL);
-      totEle = fix(totEle);
-      totUscCash = fix(totUscCash);
-      tIvaD = fix(tIvaD);
-      tIvaC = fix(tIvaC);
-      entCash = fix(entCash);
-      diffCash = fix(entCash - totUscCash);
+  // dettaglio giornaliero (come tuo, ma aggiunge badge anomalie)
+  const dayBlocks = fil.map(r => {
+    const pd = Array.isArray(r.payDet) ? r.payDet : legacyPayDet(r);
 
-      const payRows = Object.entries(payByName)
-        .sort((a, b) => b[1] - a[1])
-        .map(([nome, v]) => `
-          <tr class="border-b border-white/10">
-            <td class="py-2 text-left font-bold">${escapeHtml(nome)}</td>
-            <td class="py-2 text-right">${euro(v)}</td>
-          </tr>
-        `).join("");
+    const payTxt = pd.length
+      ? pd.map(p => `• <span class="font-bold">${escapeHtml(p.nome || "Pagamento")}</span> — ${euro(p.valore || 0)}`).join("<br>")
+      : `<span class="text-slate-300">Nessun pagamento elettronico</span>`;
 
-      const fornRows = Object.entries(fornByName)
-        .sort((a, b) => (b[1].lordo - a[1].lordo))
-        .map(([nome, v]) => `
-          <tr class="border-b border-white/10">
-            <td class="py-2 text-left font-bold">${escapeHtml(nome)}</td>
-            <td class="py-2 text-right">${euro(v.lordo)}</td>
-            <td class="py-2 text-right text-green-300">${euro(v.iva)}</td>
-            <td class="py-2 text-right text-red-300">${euro(v.cashLordo)}</td>
-            <td class="py-2 text-right text-blue-200">${euro(v.trLordo)}</td>
-          </tr>
-        `).join("");
+    const forn = (r.detFornitori || [])
+      .filter(x => (x.lordo || 0) > 0)
+      .map(x => confirmSafeSupplierLine(x))
+      .join("<br>") || `<span class="text-slate-300">Nessuna spesa fornitori</span>`;
 
-      const dayBlocks = fil.map(r => {
-        const pd = Array.isArray(r.payDet) ? r.payDet : legacyPayDet(r);
-        const payTxt = pd.length
-          ? pd.map(p => `• <span class="font-bold">${escapeHtml(p.nome || "Pagamento")}</span> — ${euro(p.valore || 0)}`).join("<br>")
-          : `<span class="text-slate-300">Nessun pagamento elettronico</span>`;
+    const issues = recordAnomalies(r, avgLordoDay || null);
+    const badge = issues.length
+      ? `<div class="mt-2 text-[10px] font-black uppercase text-red-300">⚠ ${escapeHtml(issues.join(" • "))}</div>`
+      : `<div class="mt-2 text-[10px] font-black uppercase text-green-300">OK</div>`;
 
-        const forn = (r.detFornitori || [])
-          .filter(x => (x.lordo || 0) > 0)
-          .map(x => `• <span class="font-bold">${escapeHtml(x.nome)}</span> — ${euro(x.lordo)} <span class="text-[10px] ${x.cash ? 'text-red-300' : 'text-blue-200'}">(${x.cash ? 'CONTANTI' : 'TRACCIABILE'})</span>`)
-          .join("<br>") || `<span class="text-slate-300">Nessuna spesa fornitori</span>`;
-
-        return `
-          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-            <div class="flex justify-between items-center">
-              <div class="font-black text-blue-200">${escapeHtml(r.data)}</div>
-              <div class="text-[10px] font-bold text-slate-300 uppercase">
-                Lordo ${euro(r.lordoZ || 0)} • Elettr. ${euro(r.totEle || 0)} • Usc. Cash ${euro(r.uscCash || 0)}
-              </div>
-            </div>
-            <div class="text-[11px] leading-5">
-              <div class="font-black text-[10px] uppercase text-slate-300 mb-1">Pagamenti elettronici</div>
-              ${payTxt}
-            </div>
-            <div class="text-[11px] leading-5">
-              <div class="font-black text-[10px] uppercase text-slate-300 mb-1">Fornitori</div>
-              ${forn}
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      const res = document.getElementById('s-res');
-      res.classList.remove('hidden');
-      res.innerHTML = `
-        <div class="p-5 bg-slate-900 text-white rounded-3xl space-y-6 shadow-xl">
-          <h4 class="text-center font-black text-blue-400 text-xs uppercase">Report Dettagliato per Periodo</h4>
-
-          <div class="space-y-2">
-            <div class="flex justify-between border-b border-white/10 pb-2">
-              <span>Entrate (Lordo Z)</span>
-              <strong class="text-lg">${euro(totL)}</strong>
-            </div>
-            <div class="flex justify-between text-slate-200">
-              <span>Totale Elettronico</span>
-              <span>${euro(totEle)}</span>
-            </div>
-            <div class="flex justify-between text-slate-200">
-              <span>Entrate Contanti (Lordo - Elettronico)</span>
-              <span>${euro(entCash)}</span>
-            </div>
-            <div class="flex justify-between text-red-300">
-              <span>Uscite Contanti</span>
-              <span>${euro(totUscCash)}</span>
-            </div>
-            <div class="flex justify-between font-black text-green-300">
-              <span>Differenza Contanti</span>
-              <span>${euro(diffCash)}</span>
-            </div>
-            <div class="pt-3 flex justify-between font-black text-orange-400 border-t border-white/20">
-              <span>IVA DA VERSARE</span>
-              <span>${euro(fix(tIvaD - tIvaC))}</span>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 overflow-x-auto">
-            <div class="font-black text-[11px] uppercase text-slate-200 mb-3">Pagamenti Elettronici per Categoria</div>
-            <table class="w-full text-[11px] min-w-[420px]">
-              <thead class="text-slate-200">
-                <tr class="border-b border-white/10">
-                  <th class="py-2 text-left">Categoria</th>
-                  <th class="py-2 text-right">Totale</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${payRows || `<tr><td colspan="2" class="py-3 text-center text-slate-300">Nessun pagamento elettronico nel periodo</td></tr>`}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <div class="font-black text-[11px] uppercase text-slate-200 mb-3">Categorie Spese Fornitori</div>
-            <div class="grid grid-cols-2 gap-2 text-[11px]">
-              <div class="flex justify-between"><span>Fornitori Contanti</span><span class="font-bold text-red-300">${euro(fornCash)}</span></div>
-              <div class="flex justify-between"><span>Fornitori Tracciabile</span><span class="font-bold text-blue-200">${euro(fornTr)}</span></div>
-              <div class="flex justify-between col-span-2"><span>IVA a Credito Totale (Acquisti)</span><span class="font-bold text-green-300">${euro(fornIva)}</span></div>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 overflow-x-auto">
-            <div class="font-black text-[11px] uppercase text-slate-200 mb-3">Fornitori Raggruppati</div>
-            <table class="w-full text-[11px] min-w-[560px]">
-              <thead class="text-slate-200">
-                <tr class="border-b border-white/10">
-                  <th class="py-2 text-left">Fornitore</th>
-                  <th class="py-2 text-right">Totale</th>
-                  <th class="py-2 text-right">IVA</th>
-                  <th class="py-2 text-right">Contanti</th>
-                  <th class="py-2 text-right">Tracciabile</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${fornRows || `<tr><td colspan="5" class="py-3 text-center text-slate-300">Nessun fornitore nel periodo</td></tr>`}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="space-y-3">
-            <div class="font-black text-[11px] uppercase text-slate-200">Dettaglio Giornaliero</div>
-            ${dayBlocks || `<div class="text-slate-300">Nessun dato nel periodo</div>`}
+    return `
+      <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+        <div class="flex justify-between items-center">
+          <div class="font-black text-blue-200">${escapeHtml(r.data)}</div>
+          <div class="text-[10px] font-bold text-slate-300 uppercase">
+            Lordo ${euro(r.lordoZ || 0)} • Elettr. ${euro(r.totEle || 0)} • Usc. Cash ${euro(r.uscCash || 0)}
           </div>
         </div>
-      `;
-    }
+        <div class="text-[11px] leading-5">
+          <div class="font-black text-[10px] uppercase text-slate-300 mb-1">Pagamenti elettronici</div>
+          ${payTxt}
+        </div>
+        <div class="text-[11px] leading-5">
+          <div class="font-black text-[10px] uppercase text-slate-300 mb-1">Fornitori</div>
+          ${forn}
+        </div>
+        ${badge}
+      </div>
+    `;
+  }).join("");
 
+  const res = document.getElementById('s-res');
+  res.classList.remove('hidden');
+  res.innerHTML = `
+    <div class="p-5 bg-slate-900 text-white rounded-3xl space-y-6 shadow-xl">
+      <h4 class="text-center font-black text-blue-400 text-xs uppercase">Report PRO per Periodo</h4>
+
+      <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
+        <div class="grid grid-cols-2 gap-3 text-[11px]">
+          <div class="flex justify-between"><span>Giorni nel periodo</span><span class="font-bold">${days}</span></div>
+          <div class="flex justify-between"><span>Giorni attivi</span><span class="font-bold">${activeDays}</span></div>
+          <div class="flex justify-between"><span>Media Lordo/giorno</span><span class="font-bold">${euro(avgLordoDay)}</span></div>
+          <div class="flex justify-between"><span>Media Elettr./giorno</span><span class="font-bold">${euro(avgEleDay)}</span></div>
+          <div class="flex justify-between col-span-2"><span>Spese/Incasso</span><span class="font-bold">${fmtPerc(speseInc)}</span></div>
+        </div>
+        <div class="mt-3 text-[11px] text-slate-200">
+          <div class="font-black text-[10px] uppercase text-slate-300 mb-1">Top fornitori</div>
+          ${topSupHtml}
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex justify-between border-b border-white/10 pb-2">
+          <span>Entrate (Lordo Z)</span>
+          <strong class="text-lg">${euro(totL)}</strong>
+        </div>
+        <div class="flex justify-between text-slate-200">
+          <span>Totale Elettronico</span>
+          <span>${euro(totEle)}</span>
+        </div>
+        <div class="flex justify-between text-slate-200">
+          <span>Entrate Contanti (Lordo - Elettronico)</span>
+          <span>${euro(entCash)}</span>
+        </div>
+        <div class="flex justify-between text-red-300">
+          <span>Uscite Contanti</span>
+          <span>${euro(totUscCash)}</span>
+        </div>
+        <div class="flex justify-between font-black text-green-300">
+          <span>Differenza Contanti</span>
+          <span>${euro(diffCash)}</span>
+        </div>
+        <div class="pt-3 flex justify-between font-black text-orange-400 border-t border-white/20">
+          <span>IVA DA VERSARE</span>
+          <span>${euro(fix(tIvaD - tIvaC))}</span>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-white/5 border border-white/10 overflow-x-auto">
+        <div class="font-black text-[11px] uppercase text-slate-200 mb-3">Pagamenti Elettronici per Categoria</div>
+        <table class="w-full text-[11px] min-w-[520px]">
+          <thead class="text-slate-200">
+            <tr class="border-b border-white/10">
+              <th class="py-2 text-left">Categoria</th>
+              <th class="py-2 text-right">Totale</th>
+              <th class="py-2 text-right">% su elettr.</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payRows || `<tr><td colspan="3" class="py-3 text-center text-slate-300">Nessun pagamento elettronico nel periodo</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-white/5 border border-white/10 overflow-x-auto">
+        <div class="font-black text-[11px] uppercase text-slate-200 mb-3">Fornitori Raggruppati</div>
+        <table class="w-full text-[11px] min-w-[560px]">
+          <thead class="text-slate-200">
+            <tr class="border-b border-white/10">
+              <th class="py-2 text-left">Fornitore</th>
+              <th class="py-2 text-right">Totale</th>
+              <th class="py-2 text-right">IVA</th>
+              <th class="py-2 text-right">Contanti</th>
+              <th class="py-2 text-right">Tracciabile</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${fornRows || `<tr><td colspan="5" class="py-3 text-center text-slate-300">Nessun fornitore nel periodo</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
+        <div class="font-black text-[11px] uppercase text-slate-200 mb-3">Anomalie (max 10)</div>
+        <div class="text-[11px] leading-5">${anomaliesHtml}</div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="font-black text-[11px] uppercase text-slate-200">Dettaglio Giornaliero</div>
+        ${dayBlocks || `<div class="text-slate-300">Nessun dato nel periodo</div>`}
+      </div>
+    </div>
+  `;
+
+  // helper per righe fornitori nel dettaglio giornaliero
+  function confirmSafeSupplierLine(x) {
+    const nome = escapeHtml(x.nome || "Senza Nome");
+    const lordo = euro(x.lordo || 0);
+    const meth = x.cash ? 'CONTANTI' : 'TRACCIABILE';
+    const cls = x.cash ? 'text-red-300' : 'text-blue-200';
+    return `• <span class="font-bold">${nome}</span> — ${lordo} <span class="text-[10px] ${cls}">(${meth})</span>`;
+  }
+}
+// AL: cercaPeriodo PRO
     // ===== Report fiscale (con dettaglio pagamenti per categoria + fornitori) =====
     function generaReportProfessionale() {
       const f = document.getElementById('p-from').value;
