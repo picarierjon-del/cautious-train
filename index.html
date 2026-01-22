@@ -505,28 +505,43 @@
       calcola();
     }
 
-    function addRowIVA(btn) {
-      const row = document.createElement('div');
-      row.className = "grid grid-cols-3 gap-2 r-item mt-2";
-      row.innerHTML = `
-        <input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()" inputmode="decimal" step="0.01">
-        <select class="r-iva !p-2 text-[10px] font-bold" onchange="calcola()">
-          <option value="22">22%</option>
-          <option value="10" selected>10%</option>
-          <option value="5">5%</option>
-          <option value="4">4%</option>
-          <option value="0">0%</option>
-        </select>
-        <div class="flex gap-2 items-center">
-          <select class="r-tipo !p-2 text-[10px] font-bold bg-blue-50 border-blue-100" onchange="calcola()">
-            <option value="L">LORDO</option>
-            <option value="N">NETTO +</option>
-          </select>
-          <button type="button" onclick="this.closest('.r-item').remove(); calcola()" class="w-10 h-10 bg-red-50 text-red-500 rounded-full font-black flex items-center justify-center">✕</button>
-        </div>
-      `;
-      btn.parentElement.previousElementSibling.appendChild(row);
-    }
+function addRowIVA(btn) {
+  // container delle righe IVA del fornitore
+  const rowsContainer = btn.parentElement.previousElementSibling; // .r-cont
+  const lastRow = rowsContainer.querySelector('.r-item:last-child');
+
+  // valori da copiare dalla riga sopra (se esiste)
+  const lastIva = lastRow?.querySelector('.r-iva')?.value ?? "10";
+  const lastTipo = lastRow?.querySelector('.r-tipo')?.value ?? "L";
+
+  const row = document.createElement('div');
+  row.className = "grid grid-cols-3 gap-2 r-item mt-2";
+  row.innerHTML = `
+    <input type="number" placeholder="Valore" class="r-val !p-2 text-sm font-bold" oninput="calcola()" inputmode="decimal" step="0.01">
+    <select class="r-iva !p-2 text-[10px] font-bold" onchange="calcola()">
+      <option value="22">22%</option>
+      <option value="10">10%</option>
+      <option value="5">5%</option>
+      <option value="4">4%</option>
+      <option value="0">0%</option>
+    </select>
+    <div class="flex gap-2 items-center">
+      <select class="r-tipo !p-2 text-[10px] font-bold bg-blue-50 border-blue-100" onchange="calcola()">
+        <option value="L">LORDO</option>
+        <option value="N">NETTO +</option>
+      </select>
+      <button type="button" onclick="this.closest('.r-item').remove(); calcola()" class="w-10 h-10 bg-red-50 text-red-500 rounded-full font-black flex items-center justify-center">✕</button>
+    </div>
+  `;
+
+  rowsContainer.appendChild(row);
+
+  // imposta gli stessi valori della riga sopra
+  row.querySelector('.r-iva').value = String(lastIva);
+  row.querySelector('.r-tipo').value = (lastTipo === 'N') ? 'N' : 'L';
+
+  calcola();
+}
 
     // ===== Day calc/save/load =====
     function calcola() {
