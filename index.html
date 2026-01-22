@@ -1217,21 +1217,55 @@ function aggiornaStatsDash() {
 // AL: aggiornaStatsDash PRO
 
     // ===== Analisi per periodo (dettagli: pagamenti + fornitori + giornaliero) =====
-// DAL: cercaPeriodo PRO
+// DAL: cercaPeriodo PRO (con questa settimana / settimana scorsa)
 function cercaPeriodo() {
   const f = document.getElementById('s-from').value;
   const t = document.getElementById('s-to').value;
   if (!f || !t) return alert("Scegli le date!");
   if (f > t) return alert("⚠️ Intervallo non valido: DAL è dopo AL.");
 
+  // --- helper locale: inizio settimana (Lunedì) ---
+  function startOfWeekMonday(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    const day = x.getDay(); // 0 dom, 1 lun ... 6 sab
+    const diff = (day === 0 ? -6 : 1 - day); // porta a lunedì
+    x.setDate(x.getDate() + diff);
+    return x;
+  }
+
+  // --- confronto settimanale ---
+  const now = new Date();
+  const thisMon = startOfWeekMonday(now);
+  const thisFrom = toISODate(thisMon);
+  const thisTo = toISODate(now);
+
+  const lastMon = new Date(thisMon);
+  lastMon.setDate(lastMon.getDate() - 7);
+  const lastSun = new Date(thisMon);
+  lastSun.setDate(lastSun.getDate() - 1);
+
+  const lastFrom = toISODate(lastMon);
+  const lastTo = toISODate(lastSun);
+
+  const aggThisW = getRangeAgg(thisFrom, thisTo);
+  const aggLastW = getRangeAgg(lastFrom, lastTo);
+
+  const deltaW = (aggLastW.lordo > 0)
+    ? ((aggThisW.lordo - aggLastW.lordo) / aggLastW.lordo)
+    : (aggThisW.lordo > 0 ? 1 : 0);
+
+  const deltaWtxt = `${deltaW > 0 ? "+" : ""}${(deltaW * 100).toFixed(1)}%`;
+
+  // --- aggregato periodo selezionato ---
   const agg = getRangeAgg(f, t);
   const fil = agg.recs;
 
-  let totL = agg.lordo;
-  let totEle = agg.ele;
-  let totUscCash = agg.uscCash;
-  let tIvaD = agg.ivaD;
-  let tIvaC = agg.ivaA;
+  const totL = agg.lordo;
+  const totEle = agg.ele;
+  const totUscCash = agg.uscCash;
+  const tIvaD = agg.ivaD;
+  const tIvaC = agg.ivaA;
 
   const entCash = fix(totL - totEle);
   const diffCash = fix(entCash - totUscCash);
@@ -1241,7 +1275,6 @@ function cercaPeriodo() {
 
   const avgLordoDay = days ? fix(totL / days) : 0;
   const avgEleDay = days ? fix(totEle / days) : 0;
-  const avgCashInDay = days ? fix(entCash / days) : 0;
 
   const speseTot = fix(agg.spese || 0);
   const speseInc = (totL > 0) ? (speseTot / totL) : 0;
@@ -1263,7 +1296,7 @@ function cercaPeriodo() {
       `;
     }).join("");
 
-  // suppliers breakdown + top5
+  // suppliers breakdown
   const supAgg = agg.supAgg || {};
   const topSup = Object.entries(supAgg)
     .sort((a, b) => (b[1].lordo - a[1].lordo))
@@ -1285,7 +1318,7 @@ function cercaPeriodo() {
       </tr>
     `).join("");
 
-  // anomalie: lista compatta
+  // anomalie (max 10)
   const anomalies = [];
   fil.forEach(r => {
     const issues = recordAnomalies(r, avgLordoDay || null);
@@ -1296,7 +1329,7 @@ function cercaPeriodo() {
     ? anomalies.slice(0, 10).map(a => `• <span class="font-bold">${escapeHtml(a.data)}</span> — ${escapeHtml(a.issues.join(", "))}`).join("<br>")
     : `<span class="text-slate-300">Nessuna anomalia rilevata</span>`;
 
-  // dettaglio giornaliero (come tuo, ma aggiunge badge anomalie)
+  // dettaglio giornaliero
   const dayBlocks = fil.map(r => {
     const pd = Array.isArray(r.payDet) ? r.payDet : legacyPayDet(r);
 
@@ -1306,7 +1339,13 @@ function cercaPeriodo() {
 
     const forn = (r.detFornitori || [])
       .filter(x => (x.lordo || 0) > 0)
-      .map(x => confirmSafeSupplierLine(x))
+      .map(x => {
+        const nome = escapeHtml(x.nome || "Senza Nome");
+        const lordo = euro(x.lordo || 0);
+        const meth = x.cash ? 'CONTANTI' : 'TRACCIABILE';
+        const cls = x.cash ? 'text-red-300' : 'text-blue-200';
+        return `• <span class="font-bold">${nome}</span> — ${lordo} <span class="text-[10px] ${cls}">(${meth})</span>`;
+      })
       .join("<br>") || `<span class="text-slate-300">Nessuna spesa fornitori</span>`;
 
     const issues = recordAnomalies(r, avgLordoDay || null);
@@ -1340,6 +1379,27 @@ function cercaPeriodo() {
   res.innerHTML = `
     <div class="p-5 bg-slate-900 text-white rounded-3xl space-y-6 shadow-xl">
       <h4 class="text-center font-black text-blue-400 text-xs uppercase">Report PRO per Periodo</h4>
+
+      <!-- BOX: Questa settimana / Settimana scorsa -->
+      <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
+        <div class="font-black text-[11px] uppercase text-slate-200 mb-3">Confronto Settimane</div>
+        <div class="grid grid-cols-2 gap-3 text-[11px]">
+          <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+            <div class="text-[10px] font-black uppercase text-slate-300">Questa settimana</div>
+            <div class="font-black text-lg">${euro(aggThisW.lordo)}</div>
+            <div class="text-[10px] text-slate-300">${escapeHtml(thisFrom)} → ${escapeHtml(thisTo)}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+            <div class="text-[10px] font-black uppercase text-slate-300">Settimana scorsa</div>
+            <div class="font-black text-lg">${euro(aggLastW.lordo)}</div>
+            <div class="text-[10px] text-slate-300">${escapeHtml(lastFrom)} → ${escapeHtml(lastTo)}</div>
+          </div>
+          <div class="col-span-2 flex justify-between items-center border-t border-white/10 pt-3 text-[11px]">
+            <span class="text-slate-200">Variazione</span>
+            <span class="font-black ${deltaW >= 0 ? 'text-green-300' : 'text-red-300'}">${deltaWtxt}</span>
+          </div>
+        </div>
+      </div>
 
       <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
         <div class="grid grid-cols-2 gap-3 text-[11px]">
@@ -1427,17 +1487,9 @@ function cercaPeriodo() {
       </div>
     </div>
   `;
-
-  // helper per righe fornitori nel dettaglio giornaliero
-  function confirmSafeSupplierLine(x) {
-    const nome = escapeHtml(x.nome || "Senza Nome");
-    const lordo = euro(x.lordo || 0);
-    const meth = x.cash ? 'CONTANTI' : 'TRACCIABILE';
-    const cls = x.cash ? 'text-red-300' : 'text-blue-200';
-    return `• <span class="font-bold">${nome}</span> — ${lordo} <span class="text-[10px] ${cls}">(${meth})</span>`;
-  }
 }
 // AL: cercaPeriodo PRO
+
     // ===== Report fiscale (con dettaglio pagamenti per categoria + fornitori) =====
     function generaReportProfessionale() {
       const f = document.getElementById('p-from').value;
