@@ -831,66 +831,7 @@ function addRowIVA(btn) {
         payDet, detFornitori
       };
     }
-
-    function salvaData(btnEl) {
-      const data = document.getElementById('data-lavoro').value;
-      if (!data) return alert("⚠️ Seleziona la data prima di salvare!");
-
-      const dati = calcola();
-
-      // basic sanity checks
-      if (dati.totEle > dati.lordoZ) {
-        const ok = confirm("⚠️ Il totale elettronico è maggiore del Lordo Z. Vuoi salvare comunque?");
-        if (!ok) return;
-      }
-
-      const haSpese = (dati.detFornitori || []).some(f => (f.lordo || 0) > 0);
-      const haIncasso = (dati.lordoZ || 0) > 0;
-      if (!haIncasso && !haSpese && (dati.payDet || []).length === 0) {
-        return alert("⚠️ Non ci sono dati da salvare.");
-      }
-
-      const rec = {
-        data,
-        lordoZ: fix(dati.lordoZ),
-        ivaV: fix(dati.ivaV),
-        impV: fix(dati.impV),
-        totEle: fix(dati.totEle),
-        uscCash: fix(dati.uscCash),
-        totIvaA: fix(dati.totIvaA),
-        payDet: (dati.payDet || []).map(p => ({ nome: String(p.nome || "").trim(), valore: fix(p.valore || 0) })).filter(p => p.nome && p.valore > 0),
-        detFornitori: (dati.detFornitori || []).map(x => ({
-          nome: x.nome || "Senza Nome",
-          lordo: fix(x.lordo || 0),
-          iva: fix(x.iva || 0),
-          cash: !!x.cash,
-          righe: Array.isArray(x.righe) ? x.righe.map(rr => ({
-            valore: fix(rr.valore || 0),
-            ivaPerc: Number(rr.ivaPerc || 0),
-            tipo: rr.tipo === 'N' ? 'N' : 'L'
-          })).filter(rr => rr.valore > 0) : []
-        })).filter(f => (f.lordo || 0) > 0 || (f.iva || 0) > 0)
-      };
-
-      db = db.filter(r => r.data !== data);
-      db.push(rec);
-      persistDB();
-
-      document.getElementById('badge-loaded').classList.add('hidden');
-
-      if (btnEl) {
-        btnEl.innerText = "✅ GIORNATA SALVATA";
-        btnEl.classList.remove('bg-blue-600');
-        btnEl.classList.add('bg-green-600');
-        setTimeout(() => {
-          btnEl.innerText = "ARCHIVIA E SALVA";
-          btnEl.classList.remove('bg-green-600');
-          btnEl.classList.add('bg-blue-600');
-        }, 2000);
-      }
-    }
-
-    function clearDayUI() {
+   function clearDayUI() {
       document.getElementById('inp-tot').value = "";
       document.getElementById('iva-v-base').value = "10";
       document.getElementById('fornitori-list').innerHTML = "";
@@ -901,31 +842,7 @@ function addRowIVA(btn) {
       if (payNames.length) addPayRow(payNames[0], "");
       calcola();
     }
-
-    function loadGiornata(data) {
-      const rec = db.find(r => r.data === data);
-      clearDayUI();
-
-      if (!rec) {
-        // no record: keep one payment row if configured
-        const payNames = getPaymentNames();
-        if (payNames.length === 0) {
-          // keep empty, user can add
-        }
-        return;
-      }
-
-      document.getElementById('inp-tot').value = rec.lordoZ ?? "";
-      document.getElementById('iva-v-base').value = String((rec.ivaV && rec.impV) ? rec.ivaV /* not used */ : document.getElementById('iva-v-base').value);
-      // Above line is NOT correct for iva selection (we don't store percent). Keep current selection:
-      // We'll keep iva-v-base unchanged unless you want to store it. (To keep system stable, we do store it below.)
-    }
-
-    // store iva percent for reload (improvement)
-    function salvaAliquotaInRec(d) {
-      d.ivaVperc = Number(document.getElementById('iva-v-base').value || 10);
-      return d;
-    }
+    // store iva percent for reload (
 
     function onChangeData() {
       const data = document.getElementById('data-lavoro').value;
