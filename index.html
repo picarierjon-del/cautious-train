@@ -842,9 +842,7 @@ function addRowIVA(btn) {
       if (payNames.length) addPayRow(payNames[0], "");
       calcola();
     }
-    // store iva percent for reload (
-
-    function onChangeData() {
+   function onChangeData() {
       const data = document.getElementById('data-lavoro').value;
       if (!data) return;
 
@@ -1613,8 +1611,7 @@ function cercaPeriodo() {
     })();
 
     // ===== Override salvaData to include iva percent in record (for reload consistency) =====
-    const _salvaDataOriginal = salvaData;
-    salvaData = function(btnEl) {
+  salvaData = function(btnEl) {
       const data = document.getElementById('data-lavoro').value;
       if (!data) return alert("⚠️ Seleziona la data prima di salvare!");
       const dati = calcola();
