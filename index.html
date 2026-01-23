@@ -146,6 +146,7 @@
       </h2>
 
    <!-- DAL: DASHBOARD ANALISI PRO -->
+<!-- DAL: DASHBOARD ANALISI PRO (con settimane) -->
 <div class="grid grid-cols-2 gap-4 mb-6">
 
   <div class="card border-t-4 border-blue-500">
@@ -177,12 +178,18 @@
 
   <div class="card col-span-2 border-t-4 border-blue-500">
     <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Filtri rapidi</p>
+
     <div class="grid grid-cols-2 gap-2">
+      <button type="button" onclick="setQuickRange('thisWeek')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Questa settimana</button>
+      <button type="button" onclick="setQuickRange('lastWeek')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Settimana scorsa</button>
+
       <button type="button" onclick="setQuickRange('month')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Questo mese</button>
       <button type="button" onclick="setQuickRange('lastMonth')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Mese scorso</button>
+
       <button type="button" onclick="setQuickRange('last30')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Ultimi 30</button>
       <button type="button" onclick="setQuickRange('last90')" class="bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px]">Ultimi 90</button>
     </div>
+
     <p class="text-[11px] text-slate-500 mt-3 leading-4">
       Imposta automaticamente DAL/AL e lancia l’analisi del periodo.
     </p>
@@ -196,6 +203,7 @@
   </div>
 
 </div>
+<!-- AL: DASHBOARD ANALISI PRO (con settimane) -->
 <!-- AL: DASHBOARD ANALISI PRO -->
         <div class="card border-t-4 border-blue-500">
           <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Ultimi 7gg</p>
@@ -1086,11 +1094,37 @@ function getRangeAgg(fromISO, toISO) {
   };
 }
 
+// DAL: setQuickRange (con settimane)
 function setQuickRange(type) {
   const now = new Date();
   let from, to;
 
-  if (type === 'month') {
+  // set settimana: lunedì → domenica
+  const mondayOf = (d) => {
+    const x = new Date(d);
+    const day = x.getDay(); // 0=dom, 1=lun...
+    const diff = (day === 0) ? -6 : (1 - day); // porta a lunedì
+    x.setDate(x.getDate() + diff);
+    x.setHours(0,0,0,0);
+    return x;
+  };
+  const sundayOf = (monday) => {
+    const x = new Date(monday);
+    x.setDate(x.getDate() + 6);
+    x.setHours(0,0,0,0);
+    return x;
+  };
+
+  if (type === 'thisWeek') {
+    from = mondayOf(now);
+    to = now; // fino ad oggi
+  } else if (type === 'lastWeek') {
+    const thisMon = mondayOf(now);
+    const lastMon = new Date(thisMon);
+    lastMon.setDate(lastMon.getDate() - 7);
+    from = lastMon;
+    to = sundayOf(lastMon);
+  } else if (type === 'month') {
     from = startOfMonth(now);
     to = now;
   } else if (type === 'lastMonth') {
@@ -1119,6 +1153,7 @@ function setQuickRange(type) {
 
   cercaPeriodo();
 }
+// AL: setQuickRange (con settimane)
 
 function recordAnomalies(r, avgLordo = null) {
   const issues = [];
@@ -1217,55 +1252,21 @@ function aggiornaStatsDash() {
 // AL: aggiornaStatsDash PRO
 
     // ===== Analisi per periodo (dettagli: pagamenti + fornitori + giornaliero) =====
-// DAL: cercaPeriodo PRO (con questa settimana / settimana scorsa)
+// DAL: cercaPeriodo PRO
 function cercaPeriodo() {
   const f = document.getElementById('s-from').value;
   const t = document.getElementById('s-to').value;
   if (!f || !t) return alert("Scegli le date!");
   if (f > t) return alert("⚠️ Intervallo non valido: DAL è dopo AL.");
 
-  // --- helper locale: inizio settimana (Lunedì) ---
-  function startOfWeekMonday(d) {
-    const x = new Date(d);
-    x.setHours(0, 0, 0, 0);
-    const day = x.getDay(); // 0 dom, 1 lun ... 6 sab
-    const diff = (day === 0 ? -6 : 1 - day); // porta a lunedì
-    x.setDate(x.getDate() + diff);
-    return x;
-  }
-
-  // --- confronto settimanale ---
-  const now = new Date();
-  const thisMon = startOfWeekMonday(now);
-  const thisFrom = toISODate(thisMon);
-  const thisTo = toISODate(now);
-
-  const lastMon = new Date(thisMon);
-  lastMon.setDate(lastMon.getDate() - 7);
-  const lastSun = new Date(thisMon);
-  lastSun.setDate(lastSun.getDate() - 1);
-
-  const lastFrom = toISODate(lastMon);
-  const lastTo = toISODate(lastSun);
-
-  const aggThisW = getRangeAgg(thisFrom, thisTo);
-  const aggLastW = getRangeAgg(lastFrom, lastTo);
-
-  const deltaW = (aggLastW.lordo > 0)
-    ? ((aggThisW.lordo - aggLastW.lordo) / aggLastW.lordo)
-    : (aggThisW.lordo > 0 ? 1 : 0);
-
-  const deltaWtxt = `${deltaW > 0 ? "+" : ""}${(deltaW * 100).toFixed(1)}%`;
-
-  // --- aggregato periodo selezionato ---
   const agg = getRangeAgg(f, t);
   const fil = agg.recs;
 
-  const totL = agg.lordo;
-  const totEle = agg.ele;
-  const totUscCash = agg.uscCash;
-  const tIvaD = agg.ivaD;
-  const tIvaC = agg.ivaA;
+  let totL = agg.lordo;
+  let totEle = agg.ele;
+  let totUscCash = agg.uscCash;
+  let tIvaD = agg.ivaD;
+  let tIvaC = agg.ivaA;
 
   const entCash = fix(totL - totEle);
   const diffCash = fix(entCash - totUscCash);
@@ -1275,6 +1276,7 @@ function cercaPeriodo() {
 
   const avgLordoDay = days ? fix(totL / days) : 0;
   const avgEleDay = days ? fix(totEle / days) : 0;
+  const avgCashInDay = days ? fix(entCash / days) : 0;
 
   const speseTot = fix(agg.spese || 0);
   const speseInc = (totL > 0) ? (speseTot / totL) : 0;
@@ -1296,7 +1298,7 @@ function cercaPeriodo() {
       `;
     }).join("");
 
-  // suppliers breakdown
+  // suppliers breakdown + top5
   const supAgg = agg.supAgg || {};
   const topSup = Object.entries(supAgg)
     .sort((a, b) => (b[1].lordo - a[1].lordo))
@@ -1318,7 +1320,7 @@ function cercaPeriodo() {
       </tr>
     `).join("");
 
-  // anomalie (max 10)
+  // anomalie: lista compatta
   const anomalies = [];
   fil.forEach(r => {
     const issues = recordAnomalies(r, avgLordoDay || null);
@@ -1329,7 +1331,7 @@ function cercaPeriodo() {
     ? anomalies.slice(0, 10).map(a => `• <span class="font-bold">${escapeHtml(a.data)}</span> — ${escapeHtml(a.issues.join(", "))}`).join("<br>")
     : `<span class="text-slate-300">Nessuna anomalia rilevata</span>`;
 
-  // dettaglio giornaliero
+  // dettaglio giornaliero (come tuo, ma aggiunge badge anomalie)
   const dayBlocks = fil.map(r => {
     const pd = Array.isArray(r.payDet) ? r.payDet : legacyPayDet(r);
 
@@ -1339,13 +1341,7 @@ function cercaPeriodo() {
 
     const forn = (r.detFornitori || [])
       .filter(x => (x.lordo || 0) > 0)
-      .map(x => {
-        const nome = escapeHtml(x.nome || "Senza Nome");
-        const lordo = euro(x.lordo || 0);
-        const meth = x.cash ? 'CONTANTI' : 'TRACCIABILE';
-        const cls = x.cash ? 'text-red-300' : 'text-blue-200';
-        return `• <span class="font-bold">${nome}</span> — ${lordo} <span class="text-[10px] ${cls}">(${meth})</span>`;
-      })
+      .map(x => confirmSafeSupplierLine(x))
       .join("<br>") || `<span class="text-slate-300">Nessuna spesa fornitori</span>`;
 
     const issues = recordAnomalies(r, avgLordoDay || null);
@@ -1379,27 +1375,6 @@ function cercaPeriodo() {
   res.innerHTML = `
     <div class="p-5 bg-slate-900 text-white rounded-3xl space-y-6 shadow-xl">
       <h4 class="text-center font-black text-blue-400 text-xs uppercase">Report PRO per Periodo</h4>
-
-      <!-- BOX: Questa settimana / Settimana scorsa -->
-      <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
-        <div class="font-black text-[11px] uppercase text-slate-200 mb-3">Confronto Settimane</div>
-        <div class="grid grid-cols-2 gap-3 text-[11px]">
-          <div class="p-3 rounded-xl bg-white/5 border border-white/10">
-            <div class="text-[10px] font-black uppercase text-slate-300">Questa settimana</div>
-            <div class="font-black text-lg">${euro(aggThisW.lordo)}</div>
-            <div class="text-[10px] text-slate-300">${escapeHtml(thisFrom)} → ${escapeHtml(thisTo)}</div>
-          </div>
-          <div class="p-3 rounded-xl bg-white/5 border border-white/10">
-            <div class="text-[10px] font-black uppercase text-slate-300">Settimana scorsa</div>
-            <div class="font-black text-lg">${euro(aggLastW.lordo)}</div>
-            <div class="text-[10px] text-slate-300">${escapeHtml(lastFrom)} → ${escapeHtml(lastTo)}</div>
-          </div>
-          <div class="col-span-2 flex justify-between items-center border-t border-white/10 pt-3 text-[11px]">
-            <span class="text-slate-200">Variazione</span>
-            <span class="font-black ${deltaW >= 0 ? 'text-green-300' : 'text-red-300'}">${deltaWtxt}</span>
-          </div>
-        </div>
-      </div>
 
       <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
         <div class="grid grid-cols-2 gap-3 text-[11px]">
@@ -1487,9 +1462,17 @@ function cercaPeriodo() {
       </div>
     </div>
   `;
+
+  // helper per righe fornitori nel dettaglio giornaliero
+  function confirmSafeSupplierLine(x) {
+    const nome = escapeHtml(x.nome || "Senza Nome");
+    const lordo = euro(x.lordo || 0);
+    const meth = x.cash ? 'CONTANTI' : 'TRACCIABILE';
+    const cls = x.cash ? 'text-red-300' : 'text-blue-200';
+    return `• <span class="font-bold">${nome}</span> — ${lordo} <span class="text-[10px] ${cls}">(${meth})</span>`;
+  }
 }
 // AL: cercaPeriodo PRO
-
     // ===== Report fiscale (con dettaglio pagamenti per categoria + fornitori) =====
     function generaReportProfessionale() {
       const f = document.getElementById('p-from').value;
