@@ -2161,6 +2161,17 @@ Controlla questi dati prima di premere Importa.`;
         prepared.push({ id, riderName, num, total, channel, paymentChannel, cash, pos, posAmt, bonusF, createdAt, createdAtISO, bonusScaled });
       });
 
+      // Se l'Admin importa direttamente in una colonna, il nome nel CSV deve corrispondere
+      // esattamente al soggetto selezionato: non associare mai un fattorino alla colonna sbagliata.
+      if (Number.isInteger(targetSubjectIdx) && targetSubjectIdx >= 0 && targetSubjectIdx < S) {
+        const targetName = String(state.names[targetSubjectIdx] || '').trim();
+        const mismatch = prepared.filter(item => nameKey(item.riderName) !== nameKey(targetName));
+        if (mismatch.length) {
+          const wrongNames = [...new Set(mismatch.map(item => item.riderName))];
+          throw new Error(`ATTENZIONE: il CSV contiene il fattorino "${wrongNames.join(', ')}", ma hai selezionato il soggetto "${targetName}". Nessuna consegna è stata importata. Seleziona la colonna corretta oppure usa l'importazione generale per verificare e associare il nome.`);
+        }
+      }
+
       // Blocca duplicati logici anche se lo stesso ordine arriva con ID differenti.
       const seenKeys = new Map();
       prepared.forEach((item, i) => {
@@ -2401,8 +2412,6 @@ Controlla questi dati prima di premere Importa.`;
     state.deliveries.forEach(syncDeliveryToGrid);
     state.expenses[0] = { label: 'Voci fuori (EF)', raw: '5,00' };
 
-    archiveAndStartNewBusinessDay();
-    purgeExpiredDailyArchives();
     renderNames();
     renderChannels();
     renderGrid();
@@ -2737,6 +2746,10 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function initUI() {
+    // Cambio data: archivia la giornata precedente e apre il conteggio del giorno corrente.
+    archiveAndStartNewBusinessDay();
+    purgeExpiredDailyArchives();
+
     state.rowsCount = Number.isInteger(state.rowsCount) ? Math.max(1, Math.min(500, state.rowsCount)) : 150;
     if (!Array.isArray(state.refRows)) state.refRows = [];
     if (!Array.isArray(state.subjects)) state.subjects = [];
