@@ -1996,11 +1996,11 @@ Controlla questi dati prima di premere Importa.`;
     }
   }
 
-  function exportRiderCsv() {
+  function buildRiderCsv(rowsToExport, fallbackName = '') {
     const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Ora', 'Canale incasso', 'Bonus F scalato'];
-    const rows = state.deliveries.map(d => [
+    const rows = rowsToExport.map(d => [
       d.id,
-      d.riderName || '',
+      String(d.riderName || fallbackName || '').trim(),
       d.subjectIdx >= 0 ? (state.names[d.subjectIdx] || `Soggetto ${d.subjectIdx + 1}`) : 'DA ASSOCIARE',
       d.num,
       d.total,
@@ -2013,12 +2013,39 @@ Controlla questi dati prima di premere Importa.`;
       d.pos ? 'BANCOMAT' : 'CASH',
       d.subjectIdx >= 0 ? (state.bonusFScaledBySubject?.[d.subjectIdx] ? 'SI' : 'NO') : (state.bonusFManualConfirmed && state.bonusFScaled ? 'SI' : 'NO')
     ]);
-    const csv = '﻿' + [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+    return '\uFEFF' + [headers, ...rows].map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
+  }
+
+  function downloadRiderCsv(filename, rows, fallbackName = '') {
+    const csv = buildRiderCsv(rows, fallbackName);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = 'fattorino-consegne.csv';
+    a.href = url;
+    a.download = filename;
     a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportRiderCsv() {
+    const riderName = String($('riderNameInput')?.value || state.lastRiderName || '').trim();
+    if (!riderName || !state.riderProfileConfirmed || !riderProfileIsValid()) {
+      alert('Prima di esportare il CSV, conferma nome e cognome e marsupio iniziale.');
+      $('riderNameInput')?.focus();
+      return;
+    }
+    // Esportazione dal telefono: solo le consegne di questo fattorino.
+    // Le righe storiche senza nome vengono attribuite al profilo attualmente confermato.
+    const rows = state.deliveries.filter(d => {
+      const existingName = String(d.riderName || '').trim();
+      return !existingName || nameKey(existingName) === nameKey(riderName);
+    });
+    if (!rows.length) {
+      alert(`Non ci sono consegne da esportare per ${riderName}.`);
+      return;
+    }
+    downloadRiderCsv(`fattorino-${riderName.replace(/[^a-z0-9_-]/gi, '_')}-consegne.csv`, rows, riderName);
+    if ($('importStatus')) $('importStatus').textContent = `CSV esportato per ${riderName}: ${rows.length} consegne. Il nome è riportato in ogni riga nella colonna Fattorino.`;
   }
 
   function parseCsvText(text) {
@@ -2164,7 +2191,10 @@ Controlla questi dati prima di premere Importa.`;
     }
   }
 
-  function exportAllRidersCsv() { exportRiderCsv(); }
+  function exportAllRidersCsv() {
+    if (!state.deliveries.length) { alert('Non ci sono consegne da esportare.'); return; }
+    downloadRiderCsv('archivio-consegne-tutti-fattorini.csv', state.deliveries, '');
+  }
 
   function exportAdminCsv() {
     const headers = ['Tipo', 'Riga', 'Numero atteso', 'Totale atteso', 'Soggetto', 'Numero', 'Totale', 'CASH', 'POS', 'Quota POS', 'Fattorino', 'Canale', 'Bonus F', 'Ora', 'Marsupio iniziale', 'Bonus F scalato'];
