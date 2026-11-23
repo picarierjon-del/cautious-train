@@ -731,19 +731,35 @@ ${preflight.slice(0,12).join('\n')}`);return;}}const inp=el.querySelector(`[data
   }
   const SEVEN_DAYS_MS=7*24*60*60*1000;
   function runRetentionCleanup(){
-    const cutoff=Date.now()-SEVEN_DAYS_MS;let removed=0;
-    const expired=(state.deliveries||[]).filter(d=>{const t=Date.parse(d.createdAtISO||'');return Number.isFinite(t)&&t<cutoff;});
-    expired.forEach(d=>{releaseDeliveryBinding(d);removed++;});
+    const cutoff=Date.now()-SEVEN_DAYS_MS;let removed=0,archivesPurged=0;
+    const expired=(state.deliveries||[]).filter(d=>{const t=Date.parse(d.createdAtISO||'');return Number.isFinite(t)&&t<=cutoff;});
+    expired.forEach(d=>{
+      const numKey=normNum(d.num), amount=parseAmt(d.total);
+      releaseDeliveryBinding(d);
+      // Elimina anche il riferimento corrispondente nella griglia Admin, ma solo
+      // se numero e importo identificano una sola riga: non tocca righe ambigue.
+      if(numKey){
+        const matches=[];
+        (state.refRows||[]).forEach((r,i)=>{
+          const sameNum=normNum(r.an)===numKey, refAmount=parseAmt(r.at);
+          if(sameNum && amount!==null && refAmount!==null && Math.abs(refAmount-amount)<0.005)matches.push(i);
+        });
+        if(matches.length===1)state.refRows[matches[0]]={an:'',at:''};
+      }
+      removed++;
+    });
     if(removed)state.deliveries=state.deliveries.filter(d=>!expired.includes(d));
-    // Dopo 7 giorni si elimina il dettaglio operativo dalle copie archiviate; restano solo aggregati.
-    (state.shiftArchives||[]).forEach(a=>{const t=Date.parse(a.archivedAt||'');if(Number.isFinite(t)&&t<cutoff&&a.snapshot){delete a.snapshot; a.detailPurgedAt=new Date().toISOString();}});
-    // Audit dettagliato oltre 7 giorni eliminato; gli archivi aggregati e i documenti esportati dall'utente restano separati.
-    const before=(state.auditLog||[]).length;state.auditLog=(state.auditLog||[]).filter(x=>{const t=Date.parse(x.at||'');return !Number.isFinite(t)||t>=cutoff;});
+    // Anche i dettagli degli archivi turno vengono eliminati dopo 7 giorni;
+    // restano i soli riepiloghi non nominativi/aggregati.
+    (state.shiftArchives||[]).forEach(a=>{const t=Date.parse(a.archivedAt||'');if(Number.isFinite(t)&&t<=cutoff&&a.snapshot){delete a.snapshot;a.detailPurgedAt=new Date().toISOString();archivesPurged++;}});
+    const before=(state.auditLog||[]).length;
+    state.auditLog=(state.auditLog||[]).filter(x=>{const t=Date.parse(x.at||'');return !Number.isFinite(t)||t>cutoff;});
     state.retentionLastRun=new Date().toISOString();
     if(removed){renderGrid();renderDeliveries();renderRiderMappings();recomputeAll();}
-    renderAuditLog();renderShiftArchives();saveLocal();
-    if($('retentionStatus'))$('retentionStatus').textContent=`Ultimo controllo: ${new Date(state.retentionLastRun).toLocaleString('it-IT')}. Consegne eliminate: ${removed}; voci di registro eliminate: ${before-state.auditLog.length}. I documenti obbligatori conservati separatamente non vengono toccati.`;
-    audit('PULIZIA AUTOMATICA 7 GIORNI',`${removed} consegne operative eliminate`);saveLocal();
+    renderAuditLog();renderShiftArchives();
+    if($('retentionStatus'))$('retentionStatus').textContent=`Ultimo controllo: ${new Date(state.retentionLastRun).toLocaleString('it-IT')}. Consegne eliminate: ${removed}; dettagli archivio eliminati: ${archivesPurged}; voci di registro eliminate: ${before-state.auditLog.length}. I dati nuovi e quelli degli ultimi 7 giorni restano disponibili.`;
+    if(removed||archivesPurged||before!==state.auditLog.length)audit('PULIZIA AUTOMATICA 7 GIORNI',`${removed} consegne e ${archivesPurged} dettagli archivio eliminati`);
+    saveLocal();
     return removed;
   }
   function renderShiftArchives() {
@@ -1997,7 +2013,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function buildRiderCsv(rowsToExport, fallbackName = '') {
-    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Ora', 'Canale incasso', 'Bonus F scalato'];
+    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO'];
     const rows = rowsToExport.map(d => [
       d.id,
       String(d.riderName || fallbackName || '').trim(),
@@ -2011,7 +2027,8 @@ Controlla questi dati prima di premere Importa.`;
       d.bonusF || '0',
       d.createdAt || '',
       d.pos ? 'BANCOMAT' : 'CASH',
-      d.subjectIdx >= 0 ? (state.bonusFScaledBySubject?.[d.subjectIdx] ? 'SI' : 'NO') : (state.bonusFManualConfirmed && state.bonusFScaled ? 'SI' : 'NO')
+      d.subjectIdx >= 0 ? (state.bonusFScaledBySubject?.[d.subjectIdx] ? 'SI' : 'NO') : (state.bonusFManualConfirmed && state.bonusFScaled ? 'SI' : 'NO'),
+      d.createdAtISO || ''
     ]);
     return '\uFEFF' + [headers, ...rows].map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
   }
@@ -2120,7 +2137,7 @@ Controlla questi dati prima di premere Importa.`;
       const ix = {
         id: col('id'), rider: col('fattorino', 'nome fattorino'), assigned: col('soggetto assegnato'),
         num: col('numero'), total: col('totale'), channel: col('canale'), cash: col('cash'), pos: col('pos'),
-        posAmt: col('quota pos'), bonus: col('bonus f'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato')
+        posAmt: col('quota pos'), bonus: col('bonus f'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), createdAtISO: col('data creazione iso')
       };
       if (ix.num < 0 || ix.total < 0 || (ix.rider < 0 && ix.assigned < 0)) throw new Error('CSV non compatibile: servono le colonne Fattorino, Numero e Totale.');
       const prepared = [];
@@ -2139,7 +2156,9 @@ Controlla questi dati prima di premere Importa.`;
         const channel = get('channel') || state.channels[0] || 'Telefono';
         const createdAt = get('time');
         const id = get('id') || stableImportId([riderName, num, total, channel, cash, pos, posAmt, bonusF, createdAt]);
-        prepared.push({ id, riderName, num, total, channel, paymentChannel, cash, pos, posAmt, bonusF, createdAt, createdAtISO: new Date().toISOString(), bonusScaled });
+        const importedCreatedAt = get('createdAtISO');
+        const createdAtISO = importedCreatedAt && Number.isFinite(Date.parse(importedCreatedAt)) ? new Date(importedCreatedAt).toISOString() : new Date().toISOString();
+        prepared.push({ id, riderName, num, total, channel, paymentChannel, cash, pos, posAmt, bonusF, createdAt, createdAtISO, bonusScaled });
       });
 
       // Blocca duplicati logici anche se lo stesso ordine arriva con ID differenti.
@@ -2181,6 +2200,7 @@ Controlla questi dati prima di premere Importa.`;
         syncDeliveryToGrid(d);
       });
       audit('IMPORTAZIONE CSV', `${file.name}: ${added} nuove, ${updated} aggiornate${Number.isInteger(targetSubjectIdx) ? ` · soggetto ${state.names[targetSubjectIdx]}` : ''}`);
+      runRetentionCleanup();
       renderChannels(); renderGrid(); renderDeliveries(); renderRiderMappings(); recomputeAll(); scheduleSave();
       const syncErrors = state.deliveries.filter(d => d.gridSyncError).length;
       $('importStatus').textContent = `Importazione completata: ${added} nuove consegne, ${updated} aggiornate.${syncErrors ? ` Attenzione: ${syncErrors} non sincronizzate nella griglia; verifica i dettagli qui sotto.` : ' Tutte le consegne assegnate sono state sincronizzate.'} Controlla e associa i nomi non riconosciuti.`;
@@ -2693,6 +2713,12 @@ Controlla questi dati prima di premere Importa.`;
     runLocalAssistant();
     runRetentionCleanup();
   }
+
+  // La pulizia viene eseguita all'apertura (in initUI), al rientro nell'app
+  // e periodicamente se la pagina resta aperta. Se il browser è chiuso, parte
+  // alla successiva apertura: il browser non esegue codice in background.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) runRetentionCleanup(); });
+  window.setInterval(() => { if (!document.hidden) runRetentionCleanup(); }, 6 * 60 * 60 * 1000);
 
   // Load saved state if present
   try {
