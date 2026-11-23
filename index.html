@@ -2401,6 +2401,8 @@ Controlla questi dati prima di premere Importa.`;
     state.deliveries.forEach(syncDeliveryToGrid);
     state.expenses[0] = { label: 'Voci fuori (EF)', raw: '5,00' };
 
+    archiveAndStartNewBusinessDay();
+    purgeExpiredDailyArchives();
     renderNames();
     renderChannels();
     renderGrid();
@@ -2652,6 +2654,88 @@ Controlla questi dati prima di premere Importa.`;
     $('loadDemoScenarioBtn').onclick = loadDemoScenario;
   }
 
+  function localBusinessDateKey(date = new Date()) {
+    const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,'0'),d=String(date.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  function dayDistance(fromKey,toKey) {
+    const a=Date.parse(`${fromKey}T00:00:00Z`),b=Date.parse(`${toKey}T00:00:00Z`);
+    return Number.isFinite(a)&&Number.isFinite(b)?Math.round((b-a)/86400000):0;
+  }
+  function archiveAndStartNewBusinessDay() {
+    const today=localBusinessDateKey();
+    const previous=String(state.activeBusinessDate||'');
+    if(!previous) { state.activeBusinessDate=today; return false; }
+    if(previous===today) return false;
+    // Conserva uno snapshot completo e autonomo della giornata precedente prima di azzerare l'operativo.
+    const deliveries=Array.isArray(state.deliveries)?state.deliveries:[];
+    const deliveryTotal=deliveries.reduce((n,d)=>n+(parseAmt(d.total)||0),0);
+    const cashTotal=deliveries.reduce((n,d)=>n+paymentBreakdown(d).cash,0);
+    const posTotal=deliveries.reduce((n,d)=>n+paymentBreakdown(d).bancomat,0);
+    const hasOperationalData=deliveries.length ||
+      (state.refRows||[]).some(r=>String(r.an||'').trim()||String(r.at||'').trim()) ||
+      (state.subjects||[]).some(row=>row.some(c=>String(c.num||'').trim()||String(c.total||'').trim())) ||
+      (state.walletClosures&&Object.keys(state.walletClosures).length);
+    if(hasOperationalData) {
+      const snapshot={
+        activeBusinessDate:previous,
+        refRows:JSON.parse(JSON.stringify(state.refRows||[])),
+        subjects:JSON.parse(JSON.stringify(state.subjects||[])),
+        deliveries:JSON.parse(JSON.stringify(deliveries)),
+        expenses:JSON.parse(JSON.stringify(state.expenses||[])),
+        walletClosures:JSON.parse(JSON.stringify(state.walletClosures||{})),
+        marsupioStart:state.marsupioStart||'',
+        marsupioStartBySubject:JSON.parse(JSON.stringify(state.marsupioStartBySubject||{})),
+        bonusFScaled:!!state.bonusFScaled,
+        bonusFManualConfirmed:!!state.bonusFManualConfirmed,
+        bonusFScaledBySubject:JSON.parse(JSON.stringify(state.bonusFScaledBySubject||{})),
+        auditLog:JSON.parse(JSON.stringify(state.auditLog||[]))
+      };
+      state.shiftArchives=Array.isArray(state.shiftArchives)?state.shiftArchives:[];
+      state.shiftArchives.push({
+        label:`Giornata ${previous}`,
+        businessDate:previous,
+        archivedAt:new Date().toISOString(),
+        deliveryCount:deliveries.length,
+        total:Math.round(deliveryTotal*100)/100,
+        cash:Math.round(cashTotal*100)/100,
+        pos:Math.round(posTotal*100)/100,
+        snapshot
+      });
+    }
+    // Nuova giornata: mantiene anagrafiche e impostazioni, azzera solo i dati operativi.
+    state.deliveries=[];
+    state.refRows=Array.from({length:state.rowsCount||150},()=>({an:'',at:''}));
+    state.subjects=Array.from({length:state.rowsCount||150},()=>Array.from({length:S},()=>blankSubjectCell()));
+    state.expenses=Array.from({length:10},(_,i)=>({label:i===0?'Voci fuori (EF)':(i===1?'Mangia spesa (EF)':''),raw:''}));
+    state.walletClosures={};
+    state.marsupioStart='';
+    state.marsupioStartBySubject={};
+    state.bonusFScaled=false;
+    state.bonusFManualConfirmed=false;
+    state.bonusFScaledBySubject={};
+    state.riderProfileConfirmed=false;
+    state.lastRiderName='';
+    state.activeBusinessDate=today;
+    state.auditLog=[];
+    // Conserva soltanto le giornate archiviate negli ultimi sette giorni di calendario.
+    state.shiftArchives=(state.shiftArchives||[]).filter(a=>a.businessDate && dayDistance(a.businessDate,today)<7 && dayDistance(a.businessDate,today)>=0);
+    state.dailyRolloverNotice=`La giornata ${previous} è stata archiviata. È iniziata la giornata ${today}: il conteggio operativo è nuovo.`;
+    return true;
+  }
+  function purgeExpiredDailyArchives() {
+    const today=localBusinessDateKey();
+    const before=(state.shiftArchives||[]).length;
+    state.shiftArchives=(state.shiftArchives||[]).filter(a=>{
+      if(!a.businessDate)return true;
+      const age=dayDistance(a.businessDate,today);
+      return age>=0 && age<7;
+    });
+    const removed=before-state.shiftArchives.length;
+    state.dailyArchivesPurged=(state.dailyArchivesPurged||0)+removed;
+    return removed;
+  }
+
   function initUI() {
     state.rowsCount = Number.isInteger(state.rowsCount) ? Math.max(1, Math.min(500, state.rowsCount)) : 150;
     if (!Array.isArray(state.refRows)) state.refRows = [];
@@ -2712,6 +2796,7 @@ Controlla questi dati prima di premere Importa.`;
     renderGuidedWalletClosures();
     runLocalAssistant();
     runRetentionCleanup();
+    if(state.dailyRolloverNotice && $('importStatus')) $('importStatus').textContent=state.dailyRolloverNotice;
   }
 
   // La pulizia viene eseguita all'apertura (in initUI), al rientro nell'app
