@@ -232,6 +232,18 @@ button{justify-content:center}
 }
 @media(max-width:390px){.riderForm{grid-template-columns:1fr}.kpiGrid{grid-template-columns:1fr 1fr}}
 
+
+/* Profilo fattorino: configurazione obbligatoria una sola volta, poi compatta */
+#riderProfilePanel.profile-compact .riderForm,
+#riderProfilePanel.profile-compact #newChannelInput,
+#riderProfilePanel.profile-compact #addChannelBtn,
+#riderProfilePanel.profile-compact #channelChips,
+#riderProfilePanel.profile-compact #riderProfileActions,
+#riderProfilePanel.profile-compact #riderNameHint { display:none!important; }
+#riderProfilePanel.profile-compact #riderProfileCompact { display:block!important; }
+#newDeliveryPanel.profile-locked { opacity:.55; pointer-events:none; }
+#newDeliveryPanel.profile-locked::after { content:"Prima conferma nome e marsupio iniziale nell’Area Fattorino."; display:block; padding:12px; color:var(--warn,#f0b84b); font-weight:700; }
+#adminSection button#addRow,#adminSection button#removeRow { position:relative; z-index:2; pointer-events:auto; }
 </style>
 </head>
 <body>
@@ -279,17 +291,17 @@ button{justify-content:center}
 
   <!-- VISTA FATTORINO -->
   <section id="riderSection" class="hidden">
-    <div class="panel">
+    <div class="panel" id="riderProfilePanel">
       <strong>Area Fattorino</strong>
       <div class="riderForm" style="margin-top:8px">
         <div class="fieldStack">
           <label for="riderNameInput">Il tuo nome e cognome</label>
           <input id="riderNameInput" type="text" autocomplete="name" placeholder="Es. Marco Rossi" required>
-          <small class="hint">Scrivilo sempre nello stesso modo: l’amministratore lo verificherà nel CSV.</small>
+          <small class="hint" id="riderNameHint">Obbligatorio: inserisci nome e cognome, sempre nello stesso modo.</small>
         </div>
         <div class="fieldStack">
           <label for="marsupioStartInput">Marsupio Iniziale (€)</label>
-          <input id="marsupioStartInput" inputmode="decimal" placeholder="0,00">
+          <input id="marsupioStartInput" inputmode="decimal" placeholder="Es. 120,00" required>
         </div>
         <div class="fieldStack">
           <label for="newChannelInput">Aggiungi Canale Manuale</label>
@@ -300,6 +312,16 @@ button{justify-content:center}
         </div>
       </div>
       <div class="channelList" id="channelChips"></div>
+      <div class="toolbar" id="riderProfileActions" style="margin-top:10px">
+        <button type="button" class="success" id="confirmRiderProfile">Conferma nome e marsupio iniziale</button>
+      </div>
+      <div id="riderProfileCompact" class="hidden">
+        <div class="walletMetric" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <span><b id="riderCompactName">—</b><small class="hint" style="display:block;margin:2px 0 0">Marsupio iniziale</small></span>
+          <b id="riderCompactStart">0,00 €</b>
+          <button type="button" class="secondary small" id="editRiderProfile">Modifica</button>
+        </div>
+      </div>
     </div>
 
     <!-- INSERIMENTO SUBITO IN ALTO -->
@@ -926,10 +948,42 @@ Controlla questi dati prima di premere Importa.`;
     }
   }
 
+  function riderProfileIsValid(){
+    const name=$('riderNameInput')?.value.trim()||'';
+    const start=$('marsupioStartInput')?.value.trim()||'';
+    const amount=parseAmt(start);
+    return !!name && !!start && amount!==null && Number.isFinite(amount) && amount>=0;
+  }
+  function refreshRiderProfileUI(){
+    const panel=$('riderProfilePanel'), delivery=$('newDeliveryPanel');
+    if(!panel||!delivery)return;
+    const ready=!!state.riderProfileConfirmed && riderProfileIsValid();
+    panel.classList.toggle('profile-compact',ready);
+    delivery.classList.toggle('profile-locked',!ready);
+    if($('riderCompactName'))$('riderCompactName').textContent=$('riderNameInput').value.trim()||'—';
+    if($('riderCompactStart'))$('riderCompactStart').textContent=fmtEur(parseAmt($('marsupioStartInput').value)||0);
+    if($('confirmRiderProfile'))$('confirmRiderProfile').textContent=ready?'Dati confermati':'Conferma nome e marsupio iniziale';
+  }
+  function confirmRiderProfile(){
+    const name=$('riderNameInput').value.trim();
+    const start=$('marsupioStartInput').value.trim();
+    const amount=parseAmt(start);
+    if(!name){alert('Per entrare nell’area consegne devi inserire nome e cognome.');$('riderNameInput').focus();return;}
+    if(!start||amount===null||!Number.isFinite(amount)||amount<0){alert('Inserisci il marsupio iniziale: è obbligatorio e deve essere un importo valido, anche 0,00 €.');$('marsupioStartInput').focus();return;}
+    state.lastRiderName=name;
+    state.marsupioStart=start;
+    state.riderProfileConfirmed=true;
+    audit('PROFILO FATTORINO CONFERMATO',`${name} · marsupio iniziale ${fmtEur(amount)}`);
+    refreshRiderProfileUI();
+    recomputeAll();
+    saveLocal();
+  }
   function setRole(newRole) {
     state.role = newRole;
+    if(newRole==='rider' && !riderProfileIsValid()) state.riderProfileConfirmed=false;
     scheduleSave();
     applyRoleVisibility();
+    refreshRiderProfileUI();
     recomputeAll();
   }
 
@@ -2164,6 +2218,7 @@ Controlla questi dati prima di premere Importa.`;
       state.marsupioStartBySubject = {};
       state.filters = { search: '', status: 'all', subject: '', channel: '' };
       $('marsupioStartInput').value = state.marsupioStart;
+      refreshRiderProfileUI();
       renderNames(); renderChannels(); renderGrid(); renderExpenses(); renderDeliveries(); renderRiderMappings();
       recomputeAll();
 
@@ -2334,8 +2389,11 @@ Controlla questi dati prima di premere Importa.`;
     });
 
     if ($('riderSelect')) $('riderSelect').onchange = e => { state.activeRiderIdx = Number(e.target.value || 0); scheduleSave(); };
-    $('riderNameInput').addEventListener('input', e => { state.lastRiderName = e.target.value.trim(); scheduleSave(); });
+    $('riderNameInput').addEventListener('input', e => { state.lastRiderName = e.target.value.trim(); if(state.riderProfileConfirmed){state.riderProfileConfirmed=false;} refreshRiderProfileUI(); scheduleSave(); });
     $('riderNameInput').value = state.lastRiderName || '';
+    $('confirmRiderProfile').onclick = confirmRiderProfile;
+    $('editRiderProfile').onclick = () => { state.riderProfileConfirmed=false; refreshRiderProfileUI(); $('riderNameInput').focus(); };
+
     $('importRiderCsvBtn').onclick = () => importRiderCsv();
     $('importCsvForSubjectBtn').onclick = () => importRiderCsv(Number($('targetImportSubject').value));
     $('exportAllRidersCsvBtn').onclick = exportAllRidersCsv;
@@ -2347,6 +2405,8 @@ Controlla questi dati prima di premere Importa.`;
     $('exportArchivesBtn').onclick = () => downloadText('verifica-numeri-archivio-turni.json', JSON.stringify(state.shiftArchives||[],null,2), 'application/json');
     $('marsupioStartInput').addEventListener('input', e => {
       state.marsupioStart = e.target.value;
+      if(state.riderProfileConfirmed)state.riderProfileConfirmed=false;
+      refreshRiderProfileUI();
       recomputeAll();
       scheduleSave();
     });
@@ -2390,25 +2450,32 @@ Controlla questi dati prima di premere Importa.`;
     $('exportCsvBtn').onclick = exportAdminCsv;
 
     $('jumpSummary').onclick = () => $('summaryPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    $('addRow').onclick = () => {
-      if (state.rowsCount >= 500) return alert('Massimo 500 righe.');
+    function addAdminRow(){
+      if(state.rowsCount>=500){alert('Raggiunto il limite massimo di 500 righe.');return;}
       state.rowsCount++;
-      renderGrid();
-      recomputeAll();
-      scheduleSave();
-    };
-    $('removeRow').onclick = () => {
-      if (state.rowsCount <= 1) return alert('Deve restare almeno una riga.');
-      const last = state.rowsCount - 1;
-      const ref = state.refRows[last];
-      const hasData = String(ref?.an || '').trim() || String(ref?.at || '').trim() || state.subjects[last].some(c => String(c.num || '').trim() || String(c.total || '').trim());
-      const hasBinding = state.deliveries.some(d => d._gridBinding?.rowIdx === last);
-      if (hasData || hasBinding) return alert('L’ultima riga contiene dati o consegne collegate. Svuotala o sposta i dati prima di rimuoverla, così evitiamo perdite.');
-      state.rowsCount--;
-      renderGrid();
-      recomputeAll();
-      scheduleSave();
-    };
+      ensureSize(state.rowsCount);
+      renderGrid(); recomputeAll(); saveLocal();
+      if($('importStatus'))$('importStatus').textContent=`Aggiunta riga ${state.rowsCount}. Totale righe attive: ${state.rowsCount}.`;
+    }
+    function removeAdminRow(){
+      if(state.rowsCount<=1){alert('Deve restare almeno una riga.');return;}
+      const last=state.rowsCount-1, ref=state.refRows[last];
+      const hasData=String(ref?.an||'').trim()||String(ref?.at||'').trim()||state.subjects[last].some(c=>String(c.num||'').trim()||String(c.total||'').trim());
+      const linked=state.deliveries.some(d=>d._gridBinding?.rowIdx===last);
+      if(linked){alert('Non posso rimuovere questa riga: è collegata a una o più consegne. Prima correggi o scollega le consegne interessate.');return;}
+      if(hasData&&!confirm(`L’ultima riga (${state.rowsCount}) contiene dati. Vuoi eliminarla definitivamente?`))return;
+      state.refRows.pop(); state.subjects.pop(); state.rowsCount--;
+      renderGrid(); recomputeAll(); saveLocal();
+      if($('importStatus'))$('importStatus').textContent=`Rimossa l’ultima riga. Totale righe attive: ${state.rowsCount}.`;
+    }
+    $('addRow').type='button'; $('removeRow').type='button';
+    $('addRow').onclick=null; $('removeRow').onclick=null;
+    // Delegazione di sicurezza: mantiene i comandi attivi anche se la barra Admin viene ricostruita.
+    document.addEventListener('click',e=>{
+      const add=e.target.closest('#addRow'), remove=e.target.closest('#removeRow');
+      if(add){e.preventDefault();addAdminRow();}
+      if(remove){e.preventDefault();removeAdminRow();}
+    },true);
     $('clearAll').onclick = () => {
       if (!pendingClearAll) {
         pendingClearAll = true;
@@ -2542,6 +2609,7 @@ Controlla questi dati prima di premere Importa.`;
     ensureSize(state.rowsCount);
     state.refRows = state.refRows.map(r => ({ an: String(r?.an ?? ''), at: String(r?.at ?? '') }));
     state.subjects = state.subjects.map(row => Array.from({ length: S }, (_, j) => ({ ...blankSubjectCell(), ...(row?.[j] || {}), bonusF: String(row?.[j]?.bonusF ?? '') })));
+    if (typeof state.riderProfileConfirmed !== 'boolean') state.riderProfileConfirmed = false;
     if (!Array.isArray(state.expenses)) state.expenses = [];
     if (!Array.isArray(state.deliveries)) state.deliveries = [];
     if (!Array.isArray(state.auditLog)) state.auditLog = [];
