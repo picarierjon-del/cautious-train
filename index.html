@@ -23,6 +23,8 @@ header{max-width:1360px;margin:auto;padding:16px 12px 10px;display:flex;gap:12px
 .rolePill{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--panel)}
 .rolePill.admin{border-color:var(--blue);color:var(--blue);background:var(--bluebg)}
 .rolePill.rider{border-color:var(--green);color:#9bf0cc;background:var(--greenbg)}
+.businessDatePill{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:9px;border:1px solid var(--green);background:var(--greenbg);color:#a5f1d0;font-size:13px;font-weight:800;white-space:nowrap}
+.businessDatePill small{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#8be5be;font-weight:700}
 main{max-width:1360px;margin:auto;padding:0 10px 44px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
 .panelSub{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}
@@ -251,6 +253,7 @@ button{justify-content:center}
   <div class="brand">
     <h1>Verifica Numeri</h1>
     <p>Controllo consegne e quadratura incassi</p>
+    <div class="businessDatePill" id="businessDatePill" aria-live="polite"><small>Giornata operativa</small><span id="businessDateValue">—</span></div>
   </div>
   <div class="roleBar">
     <span id="roleIndicator" class="rolePill">Non connesso</span>
@@ -2671,6 +2674,13 @@ Controlla questi dati prima di premere Importa.`;
     const a=Date.parse(`${fromKey}T00:00:00Z`),b=Date.parse(`${toKey}T00:00:00Z`);
     return Number.isFinite(a)&&Number.isFinite(b)?Math.round((b-a)/86400000):0;
   }
+  function renderBusinessDate() {
+    const key=String(state.activeBusinessDate||localBusinessDateKey());
+    const parts=key.split('-');
+    const display=parts.length===3?`${parts[2]}/${parts[1]}/${parts[0]}`:key;
+    const target=$('businessDateValue');
+    if(target) target.textContent=display;
+  }
   function archiveAndStartNewBusinessDay() {
     const today=localBusinessDateKey();
     const previous=String(state.activeBusinessDate||'');
@@ -2749,6 +2759,7 @@ Controlla questi dati prima di premere Importa.`;
     // Cambio data: archivia la giornata precedente e apre il conteggio del giorno corrente.
     archiveAndStartNewBusinessDay();
     purgeExpiredDailyArchives();
+    renderBusinessDate();
 
     state.rowsCount = Number.isInteger(state.rowsCount) ? Math.max(1, Math.min(500, state.rowsCount)) : 150;
     if (!Array.isArray(state.refRows)) state.refRows = [];
