@@ -3,164 +3,2611 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#101827">
-<title>Verifica Numeri V6.0</title>
+<meta name="theme-color" content="#0b1220">
+<meta name="description" content="Verifica numeri e quadra consegne, ottimizzata per smartphone e PC.">
+<title>Verifica Numeri</title>
 <style>
-:root{--bg:#0b1220;--panel:#152137;--field:#0d1728;--line:#30415c;--txt:#f3f6fb;--muted:#a5b2c5;--green:#20b978;--greenbg:#103b30;--red:#ff6572;--redbg:#421f2a;--blue:#80adff;--amber:#ffcb68}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
-header{max-width:1200px;margin:auto;padding:18px 12px 12px}h1{font-size:22px;margin:0 0 4px}header p{margin:0;color:var(--muted);font-size:13px}
-main{max-width:1200px;margin:auto;padding:0 10px 35px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
-.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}.hint{color:var(--muted);font-size:12px;margin:8px 0}
-button{border:0;border-radius:9px;padding:10px 13px;background:var(--blue);color:#0b1830;font-weight:700;cursor:pointer}button.secondary{background:#263751;color:var(--txt);border:1px solid var(--line)}
-.names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.namebox{display:flex;gap:7px;align-items:center;background:var(--field);border:1px solid var(--line);padding:7px;border-radius:9px}.namebox b{font-size:12px;color:var(--muted);min-width:20px}.namebox input{width:100%;min-width:0;background:transparent;border:0;color:var(--txt);outline:none;font:13px system-ui}
-.tablewrap{overflow:auto;margin-top:10px;max-height:70vh;border:1px solid var(--line);border-radius:9px}
-table{border-collapse:separate;border-spacing:2px;table-layout:fixed;min-width:1500px;width:100%}
-th{position:sticky;top:0;z-index:2;background:#1c2a42;color:var(--muted);font-size:11px;padding:7px 3px;text-align:center}
-th:first-child,td.idx{position:sticky;left:0;z-index:1;background:#1c2a42;width:36px}
-th:nth-child(2),th:nth-child(3){width:90px}
-th.subjectHead{min-width:126px}
-td{padding:2px;text-align:center;background:var(--field)}
-td.idx{font-size:11px;color:var(--muted);z-index:1}
-.refInput,.subjectNum,.subjectTotal{width:100%;min-width:0;height:31px;border-radius:6px;border:1px solid var(--line);background:var(--field);color:var(--txt);padding:3px 4px;text-align:center;font:12px system-ui}
-.subjectCell{display:grid;grid-template-columns:1fr 1fr;gap:3px;min-width:120px}
-.refInput.ok,.subjectNum.ok,.subjectTotal.ok{background:var(--greenbg);border-color:var(--green);color:#a5f1d0}
-.refInput.bad,.subjectNum.bad,.subjectTotal.bad{background:var(--redbg);border-color:var(--red);color:#ffc0c5}
-.refInput:focus,.subjectNum:focus,.subjectTotal:focus,.namebox input:focus{outline:2px solid var(--blue);outline-offset:1px}
-.totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
-.totalbox{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0}.totalbox span{display:block;color:var(--muted);font-size:11px}.totalbox b{font-size:16px;display:block;margin-top:3px;overflow-wrap:anywhere}
-.subjectSummary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
-.subjectStat{background:var(--field);border:1px solid var(--line);border-radius:9px;padding:9px;display:flex;justify-content:space-between;gap:6px;align-items:center}.subjectStat span{font-size:12px;overflow-wrap:anywhere}.subjectStat b{font-size:13px;white-space:nowrap}
-.verdict{margin-top:10px;padding:11px;border-radius:10px;font-weight:700;text-align:center;background:var(--field);border:1px solid var(--line)}
-.verdict.good{background:var(--greenbg);border-color:var(--green);color:#a5f1d0}.verdict.bad{background:var(--redbg);border-color:var(--red);color:#ffc0c5}
-.expenseRow{display:grid;grid-template-columns:1fr minmax(100px,150px);gap:8px;margin:6px 0}
-.expenseLabel,.expenseAmount{width:100%;min-width:0;height:36px;border-radius:7px;border:1px solid var(--line);background:var(--field);color:var(--txt);padding:6px 9px;font:13px system-ui}
-@media(max-width:600px){header{padding-top:14px}h1{font-size:20px}.panel{padding:9px}.names{grid-template-columns:1fr 1fr}.totals{grid-template-columns:1fr 1fr}.subjectSummary{grid-template-columns:1fr}table{min-width:1500px}}
+:root{
+  --bg:#0b1220;--panel:#152137;--panel2:#101b2e;--field:#0d1728;--line:#30415c;
+  --txt:#f3f6fb;--muted:#a5b2c5;--green:#20b978;--greenbg:#103b30;
+  --red:#ff6572;--redbg:#421f2a;--blue:#80adff;--bluebg:#172a4d;
+  --amber:#ffcb68;--amberbg:#403012;--purple:#b993ff;--purplebg:#2a1949;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{min-height:100vh}
+header{max-width:1360px;margin:auto;padding:16px 12px 10px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.brand h1{font-size:21px;margin:0 0 2px;letter-spacing:-0.01em}
+.brand p{margin:0;color:var(--muted);font-size:13px}
+.roleBar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rolePill{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--panel)}
+.rolePill.admin{border-color:var(--blue);color:var(--blue);background:var(--bluebg)}
+.rolePill.rider{border-color:var(--green);color:#9bf0cc;background:var(--greenbg)}
+main{max-width:1360px;margin:auto;padding:0 10px 44px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+.panelSub{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}
+.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.btnGroup{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:12px;margin:7px 0}
+button{border:0;border-radius:9px;padding:9px 13px;background:var(--blue);color:#091426;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:filter .15s ease,transform .08s ease}
+button:hover{filter:brightness(1.06)}
+button:active{transform:scale(0.99)}
+button.secondary{background:#253652;color:var(--txt);border:1px solid var(--line)}
+button.success{background:var(--green);color:#062117}
+button.warn{background:var(--amber);color:#261a03}
+button.danger{background:var(--red);color:#2b080d}
+button.small{padding:7px 10px;font-size:13px;border-radius:8px}
+input,select{font-size:16px;font-family:inherit;color:var(--txt);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+input:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px}
+input:invalid,.fieldError{border:2px solid var(--red)!important;background:var(--redbg)!important}
+.preflightError{padding:9px 11px;margin:5px 0;border:1px solid var(--red);border-radius:8px;background:var(--redbg);color:#ffc0c5;font-size:13px;font-weight:600}
+.preflightOk{padding:9px 11px;margin:5px 0;border:1px solid var(--green);border-radius:8px;background:var(--greenbg);color:#a5f1d0;font-size:13px}
+.walletCloseCard .countInput{font-size:20px;font-weight:800;min-height:48px;width:100%;max-width:260px}
+.importPreview{white-space:pre-wrap;line-height:1.55}
+label.checkWrap{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;cursor:pointer;user-select:none;padding:6px 9px;border-radius:8px;background:var(--field);border:1px solid var(--line)}
+label.checkWrap input[type="checkbox"]{width:18px;height:18px;margin:0;accent-color:var(--green);cursor:pointer}
+
+/* Login screen */
+.loginGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px;margin-top:12px}
+.loginCard{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;gap:12px}
+.loginCard h2{margin:0 0 6px;font-size:17px}
+.loginCard p{margin:0;color:var(--muted);font-size:13px}
+.pinRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pinRow input{width:140px;letter-spacing:0.18em;text-align:center;font-weight:700}
+
+/* Metrics & Quadra */
+.kpiGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:8px;margin-top:10px}
+.kpiBox{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0}
+.kpiBox span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+.kpiBox b{display:block;font-size:17px;margin-top:3px;overflow-wrap:anywhere}
+.kpiBox.good{border-color:var(--green);background:var(--greenbg);color:#a5f1d0}
+.kpiBox.good span{color:#8be5be}
+.kpiBox.warn{border-color:var(--amber);background:var(--amberbg);color:#ffe29e}
+.kpiBox.warn span{color:#f5cf7c}
+.kpiBox.bad{border-color:var(--red);background:var(--redbg);color:#ffc0c5}
+.kpiBox.bad span{color:#f59da5}
+.kpiBox.info{border-color:var(--blue);background:var(--bluebg);color:#c3daff}
+.kpiBox.info span{color:#9ec1ff}
+
+/* Names & Channels */
+.namesGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px;margin-top:10px}
+.namebox{display:flex;gap:6px;align-items:center;background:var(--field);border:1px solid var(--line);padding:6px 8px;border-radius:9px}
+.namebox b{font-size:12px;color:var(--muted);min-width:20px}
+.namebox input{width:100%;min-width:0;border:0;background:transparent;padding:4px;font-size:15px}
+.channelList{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.chChip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--field);border:1px solid var(--line);font-size:13px}
+.chChip button{padding:0 5px;background:transparent;color:var(--muted);font-size:14px;line-height:1}
+.chChip button:hover{color:var(--red)}
+
+/* Table */
+.filterBar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;padding:8px;background:var(--field);border:1px solid var(--line);border-radius:10px}
+.tablewrap{overflow:auto;margin-top:10px;max-height:68vh;border:1px solid var(--line);border-radius:10px;background:var(--field)}
+table{border-collapse:separate;border-spacing:2px;table-layout:fixed;min-width:1760px;width:100%}
+th{position:sticky;top:0;z-index:3;background:#1c2a42;color:var(--muted);font-size:11px;padding:7px 4px;text-align:center}
+th:first-child,td.idx{position:sticky;left:0;z-index:2;background:#1b2840;width:44px}
+th:nth-child(2),td.refCol1{position:sticky;left:44px;z-index:2;background:#172338;width:92px}
+th:nth-child(3),td.refCol2{position:sticky;left:136px;z-index:2;background:#172338;width:96px;box-shadow:2px 0 6px rgba(0,0,0,.35)}
+th:first-child,th:nth-child(2),th:nth-child(3){z-index:4}
+th.subjectHead{min-width:146px}
+td{padding:3px;text-align:center;background:var(--field);vertical-align:middle}
+td.idx{font-size:12px;color:var(--muted);font-weight:700}
+tr.row-ok td:not(.idx):not(.refCol1):not(.refCol2){background:#0c2821}
+tr.row-bad td:not(.idx):not(.refCol1):not(.refCol2){background:#29131b}
+tr.row-hidden{display:none}
+.refInput,.subNum,.subTot,.subPosAmt,.subBonusF{width:100%;min-width:0;height:34px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);padding:4px 5px;text-align:center;font-size:15px}
+.subjectCell{display:flex;flex-direction:column;gap:4px;min-width:138px}
+.subLine{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.subChecks{display:flex;gap:6px;align-items:center;justify-content:space-between;font-size:11px;padding:2px 4px;border-radius:6px;background:#121f36}
+.subChecks label{display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:11px;font-weight:700}
+.subChecks input[type="checkbox"]{width:14px;height:14px;margin:0;accent-color:var(--blue)}
+.ok{background:var(--greenbg)!important;border-color:var(--green)!important;color:#a5f1d0!important}
+.bad{background:var(--redbg)!important;border-color:var(--red)!important;color:#ffc0c5!important}
+.warnField{background:var(--amberbg)!important;border-color:var(--amber)!important;color:#ffe29e!important}
+.extraField{background:var(--purplebg)!important;border-color:var(--purple)!important;color:#e3d2ff!important}
+
+/* Rider view */
+.riderForm{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin-top:10px}
+#newDeliveryPanel{border-color:var(--green);box-shadow:0 0 0 1px rgba(32,185,120,.12)}
+#newDeliveryPanel #delNumInput,#newDeliveryPanel #delTotInput{font-size:18px;font-weight:700;min-height:46px}
+#riderTotalsPanel{margin-top:16px}
+.fieldStack{display:flex;flex-direction:column;gap:4px}
+.fieldStack label{font-size:12px;color:var(--muted);font-weight:600}
+.bonusBox{margin-top:10px;padding:11px;border-radius:10px;background:var(--field);border:1px dashed var(--amber);display:flex;flex-direction:column;gap:8px}
+.deliveryList{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px;margin-top:10px}
+.deliveryCard{background:var(--field);border:1px solid var(--line);border-radius:11px;padding:11px;display:flex;flex-direction:column;gap:8px}
+.deliveryTop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.deliveryNum{font-size:17px;font-weight:800}
+.deliveryTot{font-size:17px;font-weight:800;color:var(--green)}
+.badgeRow{display:flex;gap:6px;flex-wrap:wrap}
+.badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel2)}
+.badge.cash{border-color:var(--green);color:#9bf0cc;background:var(--greenbg)}
+.badge.pos{border-color:var(--blue);color:#b7d2ff;background:var(--bluebg)}
+.badge.bonus{border-color:var(--amber);color:#ffe29e;background:var(--amberbg)}
+.editGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;background:var(--panel2);padding:9px;border-radius:9px;border:1px solid var(--line)}
+
+/* V12 admin control center */
+.auditList{display:flex;flex-direction:column;gap:6px;max-height:360px;overflow:auto;margin-top:8px}
+.auditItem{background:var(--field);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12px}
+.preflightError{background:var(--redbg)!important;border:2px solid var(--red)!important;color:#ffe3e6!important;border-radius:9px;padding:9px 11px;margin:6px 0;font-weight:700}
+.preflightOk{background:var(--greenbg);border:1px solid var(--green);color:#a5f1d0;border-radius:9px;padding:9px 11px;margin:6px 0;font-weight:700}
+.auditItem time{color:var(--muted);display:block;font-size:11px}
+.anomalyList{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.anomalyItem{padding:9px 10px;border-radius:9px;background:var(--redbg);border:1px solid var(--red);color:#ffc0c5;font-size:13px}
+.anomalyItem.good{background:var(--greenbg);border-color:var(--green);color:#a5f1d0}
+.archiveList{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:8px}
+.archiveCard{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px}
+.walletCloseCard{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0}.walletCloseCard .countInput{font-size:20px;font-weight:800;max-width:190px}.walletCloseResult{font-size:22px;font-weight:900;padding:10px;border-radius:10px;background:var(--greenbg);color:#9bf0cc;margin:8px 0}.aiIssue{padding:8px;border:1px solid var(--line);border-radius:8px;margin:5px 0}.aiIssue.good{border-color:var(--green);color:#9bf0cc}.aiIssue.warn{border-color:var(--amber);color:#ffe29e}
+.importPreview{margin-top:8px;padding:10px;border-radius:10px;background:var(--bluebg);border:1px solid var(--blue);color:#c3daff;font-size:13px;white-space:pre-line}
+.walletActions{flex-wrap:wrap}
+.walletActions button{max-width:100%}
+@media print{body.print-subject>*{display:none!important}body.print-subject #printSubjectSheet{display:block!important;position:absolute;inset:0;background:white;color:#111;padding:24px}#printSubjectSheet table{min-width:0;width:100%;border-collapse:collapse}#printSubjectSheet th,#printSubjectSheet td{border:1px solid #999;color:#111;background:white;padding:6px;text-align:left}}
+#printSubjectSheet{display:none}
+
+/* Summary & Expenses */
+.subjectSummary{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:10px}
+.marsupio-highlight{border:2px solid var(--green)!important;background:#0d3b30!important;box-shadow:0 0 0 2px rgba(24,190,125,.12)}
+.walletSubjectCard{display:flex;flex-direction:column;gap:8px;background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.walletSubjectCard .walletRemain{font-size:27px;font-weight:900;line-height:1.2;color:#a5f1d0;background:#0d3b30;border:2px solid var(--green);border-radius:10px;padding:12px;text-align:center}
+.walletSubjectCard .walletMetrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#rRemainBox{grid-column:1/-1;padding:20px 16px;min-height:118px;display:flex;flex-direction:column;justify-content:center;gap:8px;border-width:3px!important}
+#rRemainBox span{font-size:15px;line-height:1.3;font-weight:800;letter-spacing:.04em}
+#rRemainBox b{font-size:clamp(38px,8vw,54px);line-height:1.05;font-weight:950;letter-spacing:-.03em}
+
+.walletSubjectCard .walletMetric{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;min-width:0}
+.walletSubjectCard .walletMetric small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase}
+.walletSubjectCard .walletMetric b{font-size:16px;overflow-wrap:anywhere}
+.walletActions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.walletActions label{font-size:12px;font-weight:700;display:flex;gap:6px;align-items:center}
+.walletActions input{width:18px;height:18px;accent-color:var(--green)}
+.subjectStat{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.subjectStat small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.verdict{margin-top:10px;padding:12px;border-radius:10px;font-weight:700;text-align:center;background:var(--field);border:1px solid var(--line)}
+.verdict.good{background:var(--greenbg);border-color:var(--green);color:#a5f1d0}
+.verdict.bad{background:var(--redbg);border-color:var(--red);color:#ffc0c5}
+.expenseRow{display:grid;grid-template-columns:1fr minmax(120px,170px);gap:8px;margin:6px 0}
+.testLog{margin-top:10px;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px;max-height:260px;overflow:auto;font-size:13px}
+.testItem{padding:5px 0;border-bottom:1px solid #1e2d47}
+.testItem:last-child{border-bottom:0}
+.hidden{display:none!important}
+
+@media print{
+  body{background:#fff;color:#000}
+  .roleBar,.btnGroup,.filterBar,#loginSection,#adminSection,#testPanel,button{display:none!important}
+  .panel,.kpiBox,.deliveryCard{background:#fff;color:#000;border:1px solid #999}
+  #riderSection{display:block!important}
+}
+
+/* V10 — responsive usability */
+:root{scroll-behavior:smooth}
+button,input,select{min-height:42px;touch-action:manipulation}
+button{justify-content:center}
+.panel{scroll-margin-top:12px}
+.tablewrap{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+#riderSelect{display:none!important}
+.nameMapRow{display:grid;grid-template-columns:minmax(130px,1fr) minmax(150px,1fr) auto;gap:8px;align-items:center;padding:9px;background:var(--field);border:1px solid var(--line);border-radius:9px;margin:7px 0}
+.nameMapRow strong{overflow-wrap:anywhere}
+.importBox{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding:12px;background:var(--field);border:1px dashed var(--blue);border-radius:10px}
+.importBox input[type=file]{max-width:100%;min-height:auto}
+.statusNote{padding:10px;border-radius:9px;background:var(--bluebg);color:#c3daff;font-size:13px;margin-top:9px}
+.riderIdentity{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,190px);gap:9px;margin-top:8px}
+.riderIdentity .fieldStack:first-child{grid-column:1/-1}
+.mobileHint{display:none}
+@media(max-width:700px){
+ header{padding:10px;align-items:flex-start}
+ .brand h1{font-size:19px}
+ #rRemainBox{padding:22px 14px;min-height:130px}
+ #rRemainBox span{font-size:14px}
+ #rRemainBox b{font-size:clamp(42px,11vw,58px)}
+ .roleBar{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+ .rolePill{grid-column:1/-1;justify-content:center}
+ .roleBar button{width:100%;min-height:44px}
+ main{padding:0 8px 28px}
+ .panel{padding:10px;border-radius:12px}
+ .toolbar{align-items:stretch}
+ .toolbar>.btnGroup,.btnGroup{width:100%}
+ .btnGroup button{flex:1 1 130px}
+ .loginGrid{grid-template-columns:1fr}
+ .loginGrid .loginCard button{width:100%;min-height:48px}
+ .pinRow{display:grid;grid-template-columns:1fr}
+ .pinRow input,.pinRow button{width:100%;min-height:48px}
+ .riderForm{grid-template-columns:1fr 1fr;gap:8px}
+ .riderForm .fieldStack{min-width:0}
+ .riderForm input,.riderForm select{width:100%;min-width:0}
+ .riderIdentity{grid-template-columns:1fr}
+ .riderIdentity .fieldStack:first-child{grid-column:auto}
+ .kpiGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .kpiBox{padding:8px}
+ .kpiBox b{font-size:15px}
+ .deliveryList{grid-template-columns:1fr}
+ .deliveryCard{padding:10px}
+ .editGrid{grid-template-columns:1fr}
+ .editGrid>*{grid-column:auto!important}
+ .expenseRow{grid-template-columns:1fr 115px}
+ .nameMapRow{grid-template-columns:1fr}
+ .nameMapRow button{width:100%}
+ .filterBar>*{flex:1 1 140px;min-width:0}
+ .filterBar input{width:100%!important}
+ .mobileHint{display:block}
+ .tablewrap{max-height:60vh}
+}
+@media(max-width:390px){.riderForm{grid-template-columns:1fr}.kpiGrid{grid-template-columns:1fr 1fr}}
+
 </style>
 </head>
 <body>
-<header><h1>Verifica Numeri V6.0</h1><p>150 righe di riferimento, 10 soggetti indipendenti e controllo incrociato: ogni numero può appartenere a un solo soggetto.</p></header>
+<header>
+  <div class="brand">
+    <h1>Verifica Numeri</h1>
+    <p>Controllo consegne e quadratura incassi</p>
+  </div>
+  <div class="roleBar">
+    <span id="roleIndicator" class="rolePill">Non connesso</span>
+    <button class="secondary small" id="btnSwitchRider">Vista Fattorino</button>
+    <button class="secondary small" id="btnSwitchAdmin">Accesso Admin</button>
+    <button class="secondary small" id="btnLogout">Esci</button>
+  </div>
+</header>
+<select id="riderSelect" aria-hidden="true" tabindex="-1"></select>
+
 <main>
-<section class="panel">
- <div class="toolbar"><strong>1. Elenco di riferimento</strong><div><button class="secondary" id="jumpSummary">Vai ai totali ↓</button> <button class="secondary" id="clear">Azzera tutto</button> <button id="save">Salva controllo</button></div></div>
- <p class="hint">Inserisci i 150 numeri e i relativi totali nelle prime due colonne. I soggetti possono inserire i propri numeri in qualsiasi riga: il programma li cercherà in tutto l'elenco.</p>
- <div class="toolbar"><button class="secondary" id="addRow">+ Aggiungi riga</button><button class="secondary" id="removeRow">− Togli ultima riga</button><span class="hint"><b id="rowCount">150</b> righe</span></div>
- <div class="tablewrap"><table><thead><tr><th>Riga</th><th>Numero<br>atteso</th><th>Totale<br>atteso</th><th class="subjectHead" data-subhead="0">Soggetto 1<br>N. / €</th><th class="subjectHead" data-subhead="1">Soggetto 2<br>N. / €</th><th class="subjectHead" data-subhead="2">Soggetto 3<br>N. / €</th><th class="subjectHead" data-subhead="3">Soggetto 4<br>N. / €</th><th class="subjectHead" data-subhead="4">Soggetto 5<br>N. / €</th><th class="subjectHead" data-subhead="5">Soggetto 6<br>N. / €</th><th class="subjectHead" data-subhead="6">Soggetto 7<br>N. / €</th><th class="subjectHead" data-subhead="7">Soggetto 8<br>N. / €</th><th class="subjectHead" data-subhead="8">Soggetto 9<br>N. / €</th><th class="subjectHead" data-subhead="9">Soggetto 10<br>N. / €</th></tr></thead><tbody id="gridBody"></tbody></table></div>
-</section>
-<section class="panel">
- <strong>2. Nomi dei dieci soggetti</strong>
- <p class="hint">Personalizza i nomi. Ogni soggetto ha una colonna dedicata e il suo totale viene calcolato separatamente.</p>
- <div class="names" id="names"></div>
-</section>
-<section class="panel" id="summary">
- <strong>3. Riepilogo generale</strong>
- <div class="totals">
-  <div class="totalbox"><span>Totale di riferimento</span><b id="sumExpected">0,00 €</b></div>
-  <div class="totalbox"><span>Totale assegnato ai soggetti</span><b id="sumAssigned">0,00 €</b></div>
-  <div class="totalbox"><span>Differenza</span><b id="difference">0,00 €</b></div>
- </div>
- <div class="totals">
-  <div class="totalbox"><span>Numeri trovati una sola volta</span><b id="foundCount">0 / 0</b></div>
-  <div class="totalbox"><span>Numeri mancanti</span><b id="missingCount">0</b></div>
-  <div class="totalbox"><span>Duplicati / non previsti</span><b id="extraCount">0</b></div>
- </div>
- <div class="subjectSummary" id="subjectSummary"></div>
- <div id="verdict" class="verdict">Inserisci i dati per avviare il controllo.</div>
-</section>
-<section class="panel">
- <div class="toolbar"><strong>4. Voci da scalare dal totale</strong><span class="hint">10 voci disponibili</span></div>
- <p class="hint">Ad esempio “Voci fuori” e “Mangia spesa”. Questi importi vengono sottratti dal totale assegnato ai soggetti per ottenere il totale netto.</p>
- <div id="expenses"></div>
- <div class="totals">
-  <div class="totalbox"><span>Totale assegnato</span><b id="grossAssigned">0,00 €</b></div>
-  <div class="totalbox"><span>Voci da scalare</span><b id="expenseSum">0,00 €</b></div>
-  <div class="totalbox"><span>Totale netto</span><b id="netAssigned">0,00 €</b></div>
- </div>
- <div class="toolbar" style="margin-top:10px"><button class="secondary" id="csv">Esporta CSV</button><button class="secondary" id="restore">Ripristina ultimo salvataggio</button></div>
- <p class="hint" id="saveStatus">Salvataggio automatico locale attivo (localStorage). Il pulsante Salva conserva anche una copia in IndexedDB.</p>
-</section>
+  <!-- ACCESSO -->
+  <section id="loginSection" class="panel">
+    <strong>Accesso Ruoli</strong>
+    <p class="hint">Accesso fattorino rapido. L’Admin è protetto da codice. Per passare i dati dal telefono al PC usa Esporta CSV sul telefono e Importa CSV nell’Admin del PC.</p>
+    <div class="loginGrid">
+      <div class="loginCard">
+        <div>
+          <h2>Accesso Fattorino (Libero)</h2>
+          <p>Entra subito per registrare consegne (partono sempre in <b>CASH</b>), spostare su <b>POS</b>, gestire i canali, inserire <b>Bonus F</b>, modificare righe ed esportare CSV/PDF.</p>
+        </div>
+        <div>
+          <button class="success" id="openRiderDirect">Entra come Fattorino</button>
+        </div>
+      </div>
+      <div class="loginCard">
+        <div>
+          <h2>Accesso Amministratore</h2>
+          <p>Inserisci il codice personale amministratore per gestire le 150 righe, i 10 soggetti, la quadra EF/Bonus F, lo stress test e il codice di sicurezza.</p>
+        </div>
+        <div class="pinRow">
+          <input id="adminPinInput" type="password" inputmode="numeric" maxlength="12" placeholder="Codice" aria-label="Codice amministratore">
+          <button id="openAdminAuth">Sblocca Admin</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISTA FATTORINO -->
+  <section id="riderSection" class="hidden">
+    <div class="panel">
+      <strong>Area Fattorino</strong>
+      <div class="riderForm" style="margin-top:8px">
+        <div class="fieldStack">
+          <label for="riderNameInput">Il tuo nome e cognome</label>
+          <input id="riderNameInput" type="text" autocomplete="name" placeholder="Es. Marco Rossi" required>
+          <small class="hint">Scrivilo sempre nello stesso modo: l’amministratore lo verificherà nel CSV.</small>
+        </div>
+        <div class="fieldStack">
+          <label for="marsupioStartInput">Marsupio Iniziale (€)</label>
+          <input id="marsupioStartInput" inputmode="decimal" placeholder="0,00">
+        </div>
+        <div class="fieldStack">
+          <label for="newChannelInput">Aggiungi Canale Manuale</label>
+          <div style="display:flex;gap:6px">
+            <input id="newChannelInput" placeholder="Es. Glovo / Banco" style="width:100%;min-width:0">
+            <button class="secondary small" id="addChannelBtn">+ Aggiungi</button>
+          </div>
+        </div>
+      </div>
+      <div class="channelList" id="channelChips"></div>
+    </div>
+
+    <!-- INSERIMENTO SUBITO IN ALTO -->
+    <div class="panel" id="newDeliveryPanel">
+      <strong>Nuova Consegna</strong>
+      <p class="hint">Il canale (Telefono, Just Eat, Deliveroo, Sofia) identifica la provenienza dell'ordine. Il metodo di incasso è separato: POS viene registrato come BANCOMAT e non entra nel marsupio; nel pagamento misto entra nel marsupio soltanto la quota CASH.</p>
+      <div class="riderForm">
+        <div class="fieldStack"><label for="delNumInput">Numero Consegna</label><input id="delNumInput" inputmode="numeric" placeholder="Es. 12"></div>
+        <div class="fieldStack"><label for="delTotInput">Totale Consegna (€)</label><input id="delTotInput" inputmode="decimal" placeholder="0,00"></div>
+        <div class="fieldStack"><label for="delChannelSelect">Canale Incasso</label><select id="delChannelSelect"></select></div>
+        <div class="fieldStack"><label for="delBonusInput">Bonus F (€)</label><input id="delBonusInput" inputmode="decimal" placeholder="0,00"></div>
+      </div>
+      <div class="toolbar" style="margin-top:10px">
+        <div class="btnGroup">
+          <label class="checkWrap"><input type="checkbox" id="delCashCheck" checked><span>CASH</span></label>
+          <label class="checkWrap"><input type="checkbox" id="delPosCheck"><span>POS</span></label>
+          <div id="delMixedWrap" class="hidden" style="display:flex;align-items:center;gap:6px"><span class="hint" style="margin:0">Quota POS €:</span><input id="delPosAmtInput" inputmode="decimal" placeholder="0,00" style="width:110px"></div>
+        </div>
+        <button class="success" id="addDeliveryBtn">+ Registra Consegna</button>
+      </div>
+    </div>
+
+    <!-- ELENCO CONSEGNE -->
+    <div class="panel">
+      <div class="toolbar">
+        <strong>Elenco Consegne (<span id="deliveryCountLabel">0</span>)</strong>
+        <div class="btnGroup">
+          <select id="filterChannelSelect" aria-label="Filtra per canale"><option value="">Tutti i canali</option></select>
+          <button class="secondary small" id="clearRiderDeliveries">Svuota consegne</button>
+        </div>
+      </div>
+      <div class="deliveryList" id="deliveryList"></div>
+    </div>
+
+    <!-- TOTALI ED ESPORTAZIONE IN FONDO -->
+    <div class="panel" id="riderTotalsPanel">
+      <div class="toolbar">
+        <strong>Riepilogo e Chiusura Marsupio</strong>
+        <div class="btnGroup">
+          <button class="secondary small" id="riderExportCsv">Esporta CSV</button>
+          <button class="secondary small" id="riderExportPdf">Esporta PDF</button>
+        </div>
+      </div>
+      <div class="kpiGrid">
+        <div class="kpiBox info"><span>Totale Consegne / Incassato</span><b id="rTotalOrders">0,00 €</b></div>
+        <div class="kpiBox"><span>Marsupio Iniziale</span><b id="rMarsupioStart">0,00 €</b></div>
+        <div class="kpiBox good"><span>Totale Cash Consegne</span><b id="rCashSum">0,00 €</b></div>
+        <div class="kpiBox warn"><span>Totale POS (accredito bancario)</span><b id="rPosScaled">0,00 €</b></div>
+        <div class="kpiBox info marsupio-highlight"><span>💶 TOTALE MARSUPIO (Start + CASH)</span><b id="rMarsupioTotal">0,00 €</b></div>
+        <div class="kpiBox" id="rBonusBox"><span>Totale Meno le F (Scalate)</span><b id="rMinusBonus">0,00 €</b></div>
+        <div class="kpiBox good marsupio-highlight" id="rRemainBox"><span>💶 RIMANENTE DA CONSEGNARE NEL MARSUPIO</span><b id="rRemainMarsupio">0,00 €</b></div>
+      </div>
+      <div class="panelSub" style="margin-top:12px">
+        <strong>Totali per canale di provenienza</strong>
+        <div id="rChannelTotals" class="subjectSummary"></div>
+        <strong style="display:block;margin-top:12px">Incassi per metodo</strong>
+        <div id="rPaymentTotals" class="subjectSummary"></div>
+      </div>
+      <div class="bonusBox">
+        <div class="toolbar">
+          <div><strong>Bonus F (Manuale — Nessuna sottrazione automatica)</strong><div class="hint" style="margin:2px 0 0">Totale Bonus F: <b id="rBonusTotal">0,00 €</b> · Scalate: <b id="rBonusScaledAmt">0,00 €</b> · In attesa: <b id="rBonusPendingAmt">0,00 €</b></div></div>
+          <label class="checkWrap"><input type="checkbox" id="rBonusScaledCheck"><span>Scalato F (aggiorna Marsupio)</span></label>
+        </div>
+        <div class="hint" id="rBonusReminder" style="margin:0;color:var(--amber)"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISTA AMMINISTRATORE -->
+  <section id="adminSection" class="hidden">
+    <div class="panel">
+      <strong>0. Importazione fattorini e associazione soggetti</strong>
+      <p class="hint">Importa qui il CSV esportato dal telefono. Controlla il nome scritto dal fattorino e assegnalo al soggetto corretto: le consegne verranno inserite nella sua colonna.</p>
+      <div class="importBox">
+        <input id="importRiderCsvInput" type="file" accept=".csv,text/csv">
+        <button class="success" id="importRiderCsvBtn" type="button">Importa CSV fattorini</button>
+        <button class="secondary small" id="exportAllRidersCsvBtn" type="button">Esporta archivio consegne</button>
+      </div>
+      <div id="importStatus" class="statusNote" aria-live="polite">In attesa di un file CSV. I dati già presenti non vengono cancellati: le consegne con lo stesso ID vengono aggiornate, non duplicate.</div><div id="importPreview" class="importPreview hidden" aria-live="polite"></div>
+      <div class="panelSub" style="margin-top:10px">
+        <strong>Importazione mirata per soggetto</strong>
+        <p class="hint">Seleziona il soggetto: tutte le consegne del CSV verranno attribuite a questa colonna, anche se il nome scritto dal fattorino è diverso. Il nome originale resta conservato e associato.</p>
+        <div class="btnGroup">
+          <select id="targetImportSubject" aria-label="Soggetto di destinazione CSV"></select>
+          <button class="success small" id="importCsvForSubjectBtn" type="button">Importa CSV nel soggetto</button>
+        </div>
+      </div>
+      <div id="riderMappingList" style="margin-top:10px"></div>
+    </div>
+    <div class="panel">
+      <strong>Canali di incasso e provenienza ordini</strong>
+      <p class="hint">Gestisci qui i canali disponibili ai fattorini. I canali già usati da una consegna non possono essere eliminati.</p>
+      <div style="display:flex;gap:6px;max-width:520px;margin-top:8px">
+        <input id="adminNewChannelInput" placeholder="Es. Glovo / Banco / WhatsApp" style="width:100%;min-width:0">
+        <button class="secondary small" id="adminAddChannelBtn" type="button">+ Aggiungi</button>
+      </div>
+      <div class="channelList" id="adminChannelChips"></div>
+    </div>
+    <div class="panel">
+      <div class="toolbar">
+        <strong>1. Elenco di Riferimento (150 Righe) &amp; 10 Soggetti</strong>
+        <div class="btnGroup">
+          <button class="secondary small" id="jumpSummary">Vai ai totali ↓</button>
+          <button class="secondary small" id="addRow">+ Aggiungi riga</button>
+          <button class="secondary small" id="removeRow">− Togli riga</button>
+          <button class="danger small" id="clearAll">Azzera tutto</button>
+          <button class="small" id="saveSnapshot">Salva controllo</button>
+        </div>
+      </div>
+      <p class="hint">Righe attive: <b id="rowCount">150</b>. Ogni numero atteso può appartenere a un solo soggetto in qualsiasi riga. Il POS viene conteggiato separatamente e non entra nel marsupio del fattorino.</p>
+
+      <div class="filterBar">
+        <input id="searchNumInput" inputmode="numeric" placeholder="Cerca numero..." style="width:140px">
+        <select id="filterStatusSelect" aria-label="Filtro stato">
+          <option value="all">Tutte le righe</option>
+          <option value="ok">Solo OK (Verdi)</option>
+          <option value="bad">Solo Anomalie / Mancanti</option>
+          <option value="filled">Solo Compilate</option>
+        </select>
+        <select id="filterSubjectSelect" aria-label="Filtro soggetto">
+          <option value="">Tutti i soggetti</option>
+        </select>
+        <button class="secondary small" id="jumpAnomalyBtn">Vai alla 1ª anomalia</button>
+        <button class="secondary small" id="resetFiltersBtn">Reset filtri</button>
+      </div>
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr id="gridHeadRow">
+              <th>Riga</th>
+              <th>Numero<br>atteso</th>
+              <th>Totale<br>atteso</th>
+            </tr>
+          </thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <strong>2. Nomi dei 10 Soggetti</strong>
+      <div class="namesGrid" id="namesContainer"></div>
+    </div>
+
+    <div class="panel" id="summaryPanel">
+      <strong>3. Riepilogo Generale e controllo incassi</strong>
+      <div class="kpiGrid">
+        <div class="kpiBox"><span>Totale Riferimento</span><b id="sumExpected">0,00 €</b></div>
+        <div class="kpiBox"><span>Totale Assegnato Soggetti</span><b id="sumAssigned">0,00 €</b></div>
+        <div class="kpiBox"><span>Differenza Lorda</span><b id="sumDiffGross">0,00 €</b></div>
+        <div class="kpiBox good"><span>Numeri OK</span><b id="foundCount">0 / 0</b></div>
+        <div class="kpiBox bad"><span>Mancanti / Duplicati / Extra</span><b id="issuesCount">0 / 0 / 0</b></div>
+      </div>
+
+      <div class="kpiGrid">
+        <div class="kpiBox good"><span>Totale CASH da tutti i soggetti</span><b id="admCashSum">0,00 €</b></div>
+        <div class="kpiBox warn"><span>Totale BANCOMAT / POS (accredito bancario)</span><b id="admPosScaled">0,00 €</b></div>
+      </div>
+
+      <div class="subjectSummary" id="subjectSummary"></div>
+      <div class="panelSub">
+        <strong>Situazione marsupio per singolo soggetto</strong>
+        <p class="hint">Per ogni fattorino: marsupio iniziale + CASH − Bonus F solo se confermato. BANCOMAT/POS è mostrato a parte e non entra nel marsupio. La spunta è indipendente per ciascun soggetto.</p>
+        <div id="adminSubjectWallets" class="subjectSummary"></div>
+      </div>
+      <div class="panelSub">
+        <strong>Totali per canale di provenienza e metodo d'incasso</strong>
+        <div id="admChannelTotals" class="subjectSummary"></div>
+      </div>
+      <div id="verdictBox" class="verdict">Inserisci i dati per avviare la verifica.</div><div class="panelSub"><div class="toolbar"><strong>Controllo automatico anomalie</strong><span id="anomalyCount" class="badge">0 anomalie</span></div><div id="anomalyList" class="anomalyList"><div class="anomalyItem good">Nessun controllo eseguito.</div></div></div>
+      <div hidden aria-hidden="true"><span id="admMarsupioStart"></span><span id="admMarsupioTotal"></span><span id="admMinusBonus"></span><span id="admRemainMarsupio"></span><span id="netAssigned"></span><div id="expensesContainer"></div></div>
+    </div>
+
+    <div class="panel" id="aiControlPanel">
+      <div class="toolbar"><strong>AI Control — Supervisore amministrativo locale</strong><span class="badge good" id="aiStatus">Controllo locale attivo</span></div>
+      <p class="hint">Assistente basato su regole e calcoli locali: nessun dato viene inviato a servizi esterni. L'assistente segnala e spiega; non modifica autonomamente incassi o consegne.</p>
+      <div id="aiControlSummary" class="anomalyList" aria-live="polite"></div>
+      <div class="btnGroup" style="margin-top:8px"><button type="button" class="secondary small" id="runAiAuditBtn">Analizza dati adesso</button><button type="button" class="secondary small" id="runRetentionBtn">Esegui pulizia dati scaduti</button></div>
+      <div class="hint" id="retentionStatus">Dettaglio operativo conservato per 7 giorni; documenti e riepiloghi soggetti a conservazione sono separati.</div>
+    </div>
+
+    <div class="panel" id="walletClosePanel">
+      <strong>Chiusura guidata dei marsupi</strong>
+      <p class="hint">Conta un fattorino alla volta. Il sistema confronta il contante teorico con il conteggio fisico inserito dall'amministratore. La chiusura non viene completata in presenza di anomalie non risolte.</p>
+      <div id="guidedWalletClosures" class="subjectSummary"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panelSub" style="margin-top:0">
+        <strong>Bonus F per soggetto — storico e importi</strong>
+        <p class="hint">Le F restano registrate sotto il nome del soggetto anche dopo la spunta manuale di avvenuta scalatura.</p>
+        <div id="bonusFBySubject" class="subjectSummary"></div>
+      </div>
+      <div class="btnGroup" style="margin-top:10px">
+        <button class="secondary small" id="exportCsvBtn">Esporta CSV Completo</button>
+        <button class="secondary small" id="restoreBtn">Ripristina salvataggio</button>
+      </div>
+      <p class="hint" id="saveStatus">Salvataggio automatico su questo dispositivo tramite localStorage. “Salva controllo” crea anche una copia di sicurezza in IndexedDB. Per trasferire i dati su un altro dispositivo usa il CSV.</p>
+    </div>
+
+    <div class="panel" id="adminHistoryPanel">
+      <strong>4. Registro modifiche e chiusura turno</strong>
+      <p class="hint">Le correzioni amministrative vengono registrate con data, ora, operazione e dettaglio. La chiusura crea una fotografia storica dei dati; non blocca né cancella il turno corrente.</p>
+      <div class="btnGroup" style="margin-top:8px">
+        <button class="success" id="closeShiftBtn">Chiudi e archivia turno</button>
+        <button class="secondary small" id="exportAuditBtn">Esporta registro modifiche</button>
+        <button class="secondary small" id="exportArchivesBtn">Esporta archivio turni</button>
+      </div>
+      <div id="archiveStatus" class="hint" aria-live="polite"></div>
+      <strong style="display:block;margin-top:12px">Turni archiviati</strong>
+      <div id="shiftArchiveList" class="archiveList"></div>
+      <strong style="display:block;margin-top:14px">Registro modifiche recenti</strong>
+      <div id="auditLogList" class="auditList"></div>
+    </div>
+
+    <!-- Sicurezza Codice Admin -->
+    <div class="panel">
+      <strong>5. Sicurezza Codice Amministratore</strong>
+      <p class="hint">Codice predefinito iniziale: <b>2511</b>. Puoi impostare un tuo codice personale (solo tu lo saprai) oppure ripristinare <b>2511</b>.</p>
+      <div class="riderForm">
+        <div class="fieldStack">
+          <label for="newAdminPinInput">Nuovo Codice Personale Admin</label>
+          <input id="newAdminPinInput" type="password" inputmode="numeric" maxlength="12" placeholder="Nuovo codice">
+        </div>
+        <div class="fieldStack">
+          <label for="confirmAdminPinInput">Conferma Nuovo Codice</label>
+          <input id="confirmAdminPinInput" type="password" inputmode="numeric" maxlength="12" placeholder="Ripeti codice">
+        </div>
+        <div class="fieldStack" style="justify-content:flex-end">
+          <div class="btnGroup">
+            <button id="updateAdminPinBtn">Salva Nuovo Codice</button>
+            <button class="secondary small" id="resetDefaultPinBtn">Ripristina 2511</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint" id="pinStatusMsg">Codice amministratore attivo configurato.</p>
+    </div>
+
+    <!-- Stress Test & Collaudo -->
+    <div class="panel" id="testPanel">
+      <div class="toolbar">
+        <strong>7. Stress Test &amp; Collaudo Completo</strong>
+        <div class="btnGroup">
+          <button class="warn small" id="runStressTestBtn">Esegui Stress Test &amp; Collaudo</button>
+          <button class="secondary small" id="loadDemoScenarioBtn">Carica Scenario Collaudo</button>
+        </div>
+      </div>
+      <p class="hint">Collauda struttura, calcoli CASH/POS e misto, Bonus F, associazione soggetto, aggiornamento e rimozione consegna, duplicati e quadratura. Il test ripristina i dati originali al termine.</p>
+      <div class="testLog" id="testLog"><div class="testItem">Pronto per eseguire il collaudo.</div></div>
+    </div>
+  </section>
 </main>
+<div id="printSubjectSheet"></div>
+
 <script>
-const $=id=>document.getElementById(id), S=10, fields=['an','at'];let N=150,inputs=[],timer;
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function amount(v){if(!String(v??'').trim())return null;let s=String(v).trim().replace(/[€\s]/g,'');if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(',','.');let n=Number(s);return Number.isFinite(n)?Math.round(n*100)/100:NaN}
-function norm(v){return String(v??'').trim().replace(/^0+(?=\d)/,'').toLowerCase()}
-function fmt(n){return n.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
-function makeRow(i,d={}){let cells=`<td class="idx">${i+1}</td><td><input class="refInput" data-row="${i}" data-field="an" inputmode="numeric" value="${esc(d.an)}" aria-label="Numero atteso riga ${i+1}"></td><td><input class="refInput" data-row="${i}" data-field="at" inputmode="decimal" value="${esc(d.at)}" aria-label="Totale atteso riga ${i+1}"></td>`;
- for(let j=0;j<S;j++){let x=d.subjects?.[j]||{};cells+=`<td><div class="subjectCell"><input class="subjectNum" data-row="${i}" data-sub="${j}" data-field="num" inputmode="numeric" value="${esc(x.num)}" placeholder="N." aria-label="Numero soggetto ${j+1} riga ${i+1}"><input class="subjectTotal" data-row="${i}" data-sub="${j}" data-field="total" inputmode="decimal" value="${esc(x.total)}" placeholder="€" aria-label="Totale soggetto ${j+1} riga ${i+1}"></div></td>`}
- return `<tr>${cells}</tr>`}
-function read(){let d=Array.from({length:N},()=>({an:'',at:'',subjects:Array.from({length:S},()=>({num:'',total:''}))}));document.querySelectorAll('[data-row][data-field]').forEach(x=>{let r=+x.dataset.row;if(x.dataset.sub!==undefined)d[r].subjects[+x.dataset.sub][x.dataset.field]=x.value;else d[r][x.dataset.field]=x.value});return d}
-function getNames(){return [...document.querySelectorAll('.subjectName')].map(x=>x.value.trim())}
-function getExpenses(){return [...document.querySelectorAll('.expenseAmount')].map(x=>({label:x.parentElement.querySelector('.expenseLabel').value.trim(),raw:x.value,amount:amount(x.value)})).filter(x=>x.raw.trim()||x.label)}
-function renderNames(names=[]){$('names').innerHTML='';for(let j=0;j<S;j++){let el=document.createElement('label');el.className='namebox';el.innerHTML=`<b>${j+1}.</b><input class="subjectName" value="${esc(names[j]||'Soggetto '+(j+1))}" aria-label="Nome soggetto ${j+1}">`;$('names').appendChild(el)}document.querySelectorAll('.subjectName').forEach((x,j)=>x.addEventListener('input',()=>{let h=document.querySelector(`[data-subhead="${j}"]`);if(h)h.innerHTML=esc(x.value||'Soggetto '+(j+1))+'<br>N. / €';paint();scheduleSave()}));document.querySelectorAll('[data-subhead]').forEach((h,j)=>h.innerHTML=esc(names[j]||'Soggetto '+(j+1))+'<br>N. / €')}
-function renderExpenses(list=[]){$('expenses').innerHTML='';for(let i=0;i<10;i++){let x=list[i]||{},el=document.createElement('div');el.className='expenseRow';el.innerHTML=`<input class="expenseLabel" placeholder="${i===0?'Voci fuori':i===1?'Mangia spesa':'Descrizione voce'}" value="${esc(x.label||(i===0?'Voci fuori':i===1?'Mangia spesa':''))}"><input class="expenseAmount" inputmode="decimal" placeholder="0,00 €" value="${esc(x.raw??'')}">`;$('expenses').appendChild(el)}document.querySelectorAll('.expenseLabel,.expenseAmount').forEach(x=>x.addEventListener('input',()=>{paint();scheduleSave()}))}
-function bind(){inputs=[...document.querySelectorAll('[data-row][data-field]')];inputs.forEach(x=>x.addEventListener('input',()=>{paint();scheduleSave()}))}
-function renderRows(data=[]){$('gridBody').innerHTML='';for(let i=0;i<N;i++)$('gridBody').insertAdjacentHTML('beforeend',makeRow(i,data[i]||{}));$('rowCount').textContent=N;bind();paint()}
-function paint(){
- let d=read(),names=getNames(),expectedTotal=0,assignedTotal=0,found=0,missing=0,extras=0;
- const refMap=new Map(),occurrences=new Map(),subjectSums=Array(S).fill(0),subjectCounts=Array(S).fill(0),subjectErrors=Array(S).fill(0);
- d.forEach((r,i)=>{if(r.an.trim()){let k=norm(r.an);if(!refMap.has(k))refMap.set(k,[]);refMap.get(k).push({r,i})}let a=amount(r.at);if(a!==null&&!Number.isNaN(a))expectedTotal+=a});
- // Build the global occurrence list: a reference number can be assigned once only across all ten subjects.
- d.forEach((r,i)=>r.subjects.forEach((x,j)=>{if(x.num.trim()){let k=norm(x.num);if(!occurrences.has(k))occurrences.set(k,[]);occurrences.get(k).push({r:x,i,j})}}));
- let refSeen=new Set(), assignedSeen=new Set();
- d.forEach((r,i)=>{
-  let refNum=r.an.trim(),refTotal=amount(r.at),refInput=document.querySelector(`[data-row="${i}"][data-field="an"]`),refTotalInput=document.querySelector(`[data-row="${i}"][data-field="at"]`);
-  // Rimuove sempre lo stato precedente: evita che una casella resti rossa dopo essere diventata corretta.
-  refInput.classList.remove('ok','bad');refTotalInput.classList.remove('ok','bad');
-  let list=refNum?(occurrences.get(norm(refNum))||[]):[],match=list.length===1?list[0]:null;
-  if(refNum){if(match){found++;refSeen.add(norm(refNum));refInput.classList.add('ok');}else{missing++;refInput.classList.add('bad');if(list.length>1)extras+=list.length-1;}}
-  else if(refTotalInput.value.trim())refInput.classList.add('bad');
-  if(refTotalInput.value.trim()){
-   // Il totale atteso diventa verde solo quando il numero è stato trovato una sola volta
-   // e l'importo assegnato al soggetto corrisponde esattamente.
-   let ok=!!(match&&refTotal!==null&&!Number.isNaN(refTotal)&&amount(match.r.total)===refTotal);
-   refTotalInput.classList.add(ok?'ok':'bad');
+(() => {
+  const DEFAULT_PIN = '2511';
+  const STORAGE_KEY = 'verifica_numeri_v9_3_state'; // Compatibile con i dati V9.3/V10
+  const S = 10;
+  const DEFAULT_CHANNELS = ['Telefono', 'Just Eat', 'Deliveroo', 'Sofia'];
+
+  const $ = id => document.getElementById(id);
+
+  let state = {
+    role: 'none',
+    adminPin: DEFAULT_PIN,
+    rowsCount: 150,
+    names: Array.from({ length: S }, (_, i) => `Soggetto ${i + 1}`),
+    refRows: Array.from({ length: 150 }, () => ({ an: '', at: '' })),
+    subjects: Array.from({ length: 150 }, () =>
+      Array.from({ length: S }, () => ({ num: '', total: '', cash: false, pos: false, posAmt: '', bonusF: '' }))
+    ),
+    expenses: Array.from({ length: 10 }, (_, i) => ({
+      label: i === 0 ? 'Voci fuori (EF)' : (i === 1 ? 'Mangia spesa (EF)' : ''),
+      raw: ''
+    })),
+    marsupioStart: '',
+    activeRiderIdx: 0,
+    lastRiderName: '',
+    riderMappings: {},
+    channels: [...DEFAULT_CHANNELS],
+    deliveries: [],
+    bonusFScaled: false,
+    bonusFManualConfirmed: false,
+    bonusFScaledBySubject: {},
+    marsupioStartBySubject: {},
+    filters: { search: '', status: 'all', subject: '', channel: '' },
+    auditLog: [],
+    shiftArchives: [],
+    walletClosures: {},
+    retentionLastRun: null,
+    retentionDays: 7,
+    operationalPurges: []
+  };
+
+  let saveTimer = null;
+  let pendingClearSubjectIdx = null;
+  let pendingClearAll = false;
+
+  function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
   }
- });
- // Paint each subject entry, including unknown numbers and duplicates.
- d.forEach((r,i)=>r.subjects.forEach((x,j)=>{
-  let nEl=document.querySelector(`[data-row="${i}"][data-sub="${j}"][data-field="num"]`),tEl=document.querySelector(`[data-row="${i}"][data-sub="${j}"][data-field="total"]`);
-  nEl.classList.remove('ok','bad');tEl.classList.remove('ok','bad');
-  if(!x.num.trim()&&!x.total.trim())return;
-  let k=norm(x.num),list=x.num.trim()?(occurrences.get(k)||[]):[],refs=refMap.get(k)||[];
-  let isDuplicate=list.length>1,known=refs.length>0,unique=list.length===1&&known;
-  if(x.num.trim()){
-   if(unique){nEl.classList.add('ok');assignedSeen.add(k)}else{nEl.classList.add('bad');subjectErrors[j]++;if(isDuplicate){}else extras++}
+
+  function audit(action, detail) {
+    state.auditLog = Array.isArray(state.auditLog) ? state.auditLog : [];
+    state.auditLog.unshift({ at: new Date().toISOString(), action: String(action), detail: String(detail || '') });
+    if (state.auditLog.length > 500) state.auditLog.length = 500;
+    renderAuditLog();
   }
-  let total=amount(x.total);
-  if(x.total.trim()){
-   let expected=refs.length===1?amount(refs[0].r.at):null;
-   let ok=unique&&expected!==null&&!Number.isNaN(expected)&&total===expected;
-   tEl.classList.add(ok?'ok':'bad');
-   if(!ok)subjectErrors[j]++;
-  }else if(x.num.trim()){tEl.classList.add('bad');subjectErrors[j]++}
-  if(total!==null&&!Number.isNaN(total)){subjectSums[j]+=total;assignedTotal+=total;subjectCounts[j]++}
- }));
- // Count expected reference numbers not found at all; duplicate allocations are reported separately.
- d.forEach(r=>{if(r.an.trim()){let c=(occurrences.get(norm(r.an))||[]).length;if(c===0){}else if(c>1){/* duplicate counted below */}}});
- const duplicateKeys=[...occurrences.entries()].filter(([k,v])=>v.length>1);
- extras+=duplicateKeys.reduce((a,[k,v])=>a+v.length,0);
- let expenses=0;getExpenses().forEach(x=>{if(x.amount!==null&&!Number.isNaN(x.amount))expenses+=x.amount});
- let net=assignedTotal-expenses,diff=net-expectedTotal;
- $('sumExpected').textContent=fmt(expectedTotal);$('sumAssigned').textContent=fmt(assignedTotal);$('difference').textContent=fmt(assignedTotal-expectedTotal);
- $('foundCount').textContent=`${found} / ${d.filter(x=>x.an.trim()).length}`;$('missingCount').textContent=missing;$('extraCount').textContent=extras;
- $('subjectSummary').innerHTML=names.map((n,j)=>`<div class="subjectStat"><span>${esc(n||'Soggetto '+(j+1))} · ${subjectCounts[j]} importi · ${subjectErrors[j]} anomalie</span><b>${fmt(subjectSums[j])}</b></div>`).join('');
- $('grossAssigned').textContent=fmt(assignedTotal);$('expenseSum').textContent=fmt(expenses);$('netAssigned').textContent=fmt(net);
- let v=$('verdict'),allNumbers=d.filter(x=>x.an.trim()).every(x=>(occurrences.get(norm(x.an))||[]).length===1),allEntries=[...occurrences.values()].every(v=>v.length===1&&refMap.has(norm(v[0].r.num))),allTotals=d.filter(x=>x.an.trim()).every(x=>{let l=occurrences.get(norm(x.an))||[];return l.length===1&&amount(l[0].r.total)!==null&&amount(l[0].r.total)===amount(x.at)});
- let ok=allNumbers&&allEntries&&allTotals&&Math.abs(diff)<0.005&&d.some(x=>x.an.trim());
- v.className='verdict '+(ok?'good':'bad');
- v.textContent=ok?'TUTTO OK: ogni numero è assegnato a un solo soggetto, i totali corrispondono e il totale netto coincide.':`DA VERIFICARE: controlla numeri mancanti, duplicati, non previsti o totali rossi. Differenza tra totale netto assegnato e riferimento: ${fmt(diff)}.`;
-}
-function snapshot(){return{savedAt:new Date().toISOString(),rows:N,data:read(),names:getNames(),expenses:getExpenses()}}
-function scheduleSave(){clearTimeout(timer);timer=setTimeout(()=>{try{localStorage.setItem('verificaV6',JSON.stringify(snapshot()));$('saveStatus').textContent='Salvataggio automatico sul dispositivo attivo.'}catch(e){}},250)}
-$('addRow').onclick=()=>{if(N>=500)return alert('Massimo 500 righe.');let d=read();N++;renderRows(d);scheduleSave()};
-$('removeRow').onclick=()=>{if(N<=1)return alert('Deve rimanere almeno una riga.');let d=read();if(Object.values(d[N-1]).some(v=>typeof v==='string'?v.trim():v.some(x=>x.num.trim()||x.total.trim()))&&!confirm('L’ultima riga contiene dati. Eliminarla?'))return;N--;renderRows(d.slice(0,N));scheduleSave()};
-$('jumpSummary').onclick=()=>$('summary').scrollIntoView({behavior:'smooth',block:'start'});
-$('clear').onclick=()=>{if(confirm('Cancellare tutti i numeri, i totali e le voci da scalare?')){renderRows([]);renderExpenses();paint();scheduleSave()}};
-function openDB(){return new Promise((res,rej)=>{let q=indexedDB.open('VerificaNumeriV6DB',1);q.onupgradeneeded=()=>q.result.createObjectStore('controlli',{keyPath:'id',autoIncrement:true});q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
-$('save').onclick=async()=>{try{let item=snapshot(),db=await openDB();await new Promise((res,rej)=>{let tx=db.transaction('controlli','readwrite');tx.objectStore('controlli').add(item);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});localStorage.setItem('verificaV6',JSON.stringify(item));$('saveStatus').textContent='Controllo salvato in IndexedDB e localStorage.'}catch(e){$('saveStatus').textContent='Errore di salvataggio: '+e.message}};
-$('restore').onclick=()=>{let s;try{s=JSON.parse(localStorage.getItem('verificaV6')||'null')}catch(e){}if(!s)return alert('Nessun salvataggio trovato.');N=Math.max(1,s.rows||150);renderNames(s.names||[]);renderExpenses(s.expenses||[]);renderRows(s.data||[]);$('saveStatus').textContent='Ultimo controllo ripristinato.'};
-$('csv').onclick=()=>{let d=read(),names=getNames(),rows=[['Riga','Numero atteso','Totale atteso',...names.flatMap(n=>[n+' numero',n+' totale'])],...d.map((r,i)=>[i+1,r.an,r.at,...r.subjects.flatMap(x=>[x.num,x.total])]),[],['Voce da scalare','Importo'],...getExpenses().map(x=>[x.label,x.raw])];let csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n'),a=document.createElement('a'),u=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.href=u;a.download='verifica-numeri-v6.csv';a.click();URL.revokeObjectURL(u)};
-let saved=null;try{saved=JSON.parse(localStorage.getItem('verificaV6')||'null')}catch(e){}
-N=Math.max(1,saved?.rows||150);renderNames(saved?.names||[]);renderExpenses(saved?.expenses||[]);renderRows(saved?.data||[]);
+
+  function renderAuditLog() {
+    const el = $('auditLogList'); if (!el) return;
+    const rows = (state.auditLog || []).slice(0, 100);
+    el.innerHTML = rows.length ? rows.map(x => `<div class="auditItem"><b>${esc(x.action)}</b><div>${esc(x.detail)}</div><time>${new Date(x.at).toLocaleString('it-IT')}</time></div>`).join('') : '<div class="hint">Nessuna modifica registrata.</div>';
+  }
+
+  function downloadText(filename, content, type='text/plain;charset=utf-8') {
+    const blob = new Blob([content], {type}); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1200);
+  }
+
+  function cents(v){const n=parseAmt(v);return n===null||Number.isNaN(n)?0:Math.round(n*100);}
+  function subjectWalletNumbers(idx){
+    const ds=(state.deliveries||[]).filter(d=>Number(d.subjectIdx)===idx);
+    let cash=0,bancomat=0;
+    ds.forEach(d=>{const p=paymentBreakdown(d);cash+=p.cash;bancomat+=p.bancomat;});
+    state.subjects.forEach(row=>{const c=row[idx];if(!String(c?.num||'').trim()&&!String(c?.total||'').trim())return;const linked=ds.some(d=>normNum(d.num)===normNum(c.num));if(!linked){cash+=getCashAmount(c);bancomat+=getPosDeducted(c);}});
+    const has=ds.length>0||state.subjects.some(r=>String(r[idx]?.num||'').trim()||String(r[idx]?.total||'').trim());
+    const sr=Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject||{},idx)?parseAmt(state.marsupioStartBySubject[idx]):(has?parseAmt(state.marsupioStart):0);
+    const start=sr===null||Number.isNaN(sr)?0:sr;
+    const bonus=!!state.bonusFScaledBySubject?.[idx]?bonusTotalForSubject(idx):0;
+    return {start,cash,bancomat,bonus,theoretical:Math.round((start+cash-bonus)*100)/100,ds};
+  }
+  // Controllo obbligatorio di completezza e coerenza prima della chiusura di un marsupio.
+  function preflightSubject(idx) {
+    const name = state.names[idx] || `Soggetto ${idx+1}`;
+    const issues = [];
+    const deliveries = (state.deliveries || []).filter(d => Number(d.subjectIdx) === idx);
+    const seen = new Set();
+    deliveries.forEach((d, i) => {
+      const num = normNum(d.num);
+      const total = parseAmt(d.total);
+      if (!num) issues.push(`${name}: consegna ${i+1} senza NUMERO.`);
+      if (String(d.total ?? '').trim() === '' || total === null || !Number.isFinite(total) || total <= 0)
+        issues.push(`${name}: consegna ${d.num || '(numero mancante)'} senza TOTALE valido.`);
+      if (num && seen.has(num)) issues.push(`${name}: numero consegna ${d.num} DUPLICATO.`);
+      if (num) seen.add(num);
+      const err = validateDeliveryFields({num:d.num,total:d.total,cash:!!d.cash,pos:!!d.pos,posAmt:d.posAmt,bonusF:d.bonusF});
+      if (err) issues.push(`${name}: consegna ${d.num || '(senza numero)'} – ${err}`);
+      if (d.gridSyncError) issues.push(`${name}: consegna ${d.num || d.id} non sincronizzata – ${d.gridSyncError}`);
+      if (!d.id) issues.push(`${name}: consegna ${d.num || i+1} senza ID univoco.`);
+    });
+    // Controlla anche le celle inserite direttamente nella griglia Admin.
+    const gridSeen = new Map();
+    (state.subjects || []).forEach((row, r) => {
+      const c = row?.[idx] || {};
+      const num = String(c.num ?? '').trim(), tot = String(c.total ?? '').trim();
+      if (!num && !tot) return;
+      if (num && !tot) issues.push(`${name}: riga ${r+1} – manca il TOTALE della consegna n. ${num}.`);
+      if (!num && tot) issues.push(`${name}: riga ${r+1} – manca il NUMERO della consegna con totale ${tot}.`);
+      if (num && gridSeen.has(normNum(num))) issues.push(`${name}: numero ${num} duplicato in griglia (righe ${gridSeen.get(normNum(num))} e ${r+1}).`);
+      if (num) gridSeen.set(normNum(num), r+1);
+      if (num && tot) {
+        const a = parseAmt(tot);
+        if (a === null || !Number.isFinite(a) || a <= 0) issues.push(`${name}: riga ${r+1} – totale non valido per la consegna ${num}.`);
+        const linked = deliveries.find(d => normNum(d.num) === normNum(num));
+        if (!linked) {
+          const err = validateDeliveryFields({num:c.num,total:c.total,cash:!!c.cash,pos:!!c.pos,posAmt:c.posAmt,bonusF:c.bonusF});
+          if (err) issues.push(`${name}: riga ${r+1} (${num}) – ${err}`);
+        }
+      }
+    });
+    return [...new Set(issues)];
+  }
+
+  function renderGuidedWalletClosures(){
+    const el=$('guidedWalletClosures');if(!el)return;
+    el.innerHTML=state.names.map((name,idx)=>{const n=subjectWalletNumbers(idx),c=state.walletClosures?.[idx]||{};const done=!!c.closedAt;return `<article class="walletCloseCard"><div class="toolbar"><strong>${esc(name||`Soggetto ${idx+1}`)}</strong><span class="badge ${done?'good':'warn'}">${done?'Chiuso':'Da contare'}</span></div><div class="walletMetrics"><div class="walletMetric"><small>Iniziale + CASH − F confermate</small><b>${fmtEur(n.theoretical)}</b></div><div class="walletMetric"><small>BANCOMAT separato</small><b>${fmtEur(n.bancomat)}</b></div><div class="walletMetric"><small>Consegne</small><b>${n.ds.length}</b></div></div><label>Contante contato fisicamente (€)</label><input class="countInput" inputmode="decimal" data-wallet-count="${idx}" value="${esc(c.counted??'')}" placeholder="Conta il marsupio"><div class="hint" data-wallet-diff="${idx}">${c.counted!==undefined?`Differenza: ${fmtEur(Number(c.counted)-n.theoretical)}`:'Inserisci il conteggio fisico.'}</div><div class="btnGroup"><button type="button" class="success small" data-wallet-close="${idx}">${done?'Riapri verifica':'Conferma chiusura'}</button><button type="button" class="secondary small" data-wallet-recount="${idx}">Azzera conteggio</button></div>${done?`<small class="hint">Chiuso il ${new Date(c.closedAt).toLocaleString('it-IT')} · Conteggio ${fmtEur(c.counted)} · Differenza ${fmtEur(c.diff)}</small>`:''}</article>`;}).join('');
+    el.querySelectorAll('[data-wallet-count]').forEach(inp=>inp.addEventListener('input',()=>{const idx=Number(inp.dataset.walletCount);const n=subjectWalletNumbers(idx);const val=parseAmt(inp.value);const d=$(`[data-wallet-diff="${idx}"]`);d.textContent=val===null?'Inserisci il conteggio fisico.':`Differenza: ${fmtEur(Math.round((val-n.theoretical)*100)/100)}`;}));
+    el.querySelectorAll('[data-wallet-close]').forEach(btn=>btn.onclick=()=>{const idx=Number(btn.dataset.walletClose);if(!state.walletClosures?.[idx]?.closedAt){const preflight=preflightSubject(idx);if(preflight.length){const out=$('aiControlSummary');if(out)out.innerHTML=preflight.map(x=>`<div class="preflightError">⛔ ${esc(x)}</div>`).join('');const st=$('aiStatus');if(st){st.textContent=`${preflight.length} errori: chiusura bloccata`;st.className='badge danger';}audit('CHIUSURA BLOCCATA – DATI INCOMPLETI',`${state.names[idx]} · ${preflight.length} anomalie`);saveLocal();alert(`Chiusura di ${state.names[idx]} bloccata.
+
+${preflight.slice(0,12).join('\n')}`);return;}}const inp=el.querySelector(`[data-wallet-count="${idx}"]`);const val=parseAmt(inp?.value);if(val===null||Number.isNaN(val)||val<0){alert('Inserisci un conteggio fisico valido.');return;}const n=subjectWalletNumbers(idx);const diff=Math.round((val-n.theoretical)*100)/100;if(Math.abs(diff)>0.009){const ok=confirm(`ATTENZIONE: il contante contato non coincide con il teorico.\n\nTeorico: ${fmtEur(n.theoretical)}\nContato: ${fmtEur(val)}\nDifferenza: ${fmtEur(diff)}\n\nVuoi registrare comunque la chiusura con questa differenza?`);if(!ok)return;}state.walletClosures=state.walletClosures||{};if(state.walletClosures[idx]?.closedAt){delete state.walletClosures[idx];audit('RIAPERTURA MARSUPIO',state.names[idx]);}else{state.walletClosures[idx]={closedAt:new Date().toISOString(),counted:val,diff,theoretical:n.theoretical,deliveryIds:n.ds.map(d=>d.id)};audit('CHIUSURA MARSUPIO',`${state.names[idx]} · teorico ${fmtEur(n.theoretical)} · contato ${fmtEur(val)} · differenza ${fmtEur(diff)}${Math.abs(diff)>0.009?' · DIFFERENZA CONFERMATA':''}`);}saveLocal();renderGuidedWalletClosures();});
+    el.querySelectorAll('[data-wallet-recount]').forEach(btn=>btn.onclick=()=>{const idx=Number(btn.dataset.walletRecount);if(state.walletClosures?.[idx]?.closedAt){alert('Riapri prima la verifica del marsupio.');return;}state.walletClosures=state.walletClosures||{};delete state.walletClosures[idx];renderGuidedWalletClosures();saveLocal();});
+  }
+  function runLocalAssistant(){
+    const issues=[];const seen=new Set();
+    (state.deliveries||[]).forEach(d=>{const k=nameKey(d.riderName)+'|'+normNum(d.num);if(!normNum(d.num))issues.push(`Consegna senza numero (${d.riderName||'nome mancante'}).`);if(k!=='|'&&seen.has(k))issues.push(`Possibile duplicato: ${d.riderName} n. ${d.num}.`);seen.add(k);const e=validateDeliveryFields({num:d.num,total:d.total,cash:!!d.cash,pos:!!d.pos,posAmt:d.posAmt,bonusF:d.bonusF});if(e)issues.push(`${d.riderName||'Fattorino'} n. ${d.num}: ${e}`);if(!Number.isInteger(d.subjectIdx)||d.subjectIdx<0||d.subjectIdx>=S)issues.push(`Consegna ${d.num}: soggetto non associato.`);});
+    state.names.forEach((name,idx)=>{const n=subjectWalletNumbers(idx);const c=state.walletClosures?.[idx];if(c?.closedAt&&Math.abs(Number(c.theoretical)-n.theoretical)>0.009)issues.push(`${name}: dati cambiati dopo la chiusura del marsupio. Riapri e riconta.`);if(n.theoretical<0)issues.push(`${name}: marsupio negativo.`);});
+    const out=$('aiControlSummary');if(out)out.innerHTML=issues.length?issues.slice(0,60).map(x=>`<div class="aiIssue warn">${esc(x)}</div>`).join(''):'<div class="aiIssue good">Nessuna anomalia rilevata dalle regole automatiche. Verifica comunque il conteggio fisico dei marsupi.</div>';
+    const st=$('aiStatus');if(st){st.textContent=issues.length?`${issues.length} controlli da verificare`:'Controlli regolari';st.className=issues.length?'badge warn':'badge good';}
+    return issues;
+  }
+  const SEVEN_DAYS_MS=7*24*60*60*1000;
+  function runRetentionCleanup(){
+    const cutoff=Date.now()-SEVEN_DAYS_MS;let removed=0;
+    const expired=(state.deliveries||[]).filter(d=>{const t=Date.parse(d.createdAtISO||'');return Number.isFinite(t)&&t<cutoff;});
+    expired.forEach(d=>{releaseDeliveryBinding(d);removed++;});
+    if(removed)state.deliveries=state.deliveries.filter(d=>!expired.includes(d));
+    // Dopo 7 giorni si elimina il dettaglio operativo dalle copie archiviate; restano solo aggregati.
+    (state.shiftArchives||[]).forEach(a=>{const t=Date.parse(a.archivedAt||'');if(Number.isFinite(t)&&t<cutoff&&a.snapshot){delete a.snapshot; a.detailPurgedAt=new Date().toISOString();}});
+    // Audit dettagliato oltre 7 giorni eliminato; gli archivi aggregati e i documenti esportati dall'utente restano separati.
+    const before=(state.auditLog||[]).length;state.auditLog=(state.auditLog||[]).filter(x=>{const t=Date.parse(x.at||'');return !Number.isFinite(t)||t>=cutoff;});
+    state.retentionLastRun=new Date().toISOString();
+    if(removed){renderGrid();renderDeliveries();renderRiderMappings();recomputeAll();}
+    renderAuditLog();renderShiftArchives();saveLocal();
+    if($('retentionStatus'))$('retentionStatus').textContent=`Ultimo controllo: ${new Date(state.retentionLastRun).toLocaleString('it-IT')}. Consegne eliminate: ${removed}; voci di registro eliminate: ${before-state.auditLog.length}. I documenti obbligatori conservati separatamente non vengono toccati.`;
+    audit('PULIZIA AUTOMATICA 7 GIORNI',`${removed} consegne operative eliminate`);saveLocal();
+    return removed;
+  }
+  function renderShiftArchives() {
+    const el = $('shiftArchiveList'); if (!el) return;
+    const list = state.shiftArchives || [];
+    el.innerHTML = list.length ? list.slice().reverse().map((a, revIdx) => {
+      const idx = list.length - 1 - revIdx;
+      return `<article class="archiveCard"><b>${esc(a.label || 'Turno archiviato')}</b><div class="hint">${new Date(a.archivedAt).toLocaleString('it-IT')}</div><div>${a.deliveryCount} consegne · Totale ${fmtEur(a.total)} · CASH ${fmtEur(a.cash)} · BANCOMAT ${fmtEur(a.pos)}</div><div class="btnGroup" style="margin-top:8px"><button class="secondary small" data-archive-export="${idx}">Esporta JSON</button><button class="warn small" data-archive-restore="${idx}">Riapri copia</button></div></article>`;
+    }).join('') : '<div class="hint">Nessun turno archiviato.</div>';
+    el.querySelectorAll('[data-archive-export]').forEach(b => b.onclick = () => {
+      const a = state.shiftArchives[Number(b.dataset.archiveExport)]; if (a) downloadText(`verifica-numeri-archivio-${Number(b.dataset.archiveExport)+1}.json`, JSON.stringify(a, null, 2), 'application/json');
+    });
+    el.querySelectorAll('[data-archive-restore]').forEach(b => b.onclick = () => {
+      const idx = Number(b.dataset.archiveRestore); const a = state.shiftArchives[idx];
+      if (!a) return;
+      if (b.dataset.armed !== '1') { b.dataset.armed='1'; b.textContent='Conferma riapertura'; return; }
+      const snap = a.snapshot;
+      if (!snap) return;
+      const role = state.role;
+      state = { ...state, ...JSON.parse(JSON.stringify(snap)), role, auditLog: state.auditLog, shiftArchives: state.shiftArchives };
+      audit('RIAPERTURA ARCHIVIO', `Ripristinata la copia del ${new Date(a.archivedAt).toLocaleString('it-IT')}`);
+      initUI(); $('archiveStatus').textContent = 'Copia ripristinata. L’archivio originale è conservato.'; saveLocal();
+    });
+  }
+
+  function closeAndArchiveShift() {
+    const deliveries = state.deliveries || [];
+    let total=0,cash=0,pos=0;
+    deliveries.forEach(d=>{ total += Number(parseAmt(d.total)||0); cash += getCashAmount(d); pos += getPosDeducted(d); });
+    const archive = {
+      archivedAt:new Date().toISOString(), label:`Turno ${new Date().toLocaleDateString('it-IT')}`,
+      deliveryCount:deliveries.length, total:Math.round(total*100)/100, cash:Math.round(cash*100)/100, pos:Math.round(pos*100)/100,
+      snapshot: JSON.parse(JSON.stringify({ ...state, role:'none', shiftArchives:[] }))
+    };
+    state.shiftArchives = Array.isArray(state.shiftArchives) ? state.shiftArchives : [];
+    state.shiftArchives.push(archive); if (state.shiftArchives.length>100) state.shiftArchives.shift();
+    audit('CHIUSURA TURNO', `${archive.deliveryCount} consegne · Totale ${fmtEur(archive.total)} · CASH ${fmtEur(archive.cash)} · BANCOMAT ${fmtEur(archive.pos)}`);
+    renderShiftArchives(); saveLocal();
+    $('archiveStatus').textContent = `Turno archiviato: ${archive.deliveryCount} consegne. I dati correnti restano disponibili e modificabili.`;
+  }
+
+  function renderAdminAnomalies() {
+    const el=$('anomalyList'); if(!el) return;
+    const issues=[]; const seenIds=new Set(), seenNums=new Map();
+    (state.deliveries||[]).forEach(d=>{
+      if (!d.id || seenIds.has(d.id)) issues.push(`ID consegna mancante o duplicato: ${d.id || '(vuoto)'}`); else seenIds.add(d.id);
+      const n=normNum(d.num), rider=nameKey(d.riderName || (d.subjectIdx>=0 ? state.names[d.subjectIdx] : ''));
+      if(!n) issues.push(`Consegna senza numero: ${d.riderName || 'fattorino non indicato'}`);
+      const key=rider+'|'+n;
+      if(n && seenNums.has(key)) issues.push(`Possibile duplicato: ${d.riderName || 'fattorino'} · n. ${d.num}`); else if(n) seenNums.set(key,d.id);
+      const err=validateDeliveryFields({num:d.num,total:d.total,cash:!!d.cash,pos:!!d.pos,posAmt:d.posAmt,bonusF:d.bonusF});
+      if(err) issues.push(`Consegna ${d.num || d.id}: ${err}`);
+      if(d.gridSyncError) issues.push(`Consegna ${d.num}: ${d.gridSyncError}`);
+      if(!Number.isInteger(d.subjectIdx) || d.subjectIdx<0 || d.subjectIdx>=S) issues.push(`Da associare: ${d.riderName || 'nome mancante'} · n. ${d.num}`);
+    });
+    const gridSeen=new Map();
+    state.subjects.forEach((row,ri)=>row.forEach((c,si)=>{ const n=normNum(c.num); const tot=String(c.total??'').trim(); if(!n && tot) issues.push(`Riga ${ri+1}, soggetto ${state.names[si]}: manca il NUMERO (totale ${tot}).`); if(n && !tot) issues.push(`Riga ${ri+1}, soggetto ${state.names[si]}: manca il TOTALE (numero ${c.num}).`); if(!n)return; if(gridSeen.has(n)) issues.push(`Numero ${c.num} ripetuto in griglia (righe ${gridSeen.get(n)+1} e ${ri+1})`); else gridSeen.set(n,ri); }));
+    $('anomalyCount').textContent=`${issues.length} anomalie`;
+    el.innerHTML=issues.length ? issues.slice(0,80).map(x=>`<div class="anomalyItem">${esc(x)}</div>`).join('') : '<div class="anomalyItem good">Nessuna anomalia rilevata nei controlli automatici.</div>';
+  }
+
+  function renderImportPreview(file) {
+    const box=$('importPreview'); if(!box) return;
+    if(!file){box.classList.add('hidden');box.textContent='';return;}
+    file.text().then(raw=>{
+      const rows=parseCsvText(raw); const count=Math.max(0,rows.length-1);
+      const headers=(rows[0]||[]).map(x=>String(x).trim().toLowerCase());
+      const ni=headers.indexOf('numero'), ri=headers.indexOf('fattorino'), idi=headers.indexOf('id');
+      const keys=new Set(); let dup=0, missing=0;
+      rows.slice(1).forEach(r=>{const n=ni>=0?normNum(r[ni]):'';const rider=ri>=0?nameKey(r[ri]):'';if(!n||!rider)missing++;const k=rider+'|'+n;if(n&&rider&&keys.has(k))dup++;else keys.add(k);});
+      box.classList.remove('hidden');
+      box.textContent=`ANTEPRIMA CSV
+File: ${file.name}
+Righe dati: ${count}
+Duplicati interni (nome + numero): ${dup}
+Righe senza nome/numero: ${missing}
+Consegne già presenti con stesso ID: ${rows.slice(1).filter(r=>idi>=0 && r[idi] && state.deliveries.some(d=>d.id===r[idi])).length}
+Controlla questi dati prima di premere Importa.`;
+    }).catch(e=>{box.classList.remove('hidden');box.textContent='Impossibile leggere l’anteprima: '+e.message;});
+  }
+
+  function exportSubjectCsv(idx) {
+    const name=state.names[idx] || `Soggetto ${idx+1}`;
+    const rows=[['Fattorino','Numero','Totale','Canale','Metodo','CASH','BANCOMAT','Bonus F','F scalata','Ora','Creato ISO']];
+    state.deliveries.filter(d=>d.subjectIdx===idx).forEach(d=>{const p=paymentBreakdown(d);rows.push([d.riderName||name,d.num,d.total,d.channel,p.bancomat>0?(p.cash>0?'MISTO':'BANCOMAT'):'CASH',fmtEur(p.cash),fmtEur(p.bancomat),d.bonusF||'',state.bonusFScaledBySubject?.[idx]?'SI':'NO',d.createdAt||'',d.createdAtISO||'']);});
+    const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');
+    downloadText(`verifica-numeri-${name.replace(/[^a-z0-9_-]/gi,'_')}.csv`,csv,'text/csv;charset=utf-8');
+  }
+
+  function parseAmt(v) {
+    if (v === null || v === undefined) return null;
+    const str = String(v).trim();
+    if (!str) return null;
+    let cleaned = str.replace(/[€\s]/g, '');
+    if (cleaned.includes(',') && cleaned.includes('.')) {
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    } else {
+      cleaned = cleaned.replace(',', '.');
+    }
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN;
+  }
+
+  function normNum(v) {
+    return String(v ?? '').trim().replace(/^0+(?=\d)/, '').toLowerCase();
+  }
+
+  function fmtEur(n) {
+    const val = Number.isFinite(n) ? n : 0;
+    return val.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  }
+
+  function getPosDeducted(entry) {
+    const tot = parseAmt(entry.total);
+    const validTot = tot !== null && !Number.isNaN(tot) ? tot : 0;
+    if (!entry.pos) return 0;
+    if (entry.cash) {
+      const m = parseAmt(entry.posAmt);
+      if (m !== null && !Number.isNaN(m) && m >= 0) return Math.min(validTot, m);
+      return 0;
+    }
+    return validTot;
+  }
+
+  function getCashAmount(entry) {
+    const tot = parseAmt(entry.total);
+    const validTot = tot !== null && !Number.isNaN(tot) ? tot : 0;
+    if (!entry.cash) return 0;
+    if (entry.pos) {
+      const posPart = getPosDeducted(entry);
+      return Math.max(0, Math.round((validTot - posPart) * 100) / 100);
+    }
+    return validTot;
+  }
+
+  function ensureSize(n) {
+    const target = Math.max(1, Math.min(500, n));
+    while (state.refRows.length < target) state.refRows.push({ an: '', at: '' });
+    if (state.refRows.length > target) state.refRows.length = target;
+    while (state.subjects.length < target) {
+      state.subjects.push(Array.from({ length: S }, () => ({ num: '', total: '', cash: false, pos: false, posAmt: '', bonusF: '' })));
+    }
+    if (state.subjects.length > target) state.subjects.length = target;
+    state.rowsCount = target;
+  }
+
+  function saveLocal() {
+    try {
+      const persistable = { ...state, role: 'none' };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable));
+      if ($('saveStatus')) $('saveStatus').textContent = 'Salvataggio automatico attivo · ' + new Date().toLocaleTimeString('it-IT');
+    } catch (e) {
+      if ($('saveStatus')) $('saveStatus').textContent = 'ATTENZIONE: salvataggio locale non riuscito: ' + e.message;
+    }
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveLocal, 120);
+  }
+
+  // Salva anche se iOS/Safari sospende o chiude la pagina prima del debounce.
+  window.addEventListener('pagehide', () => { clearTimeout(saveTimer); saveLocal(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { clearTimeout(saveTimer); saveLocal(); }
+  });
+
+  function openIDB() {
+    return new Promise((res, rej) => {
+      const req = indexedDB.open('VerificaNumeriV93DB', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('snapshots', { keyPath: 'id', autoIncrement: true });
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  async function saveSnapshotIDB() {
+    saveLocal();
+    let db;
+    try {
+      db = await openIDB();
+      await new Promise((res, rej) => {
+        const tx = db.transaction('snapshots', 'readwrite');
+        const store = tx.objectStore('snapshots');
+        const allReq = store.getAll();
+        allReq.onsuccess = () => {
+          const existing = allReq.result || [];
+          store.add({ savedAt: new Date().toISOString(), payload: JSON.parse(JSON.stringify(state)) });
+          // Conserva al massimo 20 copie: evita che il database cresca senza limiti.
+          existing.slice(0, Math.max(0, existing.length - 19)).forEach(item => store.delete(item.id));
+        };
+        allReq.onerror = () => rej(allReq.error);
+        tx.oncomplete = res;
+        tx.onerror = () => rej(tx.error);
+        tx.onabort = () => rej(tx.error || new Error('Salvataggio annullato'));
+      });
+      $('saveStatus').textContent = 'Copia di sicurezza salvata in IndexedDB · ' + new Date().toLocaleTimeString('it-IT');
+    } catch (e) {
+      $('saveStatus').textContent = 'Dati salvati in localStorage; copia IndexedDB non disponibile: ' + e.message;
+    } finally {
+      if (db) db.close();
+    }
+  }
+
+  function setRole(newRole) {
+    state.role = newRole;
+    scheduleSave();
+    applyRoleVisibility();
+    recomputeAll();
+  }
+
+  function applyRoleVisibility() {
+    const pill = $('roleIndicator');
+    $('loginSection').classList.toggle('hidden', state.role !== 'none');
+    $('riderSection').classList.toggle('hidden', state.role !== 'rider');
+    $('adminSection').classList.toggle('hidden', state.role !== 'admin');
+
+    pill.classList.remove('admin', 'rider');
+    if (state.role === 'admin') {
+      pill.textContent = 'Ruolo: Amministratore';
+      pill.classList.add('admin');
+    } else if (state.role === 'rider') {
+      pill.textContent = 'Ruolo: Fattorino';
+      pill.classList.add('rider');
+    } else {
+      pill.textContent = 'Accesso richiesto';
+    }
+  }
+
+  function renderNames() {
+    const container = $('namesContainer');
+    container.innerHTML = '';
+    for (let j = 0; j < S; j++) {
+      const box = document.createElement('label');
+      box.className = 'namebox';
+      box.innerHTML = `<b>${j + 1}.</b><input type="text" data-name-idx="${j}" value="${esc(state.names[j])}" aria-label="Nome soggetto ${j + 1}">`;
+      container.appendChild(box);
+    }
+    container.querySelectorAll('[data-name-idx]').forEach(inp => {
+      inp.addEventListener('input', e => {
+        const j = Number(e.target.dataset.nameIdx);
+        state.names[j] = e.target.value;
+        renderTargetImportSubject();
+        syncSubjectHeadersAndSelectors();
+        recomputeAll();
+        scheduleSave();
+      });
+      inp.addEventListener('change', e => audit('MODIFICA NOME SOGGETTO', `Soggetto ${Number(e.target.dataset.nameIdx)+1}: ${e.target.value}`));
+    });
+    syncSubjectHeadersAndSelectors();
+    renderTargetImportSubject();
+  }
+
+  function syncSubjectHeadersAndSelectors() {
+    const headRow = $('gridHeadRow');
+    while (headRow.children.length > 3) headRow.removeChild(headRow.lastElementChild);
+    for (let j = 0; j < S; j++) {
+      const th = document.createElement('th');
+      th.className = 'subjectHead';
+      th.dataset.subhead = j;
+      th.innerHTML = `${esc(state.names[j] || 'Soggetto ' + (j + 1))}<br>N. · € · CASH/POS`;
+      headRow.appendChild(th);
+    }
+
+    const rSel = $('riderSelect');
+    const prevR = Number(rSel.value || state.activeRiderIdx || 0);
+    rSel.innerHTML = state.names.map((n, j) => `<option value="${j}">${j + 1}. ${esc(n || 'Soggetto ' + (j + 1))}</option>`).join('');
+    rSel.value = String(Math.min(S - 1, Math.max(0, prevR)));
+
+    const fSel = $('filterSubjectSelect');
+    const prevF = fSel.value;
+    fSel.innerHTML = `<option value="">Tutti i soggetti</option>` + state.names.map((n, j) => `<option value="${j}">${esc(n || 'Soggetto ' + (j + 1))}</option>`).join('');
+    fSel.value = prevF;
+  }
+
+  function renderChannelChips(containerId) {
+    const container = $(containerId);
+    if (!container) return;
+    container.innerHTML = state.channels.map((ch, idx) => `
+      <span class="chChip"><span>${esc(ch)}</span>
+        ${state.channels.length > 1 ? `<button type="button" data-del-ch="${idx}" title="Rimuovi canale">×</button>` : ''}
+      </span>`).join('');
+    container.querySelectorAll('[data-del-ch]').forEach(btn => btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.delCh);
+      const channelName = state.channels[idx];
+      if (state.deliveries.some(d => nameKey(d.channel) === nameKey(channelName))) {
+        alert('Questo canale è già utilizzato da una o più consegne. Non può essere eliminato finché è in uso.');
+        return;
+      }
+      state.channels.splice(idx, 1);
+      renderChannels(); renderDeliveries(); recomputeAll(); saveLocal();
+    }));
+  }
+
+  function renderChannels() {
+    if (!Array.isArray(state.channels)) state.channels = [];
+    const uniqueChannels = [];
+    state.channels.map(v => String(v || '').trim().replace(/\s+/g, ' ')).filter(Boolean).forEach(ch => {
+      if (!uniqueChannels.some(existing => nameKey(existing) === nameKey(ch))) uniqueChannels.push(ch);
+    });
+    state.channels = uniqueChannels.length ? uniqueChannels : [...DEFAULT_CHANNELS];
+    renderChannelChips('channelChips');
+    renderChannelChips('adminChannelChips');
+
+    const curDelCh = $('delChannelSelect')?.value || '';
+    $('delChannelSelect').innerHTML = state.channels.map(ch => `<option value="${esc(ch)}">${esc(ch)}</option>`).join('');
+    if (curDelCh && state.channels.includes(curDelCh)) $('delChannelSelect').value = curDelCh;
+
+    const curFiltCh = $('filterChannelSelect')?.value || '';
+    $('filterChannelSelect').innerHTML = `<option value="">Tutti i canali</option>` + state.channels.map(ch => `<option value="${esc(ch)}">${esc(ch)}</option>`).join('');
+    if (curFiltCh && state.channels.includes(curFiltCh)) $('filterChannelSelect').value = curFiltCh;
+  }
+
+  function canonicalChannel(value) {
+    const ch = String(value || '').trim().replace(/\s+/g, ' ');
+    if (!ch) return state.channels[0] || 'Telefono';
+    const existing = state.channels.find(item => nameKey(item) === nameKey(ch));
+    if (existing) return existing;
+    state.channels.push(ch);
+    return ch;
+  }
+
+  function addChannelFromInput(inputId) {
+    const input = $(inputId);
+    const ch = String(input?.value || '').trim().replace(/\s+/g, ' ');
+    if (!ch) return;
+    if (state.channels.some(existing => nameKey(existing) === nameKey(ch))) {
+      alert('Questo canale è già presente.'); input.value = ''; return;
+    }
+    state.channels.push(ch); input.value = '';
+    renderChannels(); renderDeliveries(); recomputeAll(); saveLocal();
+  }
+
+  function renderGrid() {
+    ensureSize(state.rowsCount);
+    const tbody = $('gridBody');
+    tbody.innerHTML = '';
+    $('rowCount').textContent = state.rowsCount;
+
+    for (let i = 0; i < state.rowsCount; i++) {
+      const ref = state.refRows[i];
+      const tr = document.createElement('tr');
+      tr.dataset.rowIdx = i;
+
+      let html = `
+        <td class="idx">${i + 1}</td>
+        <td class="refCol1"><input class="refInput" data-r="${i}" data-f="an" inputmode="numeric" value="${esc(ref.an)}" placeholder="N." aria-label="Numero atteso riga ${i + 1}"></td>
+        <td class="refCol2"><input class="refInput" data-r="${i}" data-f="at" inputmode="decimal" value="${esc(ref.at)}" placeholder="€" aria-label="Totale atteso riga ${i + 1}"></td>
+      `;
+
+      for (let j = 0; j < S; j++) {
+        const cell = state.subjects[i][j];
+        html += `
+          <td>
+            <div class="subjectCell">
+              <div class="subLine">
+                <input class="subNum" data-r="${i}" data-s="${j}" data-f="num" inputmode="numeric" value="${esc(cell.num)}" placeholder="N." aria-label="Numero soggetto ${j + 1} riga ${i + 1}">
+                <input class="subTot" data-r="${i}" data-s="${j}" data-f="total" inputmode="decimal" value="${esc(cell.total)}" placeholder="€" aria-label="Totale soggetto ${j + 1} riga ${i + 1}">
+              </div>
+              <div class="subChecks">
+                <label><input type="checkbox" data-r="${i}" data-s="${j}" data-f="cash" ${cell.cash ? 'checked' : ''}>CASH</label>
+                <label><input type="checkbox" data-r="${i}" data-s="${j}" data-f="pos" ${cell.pos ? 'checked' : ''}>POS</label>
+              </div>
+              <input class="subPosAmt ${cell.cash && cell.pos ? '' : 'hidden'}" data-r="${i}" data-s="${j}" data-f="posAmt" inputmode="decimal" value="${esc(cell.posAmt)}" placeholder="Quota POS €">
+              <input class="subBonusF" data-r="${i}" data-s="${j}" data-f="bonusF" inputmode="decimal" value="${esc(cell.bonusF || '')}" placeholder="Bonus F €" aria-label="Bonus F soggetto ${j + 1} riga ${i + 1}">
+            </div>
+          </td>
+        `;
+      }
+      tr.innerHTML = html;
+      tbody.appendChild(tr);
+    }
+
+    tbody.querySelectorAll('input').forEach(inp => {
+      const evt = inp.type === 'checkbox' ? 'change' : 'input';
+      inp.addEventListener(evt, e => {
+        const r = Number(e.target.dataset.r);
+        const f = e.target.dataset.f;
+        if (e.target.dataset.s !== undefined) {
+          const s = Number(e.target.dataset.s);
+          const obj = state.subjects[r][s];
+          if (e.target.type === 'checkbox') {
+            const previous = !!obj[f]; obj[f] = e.target.checked;
+            if (previous !== obj[f]) audit('MODIFICA PAGAMENTO ADMIN', `${state.names[s]} · consegna ${obj.num}: ${f.toUpperCase()} ${previous?'attivo':'disattivo'} → ${obj[f]?'attivo':'disattivo'}`);
+            const posInp = tbody.querySelector(`input[data-r="${r}"][data-s="${s}"][data-f="posAmt"]`);
+            if (posInp) posInp.classList.toggle('hidden', !(obj.cash && obj.pos));
+          } else {
+            const previous = String(obj[f] ?? '');
+            obj[f] = e.target.value;
+  
+          }
+          // Se la cella proviene da una consegna importata/registrata,
+          // non scollegarla: aggiorna anche la consegna e i riepiloghi per canale.
+          if (obj._deliveryId) {
+            syncGridCellToDelivery(obj, r, s);
+            renderDeliveries();
+          }
+        } else {
+          const previous = String(state.refRows[r][f] ?? '');
+          state.refRows[r][f] = e.target.value;
+
+        }
+        recomputeAll();
+        scheduleSave();
+      });
+      inp.addEventListener('focus', () => { inp.dataset.auditBefore = inp.value; });
+      if (inp.type !== 'checkbox') inp.addEventListener('change', () => {
+        const before = inp.dataset.auditBefore ?? '';
+        if (before === inp.value) return;
+        const r = Number(inp.dataset.r), f = inp.dataset.f;
+        if (inp.dataset.s !== undefined) {
+          const subj = Number(inp.dataset.s);
+          audit('MODIFICA GRIGLIA', `${state.names[subj] || `Soggetto ${subj+1}`} · riga ${r+1} · ${f}: ${before || '(vuoto)'} → ${inp.value || '(vuoto)'}`);
+        } else audit('MODIFICA RIFERIMENTO', `Riga ${r+1} · ${f}: ${before || '(vuoto)'} → ${inp.value || '(vuoto)'}`);
+      });
+    });
+  }
+
+  function renderExpenses() {
+    const box = $('expensesContainer');
+    box.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+      const item = state.expenses[i] || { label: '', raw: '' };
+      const row = document.createElement('div');
+      row.className = 'expenseRow';
+      row.innerHTML = `
+        <input type="text" data-exp-label="${i}" value="${esc(item.label)}" placeholder="Voce da scalare / EF ${i + 1}">
+        <input type="text" inputmode="decimal" data-exp-amt="${i}" value="${esc(item.raw)}" placeholder="0,00 €">
+      `;
+      box.appendChild(row);
+    }
+    box.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', e => {
+        const idx = Number(e.target.dataset.expLabel ?? e.target.dataset.expAmt);
+        if (!state.expenses[idx]) state.expenses[idx] = { label: '', raw: '' };
+        if (e.target.dataset.expLabel !== undefined) state.expenses[idx].label = e.target.value;
+        else state.expenses[idx].raw = e.target.value;
+        recomputeAll();
+        scheduleSave();
+      });
+    });
+  }
+
+  function nameKey(v) {
+    return String(v || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/\s+/g, ' ');
+  }
+
+  function resolveSubjectIndex(riderName) {
+    const key = nameKey(riderName);
+    if (!key) return -1;
+    const mapped = state.riderMappings?.[key];
+    if (Number.isInteger(mapped) && mapped >= 0 && mapped < S) return mapped;
+    return state.names.findIndex(n => nameKey(n) === key);
+  }
+
+  function blankSubjectCell() { return { num: '', total: '', cash: false, pos: false, posAmt: '', bonusF: '' }; }
+
+  // Propaga ogni correzione effettuata dall'Admin sulla cella collegata
+  // alla consegna originale. La griglia e l'archivio consegne restano una sola fonte coerente.
+  function syncGridCellToDelivery(cell, rowIdx, subjectIdx) {
+    const id = cell && cell._deliveryId;
+    if (!id) return false;
+    const linked = state.deliveries.find(d => d.id === id);
+    if (!linked) { delete cell._deliveryId; return false; }
+    linked.num = String(cell.num ?? '').trim();
+    linked.total = String(cell.total ?? '').trim();
+    linked.cash = !!cell.cash;
+    linked.pos = !!cell.pos;
+    linked.posAmt = String(cell.posAmt ?? '').trim();
+    linked.bonusF = String(cell.bonusF ?? '').trim();
+    linked.subjectIdx = subjectIdx;
+    linked.paymentChannel = linked.pos && !linked.cash ? 'BANCOMAT' : (linked.cash && !linked.pos ? 'CASH' : (linked.cash && linked.pos ? 'MISTO' : ''));
+    if (linked._gridBinding) {
+      linked._gridBinding.rowIdx = rowIdx;
+      linked._gridBinding.subjectIdx = subjectIdx;
+    }
+    linked.gridSyncError = '';
+    return true;
+  }
+
+  // Rimuove soltanto la cella generata da questa consegna. Se prima esisteva
+  // un dato manuale, lo ripristina: non cancella mai dati inseriti dall'Admin.
+  function releaseDeliveryBinding(del) {
+    const b = del && del._gridBinding;
+    if (!b || !Number.isInteger(b.rowIdx) || !Number.isInteger(b.subjectIdx)) return;
+    const cell = state.subjects?.[b.rowIdx]?.[b.subjectIdx];
+    if (cell && cell._deliveryId === del.id) {
+      const restored = b.previousCell ? { ...b.previousCell } : blankSubjectCell();
+      delete restored._deliveryId;
+      state.subjects[b.rowIdx][b.subjectIdx] = restored;
+    }
+    delete del._gridBinding;
+  }
+
+  function syncDeliveryToGrid(del) {
+    ensureSize(state.rowsCount);
+    releaseDeliveryBinding(del);
+    let subjIdx = Number.isInteger(del.subjectIdx) ? del.subjectIdx : -1;
+    if (subjIdx < 0 || subjIdx >= S) subjIdx = resolveSubjectIndex(del.riderName);
+    if (subjIdx < 0 || subjIdx >= S) {
+      del.subjectIdx = -1;
+      del.gridSyncError = '';
+      return true;
+    }
+    del.subjectIdx = subjIdx;
+    const numKey = normNum(del.num);
+    if (!numKey) { del.gridSyncError = 'Numero consegna mancante: impossibile inserirla nella griglia.'; return false; }
+
+    let rowIdx = state.subjects.findIndex(row => normNum(row[subjIdx].num) === numKey);
+    if (rowIdx >= 0 && state.subjects[rowIdx][subjIdx]._deliveryId && state.subjects[rowIdx][subjIdx]._deliveryId !== del.id) {
+      del.gridSyncError = 'Numero già collegato a un’altra consegna nella stessa colonna.';
+      return false;
+    }
+    if (rowIdx < 0) rowIdx = state.subjects.findIndex(row => !String(row[subjIdx].num || '').trim() && !String(row[subjIdx].total || '').trim());
+    if (rowIdx < 0 && state.rowsCount < 500) {
+      rowIdx = state.rowsCount;
+      ensureSize(state.rowsCount + 1);
+    }
+    if (rowIdx < 0) {
+      del.gridSyncError = 'Nessuna riga libera: aggiungi una riga prima di associare la consegna.';
+      return false;
+    }
+
+    const previousCell = { ...state.subjects[rowIdx][subjIdx] };
+    const nextCell = {
+      num: String(del.num || ''), total: String(del.total || ''), cash: !!del.cash,
+      pos: !!del.pos, posAmt: String(del.posAmt || ''), bonusF: String(del.bonusF || ''), _deliveryId: del.id
+    };
+    state.subjects[rowIdx][subjIdx] = nextCell;
+    del._gridBinding = { rowIdx, subjectIdx: subjIdx, previousCell };
+    del.gridSyncError = '';
+    return true;
+  }
+
+  function validateDeliveryFields({ num, total, cash, pos, posAmt, bonusF }) {
+    const n = parseAmt(total);
+    if (!String(num || '').trim()) return 'Inserisci il numero della consegna.';
+    if (n === null || Number.isNaN(n) || n <= 0) return 'Inserisci un totale valido e maggiore di zero.';
+    if (!cash && !pos) return 'Seleziona almeno un metodo di pagamento: CASH o POS.';
+    if (cash && pos) {
+      const p = parseAmt(posAmt);
+      if (p === null || Number.isNaN(p) || p <= 0 || p >= n) return 'Nel pagamento misto la quota POS deve essere maggiore di zero e inferiore al totale.';
+    }
+    if (String(bonusF || '').trim()) {
+      const b = parseAmt(bonusF);
+      if (b === null || Number.isNaN(b) || b < 0) return 'Il Bonus F deve essere un importo valido e non negativo.';
+    }
+    return '';
+  }
+
+  function paymentBreakdown(entry) {
+    const cash = getCashAmount(entry);
+    const pos = getPosDeducted(entry);
+    return { cash: Math.round(cash * 100) / 100, bancomat: Math.round(pos * 100) / 100 };
+  }
+
+  function renderChannelTotals(containerId, deliveries) {
+    const el = $(containerId);
+    if (!el) return;
+    const byOrigin = new Map();
+    const byPayment = { CASH: 0, BANCOMAT: 0 };
+    deliveries.forEach(d => {
+      const origin = String(d.channel || 'Non specificato').trim() || 'Non specificato';
+      const parts = paymentBreakdown(d);
+      if (!byOrigin.has(origin)) byOrigin.set(origin, { cash: 0, bancomat: 0, total: 0 });
+      const item = byOrigin.get(origin);
+      item.cash += parts.cash; item.bancomat += parts.bancomat; item.total += parts.cash + parts.bancomat;
+      byPayment.CASH += parts.cash; byPayment.BANCOMAT += parts.bancomat;
+    });
+    const rows = [...byOrigin.entries()].sort((a,b)=>a[0].localeCompare(b[0],'it')).map(([name,v]) =>
+      `<div class="subjectStat"><div><strong>${esc(name)}</strong><small>CASH ${fmtEur(v.cash)} · BANCOMAT ${fmtEur(v.bancomat)}</small></div><b>${fmtEur(v.total)}</b></div>`);
+    rows.push(`<div class="subjectStat"><div><strong>Totale CASH</strong><small>Contanti da consegnare</small></div><b>${fmtEur(byPayment.CASH)}</b></div>`);
+    rows.push(`<div class="subjectStat"><div><strong>Totale BANCOMAT</strong><small>Accredito elettronico — escluso dal marsupio</small></div><b>${fmtEur(byPayment.BANCOMAT)}</b></div>`);
+    el.innerHTML = rows.join('') || '<p class="hint">Nessun incasso registrato.</p>';
+  }
+
+  function renderPaymentTotals(containerId, deliveries) {
+    const el = $(containerId); if (!el) return;
+    let cash = 0, bancomat = 0;
+    deliveries.forEach(d => { const p = paymentBreakdown(d); cash += p.cash; bancomat += p.bancomat; });
+    el.innerHTML = `<div class="subjectStat"><div><strong>CASH</strong><small>Contanti da consegnare al titolare</small></div><b>${fmtEur(cash)}</b></div><div class="subjectStat"><div><strong>BANCOMAT / POS</strong><small>Accredito elettronico, escluso dal marsupio</small></div><b>${fmtEur(bancomat)}</b></div>`;
+  }
+
+  function bonusTotalForSubject(idx) {
+    const entries = state.deliveries.filter(d => d.subjectIdx === idx && parseAmt(d.bonusF) > 0);
+    const manualCells = [];
+    state.subjects.forEach(row => {
+      const c = row[idx];
+      if (c && parseAmt(c.bonusF) > 0 && !state.deliveries.some(d => d.subjectIdx === idx && normNum(d.num) === normNum(c.num))) manualCells.push(c);
+    });
+    return entries.reduce((sum,d)=>sum+(parseAmt(d.bonusF)||0),0) + manualCells.reduce((sum,c)=>sum+(parseAmt(c.bonusF)||0),0);
+  }
+
+  function renderBonusBySubject() {
+    const el = $('bonusFBySubject');
+    if (!el) return;
+    const rows = state.names.map((name, idx) => {
+      const entries = state.deliveries.filter(d => d.subjectIdx === idx && parseAmt(d.bonusF) > 0);
+      const manualCells = [];
+      state.subjects.forEach(row => { const c=row[idx]; if (c && parseAmt(c.bonusF)>0 && !state.deliveries.some(d=>d.subjectIdx===idx && normNum(d.num)===normNum(c.num))) manualCells.push({num:c.num, bonusF:c.bonusF}); });
+      const total = bonusTotalForSubject(idx);
+      const details = entries.map(d=>`N. ${esc(d.num)}: ${fmtEur(parseAmt(d.bonusF)||0)}`).concat(manualCells.map(c=>`N. ${esc(c.num)} (manuale): ${fmtEur(parseAmt(c.bonusF)||0)}`));
+      const scaled = !!state.bonusFScaledBySubject?.[idx];
+      const armed = pendingClearSubjectIdx === idx;
+      return `<div class="subjectStat"><div><strong>${esc(name || `Soggetto ${idx+1}`)}</strong><small>${details.length ? details.join(' · ') : 'Nessun Bonus F'} · ${scaled ? 'Scalatura confermata manualmente' : 'In attesa di conferma manuale'}</small></div><b>${fmtEur(total)}</b><button type="button" class="danger small" data-clear-subject="${idx}" aria-label="${armed ? 'Conferma pulizia' : 'Pulisci soggetto'}">${armed ? 'Conferma pulizia' : 'Pulisci soggetto'}</button></div>`;
+    });
+    el.innerHTML = rows.join('');
+    el.querySelectorAll('[data-clear-subject]').forEach(btn => btn.addEventListener('click', () => clearSubjectData(Number(btn.dataset.clearSubject))));
+  }
+
+  function renderAdminWallets() {
+    const el = $('adminSubjectWallets');
+    if (!el) return;
+    const legacyStartRaw = parseAmt(state.marsupioStart);
+    const legacyStart = legacyStartRaw === null || Number.isNaN(legacyStartRaw) ? 0 : legacyStartRaw;
+    el.innerHTML = state.names.map((name, idx) => {
+      const ds = state.deliveries.filter(d => d.subjectIdx === idx);
+      let cash = 0, bancomat = 0;
+      ds.forEach(d => { const p = paymentBreakdown(d); cash += p.cash; bancomat += p.bancomat; });
+      // Include cells entered manually in the Admin grid only when not represented by a delivery.
+      state.subjects.forEach(row => {
+        const c = row[idx];
+        if (!String(c?.num || '').trim() && !String(c?.total || '').trim()) return;
+        const linked = ds.some(d => normNum(d.num) === normNum(c.num));
+        if (!linked) { cash += getCashAmount(c); bancomat += getPosDeducted(c); }
+      });
+      const bonus = bonusTotalForSubject(idx);
+      const scaled = !!state.bonusFScaledBySubject?.[idx];
+      const hasActivity = ds.length > 0 || state.subjects.some(row => String(row[idx]?.num || '').trim() || String(row[idx]?.total || '').trim());
+      const startRaw = Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject || {}, idx) ? parseAmt(state.marsupioStartBySubject[idx]) : (hasActivity ? legacyStart : 0);
+      const start = startRaw === null || Number.isNaN(startRaw) ? 0 : startRaw;
+      const total = Math.round((start + cash) * 100) / 100;
+      const remain = Math.round((total - (scaled ? bonus : 0)) * 100) / 100;
+      return `<article class="walletSubjectCard">
+        <div class="toolbar"><strong>${esc(name || `Soggetto ${idx+1}`)}</strong><b>${fmtEur(total + bancomat)}</b></div>
+        <div class="walletMetrics">
+          <div class="walletMetric"><small>Marsupio iniziale (modificabile)</small><input inputmode="decimal" aria-label="Marsupio iniziale ${esc(name)}" data-wallet-start="${idx}" value="${esc(Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject || {}, idx) ? state.marsupioStartBySubject[idx] : (hasActivity ? state.marsupioStart : '0'))}" style="width:100%;margin-top:4px"></div>
+          <div class="walletMetric"><small>Cash da consegnare</small><b>${fmtEur(cash)}</b></div>
+          <div class="walletMetric"><small>Bancomat / POS (banca)</small><b>${fmtEur(bancomat)}</b></div>
+          <div class="walletMetric"><small>Bonus F totale</small><b>${fmtEur(bonus)}</b></div>
+        </div>
+        <div class="walletActions"><label><input type="checkbox" data-wallet-scaled="${idx}" ${scaled?'checked':''}> F scalate confermate</label><button type="button" class="secondary small" data-wallet-export="${idx}">Esporta CSV</button><button type="button" class="danger small" data-wallet-clear="${idx}">${pendingClearSubjectIdx === idx ? 'Conferma pulizia definitiva' : 'Pulisci soggetto'}</button></div>
+        <div class="walletRemain">RIMANENTE NEL MARSUPIO<br>${fmtEur(remain)}</div>
+        <small class="hint">Calcolo: iniziale + CASH${scaled?' − Bonus F scalate':''}. Il BANCOMAT è separato e non entra nel marsupio.</small>
+      </article>`;
+    }).join('');
+    el.querySelectorAll('[data-wallet-start]').forEach(input => input.addEventListener('change', () => {
+      const idx = Number(input.dataset.walletStart);
+      const value = input.value.trim();
+      if (value && (parseAmt(value) === null || Number.isNaN(parseAmt(value)) || parseAmt(value) < 0)) { alert('Inserisci un marsupio iniziale valido e non negativo.'); input.focus(); return; }
+      state.marsupioStartBySubject = state.marsupioStartBySubject || {};
+      const before = state.marsupioStartBySubject[idx] ?? '';
+      state.marsupioStartBySubject[idx] = value || '0';
+      audit('MODIFICA MARSUPIO INIZIALE', `${state.names[idx]}: ${before || '0'} → ${value || '0'}`);
+      recomputeAll(); scheduleSave();
+    }));
+    el.querySelectorAll('[data-wallet-scaled]').forEach(input => input.addEventListener('change', () => {
+      const idx = Number(input.dataset.walletScaled);
+      state.bonusFScaledBySubject = state.bonusFScaledBySubject || {};
+      state.bonusFScaledBySubject[idx] = input.checked;
+      audit('CONFERMA BONUS F', `${state.names[idx]}: ${input.checked ? 'scalatura confermata' : 'scalatura revocata'}`);
+      recomputeAll(); scheduleSave();
+    }));
+    el.querySelectorAll('[data-wallet-clear]').forEach(btn => btn.addEventListener('click', () => clearSubjectData(Number(btn.dataset.walletClear))));
+    el.querySelectorAll('[data-wallet-export]').forEach(btn => btn.addEventListener('click', () => exportSubjectCsv(Number(btn.dataset.walletExport))));
+    renderGuidedWalletClosures();
+  }
+
+  function clearSubjectData(idx) {
+    if (!Number.isInteger(idx) || idx < 0 || idx >= S) return;
+    // Conferma a due tocchi interna alla pagina: evita finestre confirm bloccate
+    // o non visibili nei browser mobili / webview.
+    if (pendingClearSubjectIdx !== idx) {
+      pendingClearSubjectIdx = idx;
+      const namePreview = state.names[idx] || `Soggetto ${idx+1}`;
+      const mappedPreview = Object.keys(state.riderMappings || {}).filter(k => Number(state.riderMappings[k]) === idx).map(k => k);
+      const belongsPreview = d => Number(d.subjectIdx) === idx || mappedPreview.includes(nameKey(d.riderName)) || (!!nameKey(namePreview) && nameKey(d.riderName) === nameKey(namePreview));
+      const countPreview = (state.deliveries || []).filter(belongsPreview).length;
+      if (!confirm(`Conferma la pulizia di ${namePreview}?\n\nSaranno eliminate ${countPreview} consegne associate, svuotata la relativa colonna e azzerati marsupio iniziale e stato Bonus F. Gli altri soggetti non verranno modificati.\n\nProcedere?`)) { pendingClearSubjectIdx = null; return; }
+      renderBonusBySubject();
+      renderAdminWallets();
+      return;
+    }
+    pendingClearSubjectIdx = null;
+    const name = state.names[idx] || `Soggetto ${idx+1}`;
+    audit('PULIZIA SOGGETTO', `${name}: avviata cancellazione dati e consegne`);
+    const subjectNameKey = nameKey(name);
+    const mappedKeys = Object.keys(state.riderMappings || {}).filter(k => Number(state.riderMappings[k]) === idx);
+    const belongsToSubject = d => Number(d.subjectIdx) === idx ||
+      mappedKeys.includes(nameKey(d.riderName)) ||
+      (!!subjectNameKey && nameKey(d.riderName) === subjectNameKey);
+    const removed = state.deliveries.filter(belongsToSubject);
+    removed.forEach(releaseDeliveryBinding);
+    state.deliveries = state.deliveries.filter(d => !belongsToSubject(d));
+    // Svuota tutta la colonna, incluse celle manuali e riferimenti di consegna.
+    state.subjects.forEach(row => { row[idx] = blankSubjectCell(); });
+    mappedKeys.forEach(k => { delete state.riderMappings[k]; });
+    state.bonusFScaledBySubject = state.bonusFScaledBySubject || {};
+    delete state.bonusFScaledBySubject[idx];
+    state.marsupioStartBySubject = state.marsupioStartBySubject || {};
+    delete state.marsupioStartBySubject[idx];
+    renderGrid(); renderDeliveries(); renderRiderMappings(); recomputeAll();
+    clearTimeout(saveTimer); saveLocal();
+    if ($('importStatus')) $('importStatus').textContent = `${name}: ${removed.length} consegne eliminate, colonna e marsupio azzerati. Puoi importare nuovamente il CSV.`;
+  }
+
+  function addDeliveryFromForm() {
+    const num = $('delNumInput').value.trim();
+    const total = $('delTotInput').value.trim();
+    const channel = $('delChannelSelect').value || state.channels[0] || 'Telefono';
+    const bonusF = $('delBonusInput').value.trim();
+    const cash = $('delCashCheck').checked;
+    const pos = $('delPosCheck').checked;
+    const posAmt = $('delPosAmtInput').value.trim();
+    const riderName = $('riderNameInput').value.trim();
+    const subjectIdx = resolveSubjectIndex(riderName);
+
+    if (!riderName) { alert('Inserisci il tuo nome e cognome.'); $('riderNameInput').focus(); return; }
+    const validationError = validateDeliveryFields({ num, total, cash, pos, posAmt, bonusF });
+    if (validationError) { alert(validationError); return; }
+    if (num) {
+      const duplicate = state.deliveries.find(d => nameKey(d.riderName || (d.subjectIdx >= 0 ? state.names[d.subjectIdx] : '')) === nameKey(riderName) && normNum(d.num) === normNum(num));
+      if (duplicate) {
+        alert(`La consegna n. ${num} risulta già registrata per ${riderName}. Non è stata aggiunta una seconda volta.`);
+        $('delNumInput').focus();
+        return;
+      }
+    }
+    if (!num && !total) {
+      alert('Inserisci almeno il numero o il totale della consegna.');
+      return;
+    }
+
+    const del = {
+      id: 'del_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      subjectIdx,
+      riderName,
+      num,
+      total,
+      channel,
+      paymentChannel: pos ? 'BANCOMAT' : 'CASH',
+      bonusF,
+      cash,
+      pos,
+      posAmt,
+      createdAt: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+      createdAtISO: new Date().toISOString()
+    };
+
+    state.lastRiderName = riderName;
+    state.deliveries.unshift(del);
+    audit('NUOVA CONSEGNA', `${riderName} · n. ${num} · ${fmtEur(parseAmt(total)||0)} · ${channel}`);
+    const gridSynced = syncDeliveryToGrid(del);
+    if (!gridSynced) $('importStatus').textContent = del.gridSyncError;
+    else if (subjectIdx < 0) $('importStatus') && ($('importStatus').textContent = `Consegna registrata per ${riderName}. Il nome dovrà essere associato dall’Admin.`);
+
+    $('delNumInput').value = '';
+    $('delTotInput').value = '';
+    $('delBonusInput').value = '';
+    $('delPosAmtInput').value = '';
+    $('delCashCheck').checked = true;
+    $('delPosCheck').checked = false;
+    $('delMixedWrap').classList.add('hidden');
+
+    renderGrid();
+    renderDeliveries();
+    renderRiderMappings();
+    renderAuditLog(); renderShiftArchives();
+    recomputeAll();
+    saveLocal();
+  }
+
+  function renderDeliveries() {
+    const chFilter = $('filterChannelSelect').value;
+    const listEl = $('deliveryList');
+    const filtered = state.deliveries.filter(d => !chFilter || d.channel === chFilter);
+    $('deliveryCountLabel').textContent = String(filtered.length);
+
+    if (!filtered.length) {
+      listEl.innerHTML = `<div class="hint">Nessuna consegna registrata per il filtro selezionato.</div>`;
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(d => {
+      const tot = parseAmt(d.total);
+      const bAmt = parseAmt(d.bonusF);
+      const posDed = getPosDeducted(d);
+      const payLabel = d.cash && d.pos
+        ? `Misto (Cash + POS ${fmtEur(posDed)})`
+        : (d.pos ? `POS (${fmtEur(posDed)})` : 'CASH');
+
+      return `
+        <div class="deliveryCard" data-del-id="${esc(d.id)}">
+          <div class="deliveryTop">
+            <div>
+              <div class="deliveryNum">N. ${esc(d.num || '—')}</div>
+              <div class="hint" style="margin:2px 0 0">${esc(d.riderName || state.names[d.subjectIdx] || 'Nome da verificare')} · ${d.subjectIdx >= 0 ? 'Associato' : 'Da associare'} · ${esc(d.channel)} · ${esc(d.createdAt || '')}</div>
+            </div>
+            <div class="deliveryTot">${tot !== null && !Number.isNaN(tot) ? fmtEur(tot) : '0,00 €'}</div>
+          </div>
+          <div class="badgeRow">
+            <span class="badge ${d.pos && !d.cash ? 'pos' : 'cash'}">${esc(payLabel)}</span>
+            ${bAmt !== null && !Number.isNaN(bAmt) && bAmt > 0 ? `<span class="badge bonus">Bonus F: ${fmtEur(bAmt)}</span>` : ''}
+          </div>
+          <div class="btnGroup">
+            <button type="button" class="secondary small" data-edit-del="${esc(d.id)}">Modifica</button>
+            <button type="button" class="danger small" data-rm-del="${esc(d.id)}">Elimina</button>
+          </div>
+          <div class="editGrid hidden" data-edit-box="${esc(d.id)}">
+            <input type="text" data-ef="riderName" value="${esc(d.riderName || '')}" placeholder="Nome fattorino" style="grid-column:span 2">
+            <input type="text" inputmode="numeric" data-ef="num" value="${esc(d.num)}" placeholder="Numero">
+            <input type="text" inputmode="decimal" data-ef="total" value="${esc(d.total)}" placeholder="Totale €">
+            <select data-ef="channel">
+              ${state.channels.map(c => `<option value="${esc(c)}" ${c === d.channel ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+            </select>
+            <input type="text" inputmode="decimal" data-ef="bonusF" value="${esc(d.bonusF)}" placeholder="Bonus F €">
+            <label class="checkWrap"><input type="checkbox" data-ef="cash" ${d.cash ? 'checked' : ''}><span>CASH</span></label>
+            <label class="checkWrap"><input type="checkbox" data-ef="pos" ${d.pos ? 'checked' : ''}><span>POS</span></label>
+            <input type="text" inputmode="decimal" data-ef="posAmt" value="${esc(d.posAmt)}" placeholder="Quota POS € (misto)" style="grid-column:span 2">
+            <div class="btnGroup" style="grid-column:span 2">
+              <button type="button" class="success small" data-save-del="${esc(d.id)}">Salva riga</button>
+              <button type="button" class="secondary small" data-cancel-del="${esc(d.id)}">Annulla</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    listEl.querySelectorAll('[data-edit-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const box = listEl.querySelector(`[data-edit-box="${btn.dataset.editDel}"]`);
+        if (box) box.classList.toggle('hidden');
+      });
+    });
+
+    listEl.querySelectorAll('[data-cancel-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const box = listEl.querySelector(`[data-edit-box="${btn.dataset.cancelDel}"]`);
+        if (box) box.classList.add('hidden');
+      });
+    });
+
+    listEl.querySelectorAll('[data-save-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.saveDel;
+        const idx = state.deliveries.findIndex(x => x.id === id);
+        if (idx < 0) return;
+        const box = listEl.querySelector(`[data-edit-box="${id}"]`);
+        const updated = {
+          ...state.deliveries[idx],
+          riderName: box.querySelector('[data-ef="riderName"]').value.trim(),
+          num: box.querySelector('[data-ef="num"]').value.trim(),
+          total: box.querySelector('[data-ef="total"]').value.trim(),
+          channel: box.querySelector('[data-ef="channel"]').value,
+          bonusF: box.querySelector('[data-ef="bonusF"]').value.trim(),
+          cash: box.querySelector('[data-ef="cash"]').checked,
+          pos: box.querySelector('[data-ef="pos"]').checked,
+          posAmt: box.querySelector('[data-ef="posAmt"]').value.trim()
+        };
+        if (!updated.riderName) { alert('Inserisci il nome del fattorino.'); return; }
+        const validationError = validateDeliveryFields(updated);
+        if (validationError) { alert(validationError); return; }
+        const duplicate = state.deliveries.find((d, i) => i !== idx && nameKey(d.riderName) === nameKey(updated.riderName) && normNum(d.num) === normNum(updated.num));
+        if (duplicate) { alert('Esiste già una consegna con questo numero per lo stesso fattorino.'); return; }
+        updated.subjectIdx = resolveSubjectIndex(updated.riderName);
+        const previous = state.deliveries[idx];
+        state.deliveries[idx] = updated;
+        audit('MODIFICA CONSEGNA', `${updated.riderName} · n. ${previous.num} → ${updated.num} · totale ${previous.total} → ${updated.total} · pagamento ${previous.cash && previous.pos ? 'MISTO' : previous.pos ? 'BANCOMAT' : 'CASH'} → ${updated.cash && updated.pos ? 'MISTO' : updated.pos ? 'BANCOMAT' : 'CASH'}`);
+        const gridSynced = syncDeliveryToGrid(updated);
+        if (!gridSynced) $('importStatus').textContent = updated.gridSyncError;
+        renderGrid();
+        renderDeliveries();
+        renderRiderMappings();
+        recomputeAll();
+        scheduleSave();
+      });
+    });
+
+    listEl.querySelectorAll('[data-rm-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = state.deliveries.find(x => x.id === btn.dataset.rmDel);
+        if (target) { audit('ELIMINAZIONE CONSEGNA', `${target.riderName || ''} · n. ${target.num}`); releaseDeliveryBinding(target); }
+        state.deliveries = state.deliveries.filter(x => x.id !== btn.dataset.rmDel);
+        renderGrid();
+        renderDeliveries();
+        renderRiderMappings();
+        recomputeAll();
+        scheduleSave();
+      });
+    });
+  }
+
+  function recomputeAll() {
+    ensureSize(state.rowsCount);
+
+    let expectedTotal = 0;
+    const refByKey = new Map();
+    state.refRows.forEach((r, i) => {
+      const k = normNum(r.an);
+      if (k) {
+        if (!refByKey.has(k)) refByKey.set(k, []);
+        refByKey.get(k).push(i);
+      }
+      const at = parseAmt(r.at);
+      if (at !== null && !Number.isNaN(at)) expectedTotal += at;
+    });
+
+    const occByKey = new Map();
+    for (let i = 0; i < state.rowsCount; i++) {
+      for (let j = 0; j < S; j++) {
+        const cell = state.subjects[i][j];
+        const k = normNum(cell.num);
+        if (k) {
+          if (!occByKey.has(k)) occByKey.set(k, []);
+          occByKey.get(k).push({ r: i, s: j, cell });
+        }
+      }
+    }
+
+    let assignedTotal = 0;
+    let cashSum = 0;
+    let posScaled = 0;
+    const subjTotals = Array(S).fill(0);
+    const subjCash = Array(S).fill(0);
+    const subjPos = Array(S).fill(0);
+    const subjCount = Array(S).fill(0);
+    const subjErr = Array(S).fill(0);
+
+    const rowOkMap = Array(state.rowsCount).fill(false);
+    const rowBadMap = Array(state.rowsCount).fill(false);
+
+    // Indicizza gli elementi una sola volta: evita migliaia di querySelector ad ogni battuta.
+    const gridInputMap = new Map();
+    const gridRowMap = new Map();
+    $('gridBody').querySelectorAll('input[data-r][data-f]').forEach(el => {
+      const key = el.dataset.s === undefined
+        ? `${el.dataset.r}|${el.dataset.f}`
+        : `${el.dataset.r}|${el.dataset.s}|${el.dataset.f}`;
+      gridInputMap.set(key, el);
+    });
+    $('gridBody').querySelectorAll('tr[data-row-idx]').forEach(tr => gridRowMap.set(Number(tr.dataset.rowIdx), tr));
+
+    // Paint subject cells
+    for (let i = 0; i < state.rowsCount; i++) {
+      for (let j = 0; j < S; j++) {
+        const cell = state.subjects[i][j];
+        const numInp = gridInputMap.get(`${i}|${j}|num`);
+        const totInp = gridInputMap.get(`${i}|${j}|total`);
+        if (numInp) numInp.classList.remove('ok', 'bad', 'extraField');
+        if (totInp) totInp.classList.remove('ok', 'bad', 'warnField');
+
+        const hasNum = cell.num.trim() !== '';
+        const hasTot = cell.total.trim() !== '';
+        if (!hasNum && !hasTot) continue;
+
+        const k = normNum(cell.num);
+        const occList = hasNum ? (occByKey.get(k) || []) : [];
+        const refRows = hasNum ? (refByKey.get(k) || []) : [];
+        const isUnique = occList.length === 1;
+        const isKnown = refRows.length > 0;
+        const validNum = hasNum && isUnique && isKnown;
+
+        if (hasNum) {
+          if (validNum) {
+            if (numInp) numInp.classList.add('ok');
+          } else {
+            if (numInp) numInp.classList.add(isKnown ? 'bad' : 'extraField');
+            subjErr[j]++;
+            rowBadMap[i] = true;
+          }
+        }
+
+        const totVal = parseAmt(cell.total);
+        const validTotAmt = totVal !== null && !Number.isNaN(totVal);
+        if (validTotAmt) {
+          assignedTotal += totVal;
+          subjTotals[j] += totVal;
+          subjCount[j]++;
+
+          const cAmt = getCashAmount(cell);
+          const pAmt = getPosDeducted(cell);
+          cashSum += cAmt;
+          posScaled += pAmt;
+          subjCash[j] += cAmt;
+          subjPos[j] += pAmt;
+        }
+
+        if (hasTot) {
+          const expectedRefAmt = refRows.length === 1 ? parseAmt(state.refRows[refRows[0]].at) : null;
+          const totMatches = validNum && validTotAmt && expectedRefAmt !== null && !Number.isNaN(expectedRefAmt) && Math.abs(totVal - expectedRefAmt) < 0.005;
+          if (totMatches) {
+            if (totInp) totInp.classList.add('ok');
+          } else {
+            if (totInp) totInp.classList.add(validNum ? 'warnField' : 'bad');
+            subjErr[j]++;
+            rowBadMap[i] = true;
+          }
+        } else if (hasNum) {
+          if (totInp) totInp.classList.add('bad');
+          subjErr[j]++;
+          rowBadMap[i] = true;
+        }
+      }
+    }
+
+    // Paint reference rows
+    let foundCount = 0;
+    let missingCount = 0;
+    let expectedCount = 0;
+
+    for (let i = 0; i < state.rowsCount; i++) {
+      const ref = state.refRows[i];
+      const anInp = gridInputMap.get(`${i}|an`);
+      const atInp = gridInputMap.get(`${i}|at`);
+      const tr = gridRowMap.get(i);
+      if (anInp) anInp.classList.remove('ok', 'bad');
+      if (atInp) atInp.classList.remove('ok', 'bad', 'warnField');
+      if (tr) tr.classList.remove('row-ok', 'row-bad');
+
+      const hasAn = ref.an.trim() !== '';
+      const hasAt = ref.at.trim() !== '';
+      if (!hasAn && !hasAt) continue;
+
+      if (hasAn) {
+        expectedCount++;
+        const k = normNum(ref.an);
+        const occList = occByKey.get(k) || [];
+        if (occList.length === 1) {
+          foundCount++;
+          if (anInp) anInp.classList.add('ok');
+          const matchCell = occList[0].cell;
+          const mTot = parseAmt(matchCell.total);
+          const eTot = parseAmt(ref.at);
+          const exactMatch = eTot !== null && !Number.isNaN(eTot) && mTot !== null && !Number.isNaN(mTot) && Math.abs(mTot - eTot) < 0.005;
+          if (hasAt) {
+            if (atInp) atInp.classList.add(exactMatch ? 'ok' : 'warnField');
+          }
+          if (exactMatch && !rowBadMap[i]) {
+            rowOkMap[i] = true;
+            if (tr) tr.classList.add('row-ok');
+          } else {
+            rowBadMap[i] = true;
+            if (tr) tr.classList.add('row-bad');
+          }
+        } else {
+          missingCount++;
+          if (anInp) anInp.classList.add('bad');
+          if (hasAt && atInp) atInp.classList.add('bad');
+          rowBadMap[i] = true;
+          if (tr) tr.classList.add('row-bad');
+        }
+      } else if (hasAt) {
+        if (anInp) anInp.classList.add('bad');
+        if (atInp) atInp.classList.add('warnField');
+        rowBadMap[i] = true;
+        if (tr) tr.classList.add('row-bad');
+      }
+    }
+
+    let dupCount = 0;
+    let extraCount = 0;
+    occByKey.forEach((list, k) => {
+      if (list.length > 1) dupCount += list.length;
+      if (!refByKey.has(k)) extraCount += list.length;
+    });
+
+    // Bonus F from deliveries (never auto-subtracted before Scalato F check)
+    let bonusTotal = 0;
+    let totalOrdersAmt = 0;
+    state.deliveries.forEach(d => {
+      const b = parseAmt(d.bonusF);
+      if (b !== null && !Number.isNaN(b)) bonusTotal += b;
+      const t = parseAmt(d.total);
+      if (t !== null && !Number.isNaN(t)) totalOrdersAmt += t;
+    });
+    // Le celle manuali della griglia possono avere Bonus F anche senza consegna
+    // collegata: si aggiungono solo se non esiste già la stessa consegna per soggetto+numero.
+    state.subjects.forEach((row, rowIdx) => row.forEach((cell, subjIdx) => {
+      if (!String(cell.bonusF || '').trim()) return;
+      const linkedDelivery = state.deliveries.some(d =>
+        d.subjectIdx === subjIdx && normNum(d.num) === normNum(cell.num));
+      if (!linkedDelivery) {
+        const b = parseAmt(cell.bonusF);
+        if (b !== null && !Number.isNaN(b)) bonusTotal += b;
+      }
+    }));
+
+    const bonusScaledAmt = state.bonusFScaled ? bonusTotal : 0;
+    const bonusPendingAmt = state.bonusFScaled ? 0 : bonusTotal;
+
+    // Riepilogo fattorino calcolato direttamente dalle consegne registrate.
+    // Non dipende dall'associazione Admin: così CASH/POS si aggiornano subito anche con nome non ancora verificato.
+    let riderCashSum = 0, riderPosScaled = 0;
+    state.deliveries.forEach(d => { riderCashSum += getCashAmount(d); riderPosScaled += getPosDeducted(d); });
+    riderCashSum = Math.round(riderCashSum * 100) / 100;
+    riderPosScaled = Math.round(riderPosScaled * 100) / 100;
+
+    // Marsupio calculations
+    const mStartRaw = parseAmt(state.marsupioStart);
+    const mStart = mStartRaw !== null && !Number.isNaN(mStartRaw) ? mStartRaw : 0;
+    const marsupioTotal = Math.round((mStart + riderCashSum) * 100) / 100;
+    const minusBonusTotal = Math.round((marsupioTotal - bonusScaledAmt) * 100) / 100;
+    const remainMarsupio = Math.round((marsupioTotal - bonusScaledAmt) * 100) / 100;
+    const adminMarsupioTotal = Math.round((mStart + cashSum) * 100) / 100;
+    const adminMinusBonus = state.names.reduce((sum, _name, idx) => {
+      const subjectCash = subjCash[idx] || 0;
+      const subjectBonus = bonusTotalForSubject(idx);
+      const subjectScaled = !!state.bonusFScaledBySubject?.[idx];
+      const subjectStartRaw = Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject || {}, idx) ? parseAmt(state.marsupioStartBySubject[idx]) : ((subjCount[idx] || 0) > 0 ? mStart : 0);
+      const subjectStart = subjectStartRaw === null || Number.isNaN(subjectStartRaw) ? 0 : subjectStartRaw;
+      return sum + subjectStart + subjectCash - (subjectScaled ? subjectBonus : 0);
+    }, 0);
+
+    // Rider UI
+    if ($('rTotalOrders')) $('rTotalOrders').textContent = fmtEur(totalOrdersAmt);
+    if ($('rMarsupioStart')) $('rMarsupioStart').textContent = fmtEur(mStart);
+    if ($('rCashSum')) $('rCashSum').textContent = fmtEur(riderCashSum);
+    if ($('rPosScaled')) $('rPosScaled').textContent = fmtEur(riderPosScaled);
+    if ($('rMarsupioTotal')) $('rMarsupioTotal').textContent = fmtEur(marsupioTotal);
+    if ($('rMinusBonus')) $('rMinusBonus').textContent = fmtEur(minusBonusTotal);
+    if ($('rRemainMarsupio')) $('rRemainMarsupio').textContent = fmtEur(remainMarsupio);
+
+    renderChannelTotals('rChannelTotals', state.deliveries);
+    renderPaymentTotals('rPaymentTotals', state.deliveries);
+    if ($('rBonusTotal')) $('rBonusTotal').textContent = fmtEur(bonusTotal);
+    if ($('rBonusScaledAmt')) $('rBonusScaledAmt').textContent = fmtEur(bonusScaledAmt);
+    if ($('rBonusPendingAmt')) $('rBonusPendingAmt').textContent = fmtEur(bonusPendingAmt);
+    if ($('rBonusScaledCheck')) $('rBonusScaledCheck').checked = !!state.bonusFScaled;
+
+    if ($('rBonusReminder')) {
+      if (bonusTotal <= 0) {
+        $('rBonusReminder').textContent = 'Nessun Bonus F inserito. Se inserisci Bonus F, non viene sottratto in automatico finché non spunti "Scalato F".';
+      } else if (state.bonusFScaled) {
+        $('rBonusReminder').textContent = `Scalato F ATTIVO: scalati ${fmtEur(bonusScaledAmt)} dal marsupio. Totale meno le F: ${fmtEur(minusBonusTotal)} · Rimanente nel marsupio: ${fmtEur(remainMarsupio)}.`;
+      } else {
+        $('rBonusReminder').textContent = `ATTENZIONE: Bonus F pari a ${fmtEur(bonusPendingAmt)} NON sottratto in automatico. Spunta "Scalato F" quando hai scalato l'importo dal marsupio.`;
+      }
+    }
+
+    // Admin Summary
+    const netAssigned = Math.round(assignedTotal * 100) / 100;
+    const efSquareDiff = Math.round((netAssigned - expectedTotal) * 100) / 100;
+
+    if ($('sumExpected')) $('sumExpected').textContent = fmtEur(expectedTotal);
+    if ($('sumAssigned')) $('sumAssigned').textContent = fmtEur(assignedTotal);
+    if ($('sumDiffGross')) $('sumDiffGross').textContent = fmtEur(assignedTotal - expectedTotal);
+    if ($('foundCount')) $('foundCount').textContent = `${foundCount} / ${expectedCount}`;
+    if ($('issuesCount')) $('issuesCount').textContent = `${missingCount} / ${dupCount} / ${extraCount}`;
+
+    if ($('admMarsupioStart')) $('admMarsupioStart').textContent = fmtEur(mStart);
+    if ($('admCashSum')) $('admCashSum').textContent = fmtEur(cashSum);
+    if ($('admPosScaled')) $('admPosScaled').textContent = fmtEur(posScaled);
+    if ($('admMarsupioTotal')) $('admMarsupioTotal').textContent = fmtEur(adminMarsupioTotal);
+    if ($('admMinusBonus')) $('admMinusBonus').textContent = fmtEur(adminMinusBonus);
+    if ($('admRemainMarsupio')) $('admRemainMarsupio').textContent = fmtEur(adminMinusBonus);
+
+    if ($('netAssigned')) $('netAssigned').textContent = fmtEur(netAssigned);
+
+    renderChannelTotals('admChannelTotals', state.deliveries);
+    renderBonusBySubject();
+    renderAdminWallets();
+    if ($('subjectSummary')) {
+      $('subjectSummary').innerHTML = state.names.map((n, j) => `
+        <div class="subjectStat">
+          <div>
+            <strong>${esc(n || 'Soggetto ' + (j + 1))}</strong>
+            <small>${subjCount[j]} voci · Cash ${fmtEur(subjCash[j])} · POS ${fmtEur(subjPos[j])} · Anomalie: ${subjErr[j]}</small>
+          </div>
+          <b>${fmtEur(subjTotals[j])}</b>
+        </div>
+      `).join('');
+    }
+
+    const verdict = $('verdictBox');
+    if (verdict) {
+      const hasAnyData = expectedCount > 0 || assignedTotal > 0 || state.deliveries.length > 0;
+      const allGood = hasAnyData && missingCount === 0 && dupCount === 0 && extraCount === 0 && Math.abs(efSquareDiff) < 0.005;
+      verdict.className = 'verdict ' + (allGood ? 'good' : 'bad');
+      verdict.textContent = allGood
+        ? `QUADRA PERFETTA: numeri allineati, nessuna anomalia e netto vs riferimento quadrato (${fmtEur(netAssigned)}).`
+        : `DA VERIFICARE: Mancanti ${missingCount} · Duplicati ${dupCount} · Extra ${extraCount} · Differenza netto/riferimento: ${fmtEur(efSquareDiff)}.`;
+    }
+
+    applyRowFilters(rowOkMap, rowBadMap);
+    renderAdminAnomalies();
+  }
+
+  function applyRowFilters(rowOkMap = [], rowBadMap = []) {
+    const search = normNum(state.filters.search);
+    const status = state.filters.status;
+    const subIdx = state.filters.subject === '' ? -1 : Number(state.filters.subject);
+
+    for (let i = 0; i < state.rowsCount; i++) {
+      const tr = document.querySelector(`tr[data-row-idx="${i}"]`);
+      if (!tr) continue;
+
+      let match = true;
+      if (status === 'ok') match = !!rowOkMap[i];
+      else if (status === 'bad') match = !!rowBadMap[i];
+      else if (status === 'filled') {
+        const hasRef = state.refRows[i].an.trim() !== '' || state.refRows[i].at.trim() !== '';
+        const hasSub = state.subjects[i].some(c => c.num.trim() !== '' || c.total.trim() !== '');
+        match = hasRef || hasSub;
+      }
+
+      if (match && subIdx >= 0) {
+        const sc = state.subjects[i][subIdx];
+        match = sc.num.trim() !== '' || sc.total.trim() !== '';
+      }
+
+      if (match && search) {
+        const refMatch = normNum(state.refRows[i].an).includes(search);
+        const subMatch = state.subjects[i].some(c => normNum(c.num).includes(search));
+        match = refMatch || subMatch;
+      }
+
+      tr.classList.toggle('row-hidden', !match);
+    }
+  }
+
+  function exportRiderCsv() {
+    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Ora', 'Canale incasso', 'Bonus F scalato'];
+    const rows = state.deliveries.map(d => [
+      d.id,
+      d.riderName || '',
+      d.subjectIdx >= 0 ? (state.names[d.subjectIdx] || `Soggetto ${d.subjectIdx + 1}`) : 'DA ASSOCIARE',
+      d.num,
+      d.total,
+      d.channel,
+      d.cash ? 'SI' : 'NO',
+      d.pos ? 'SI' : 'NO',
+      d.posAmt || '0',
+      d.bonusF || '0',
+      d.createdAt || '',
+      d.pos ? 'BANCOMAT' : 'CASH',
+      d.subjectIdx >= 0 ? (state.bonusFScaledBySubject?.[d.subjectIdx] ? 'SI' : 'NO') : (state.bonusFManualConfirmed && state.bonusFScaled ? 'SI' : 'NO')
+    ]);
+    const csv = '﻿' + [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'fattorino-consegne.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function parseCsvText(text) {
+    const rows = []; let row = [], cell = '', quoted = false;
+    const src = String(text || '').replace(/^\uFEFF/, '');
+    const firstLine = src.split(/\r?\n/, 1)[0] || '';
+    const delimiter = (firstLine.match(/;/g) || []).length >= (firstLine.match(/,/g) || []).length ? ';' : ',';
+    for (let i = 0; i < src.length; i++) {
+      const ch = src[i], next = src[i + 1];
+      if (ch === '"' && quoted && next === '"') { cell += '"'; i++; }
+      else if (ch === '"') quoted = !quoted;
+      else if ((ch === delimiter || ch === '\n' || ch === '\r') && !quoted) {
+        row.push(cell); cell = '';
+        if (ch === '\n' || ch === '\r') { if (row.some(v => v.trim() !== '')) rows.push(row); row = []; if (ch === '\r' && next === '\n') i++; }
+      } else cell += ch;
+    }
+    if (quoted) throw new Error('CSV non valido: virgolette non chiuse.');
+    row.push(cell); if (row.some(v => v.trim() !== '')) rows.push(row);
+    return rows;
+  }
+
+  function renderTargetImportSubject() {
+    const sel = $('targetImportSubject');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = state.names.map((n,i)=>`<option value="${i}">${i+1}. ${esc(n || `Soggetto ${i+1}`)}</option>`).join('');
+    if (current !== '' && Number.isInteger(Number(current))) sel.value = current;
+  }
+
+  function renderRiderMappings() {
+    const box = $('riderMappingList'); if (!box) return;
+    const pending = [...new Set(state.deliveries.filter(d => !Number.isInteger(d.subjectIdx) || d.subjectIdx < 0 || d.subjectIdx >= S).map(d => String(d.riderName || '').trim()).filter(Boolean))];
+    const syncProblems = state.deliveries.filter(d => d.gridSyncError);
+    if (!pending.length && !syncProblems.length) { box.innerHTML = '<p class="hint">Tutti i nomi presenti risultano già associati a un soggetto.</p>'; return; }
+    box.innerHTML = (pending.length ? `<strong>Nomi da verificare (${pending.length})</strong>` : '') + pending.map((name, i) => {
+      const key = nameKey(name);
+      const opts = state.names.map((n, j) => `<option value="${j}" ${nameKey(n) === key ? 'selected' : ''}>${j + 1}. ${esc(n || 'Soggetto ' + (j + 1))}</option>`).join('');
+      return `<div class="nameMapRow"><strong>${esc(name)}</strong><select data-map-name="${esc(key)}">${opts}</select><button type="button" class="success small" data-apply-map="${i}">Associa nome</button></div>`;
+    }).join('') + (syncProblems.length ? `<div class="statusNote"><b>Attenzione: ${syncProblems.length} consegna/e non sincronizzate</b><ul>${syncProblems.map(d => `<li>${esc(d.riderName || 'Fattorino')} · N. ${esc(d.num)}: ${esc(d.gridSyncError)}</li>`).join('')}</ul></div>` : '');
+    box.querySelectorAll('[data-apply-map]').forEach(btn => btn.addEventListener('click', () => {
+      const row = btn.closest('.nameMapRow');
+      const key = row.querySelector('[data-map-name]').dataset.mapName;
+      const idx = Number(row.querySelector('select').value);
+      if (!key || !Number.isInteger(idx) || idx < 0 || idx >= S) return;
+      state.riderMappings[key] = idx;
+      const mappedName = row.querySelector('strong').textContent;
+      const affected = state.deliveries.filter(d => nameKey(d.riderName) === key);
+      affected.forEach(d => { d.subjectIdx = idx; syncDeliveryToGrid(d); });
+      renderGrid(); renderDeliveries(); recomputeAll(); renderRiderMappings(); scheduleSave();
+      const syncErrors = affected.filter(d => d.gridSyncError).length;
+      $('importStatus').textContent = syncErrors
+        ? `Nome “${mappedName}” associato a ${state.names[idx]}, ma ${syncErrors} consegna/e non sono entrate in griglia: ${affected.find(d => d.gridSyncError)?.gridSyncError}`
+        : `Nome “${mappedName}” associato a ${state.names[idx]}. Consegne trasferite nella colonna corretta.`;
+    }));
+  }
+
+  function stableImportId(parts) {
+    const source = parts.map(v => String(v ?? '').trim()).join('|');
+    let h = 2166136261;
+    for (let i = 0; i < source.length; i++) { h ^= source.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return 'csv_' + (h >>> 0).toString(36);
+  }
+
+  async function importRiderCsv(targetSubjectIdx = null) {
+    const input = $('importRiderCsvInput'), file = input?.files?.[0];
+    if (!file) { alert('Seleziona prima il CSV esportato dal telefono.'); return; }
+    try {
+      const rows = parseCsvText(await file.text());
+      if (rows.length < 2) throw new Error('Il CSV non contiene righe di consegne.');
+      const headers = rows[0].map(h => h.trim().replace(/^\uFEFF/, '').toLocaleLowerCase('it-IT'));
+      const col = (...names) => names.map(n => headers.indexOf(n)).find(i => i >= 0) ?? -1;
+      const ix = {
+        id: col('id'), rider: col('fattorino', 'nome fattorino'), assigned: col('soggetto assegnato'),
+        num: col('numero'), total: col('totale'), channel: col('canale'), cash: col('cash'), pos: col('pos'),
+        posAmt: col('quota pos'), bonus: col('bonus f'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato')
+      };
+      if (ix.num < 0 || ix.total < 0 || (ix.rider < 0 && ix.assigned < 0)) throw new Error('CSV non compatibile: servono le colonne Fattorino, Numero e Totale.');
+      const prepared = [];
+      rows.slice(1).forEach((r, n) => {
+        const get = k => ix[k] >= 0 ? String(r[ix[k]] ?? '').trim() : '';
+        const riderName = get('rider') || (get('assigned') === 'DA ASSOCIARE' ? '' : get('assigned'));
+        const num = get('num'), total = get('total');
+        const cash = /^(si|1|true|yes)$/i.test(get('cash'));
+        const pos = /^(si|1|true|yes)$/i.test(get('pos'));
+        const posAmt = get('posAmt'), bonusF = get('bonus');
+        const paymentChannel = get('paymentChannel') || (pos ? 'BANCOMAT' : 'CASH');
+        const bonusScaled = /^(si|1|true|yes)$/i.test(get('bonusScaled'));
+        if (!riderName) throw new Error(`Riga CSV ${n + 2}: nome fattorino mancante.`);
+        const validationError = validateDeliveryFields({ num, total, cash, pos, posAmt, bonusF });
+        if (validationError) throw new Error(`Riga CSV ${n + 2}: ${validationError}`);
+        const channel = get('channel') || state.channels[0] || 'Telefono';
+        const createdAt = get('time');
+        const id = get('id') || stableImportId([riderName, num, total, channel, cash, pos, posAmt, bonusF, createdAt]);
+        prepared.push({ id, riderName, num, total, channel, paymentChannel, cash, pos, posAmt, bonusF, createdAt, createdAtISO: new Date().toISOString(), bonusScaled });
+      });
+
+      // Blocca duplicati logici anche se lo stesso ordine arriva con ID differenti.
+      const seenKeys = new Map();
+      prepared.forEach((item, i) => {
+        const key = nameKey(item.riderName) + '|' + normNum(item.num);
+        if (seenKeys.has(key) && prepared[seenKeys.get(key)].id !== item.id) {
+          throw new Error(`Consegna duplicata nel CSV: ${item.riderName}, numero ${item.num} (righe ${seenKeys.get(key) + 2} e ${i + 2}).`);
+        }
+        seenKeys.set(key, i);
+      });
+      const idSet = new Set(prepared.map(x => x.id));
+      const logicalExisting = state.deliveries.filter(d => !idSet.has(d.id));
+      for (const item of prepared) {
+        const duplicate = logicalExisting.find(d =>
+          nameKey(d.riderName || (d.subjectIdx >= 0 ? state.names[d.subjectIdx] : '')) === nameKey(item.riderName) &&
+          normNum(d.num) === normNum(item.num));
+        if (duplicate) throw new Error(`La consegna ${item.num} di ${item.riderName} è già presente con un ID diverso. Nessun dato è stato importato.`);
+      }
+
+      // Prima valida tutto il file, poi modifica lo stato: importazione atomica.
+      if (ix.bonusScaled >= 0 && prepared.length) { state.bonusFScaled = prepared.some(x => x.bonusScaled); state.bonusFManualConfirmed = true; }
+      let added = 0, updated = 0;
+      prepared.forEach(item => {
+        const existing = state.deliveries.findIndex(d => d.id === item.id);
+        const old = existing >= 0 ? state.deliveries[existing] : {};
+        const assignedIdx = Number.isInteger(targetSubjectIdx) && targetSubjectIdx >= 0 && targetSubjectIdx < S ? targetSubjectIdx : resolveSubjectIndex(item.riderName);
+        if (Number.isInteger(targetSubjectIdx) && targetSubjectIdx >= 0 && targetSubjectIdx < S) state.riderMappings[nameKey(item.riderName)] = targetSubjectIdx;
+        if (item.bonusScaled && assignedIdx >= 0) { state.bonusFScaledBySubject = state.bonusFScaledBySubject || {}; state.bonusFScaledBySubject[assignedIdx] = true; }
+        const d = { ...old, ...item, channel: canonicalChannel(item.channel), subjectIdx: assignedIdx };
+        if (existing >= 0) {
+          releaseDeliveryBinding(old);
+          state.deliveries[existing] = d;
+          updated++;
+        } else {
+          state.deliveries.unshift(d);
+          added++;
+        }
+        syncDeliveryToGrid(d);
+      });
+      audit('IMPORTAZIONE CSV', `${file.name}: ${added} nuove, ${updated} aggiornate${Number.isInteger(targetSubjectIdx) ? ` · soggetto ${state.names[targetSubjectIdx]}` : ''}`);
+      renderChannels(); renderGrid(); renderDeliveries(); renderRiderMappings(); recomputeAll(); scheduleSave();
+      const syncErrors = state.deliveries.filter(d => d.gridSyncError).length;
+      $('importStatus').textContent = `Importazione completata: ${added} nuove consegne, ${updated} aggiornate.${syncErrors ? ` Attenzione: ${syncErrors} non sincronizzate nella griglia; verifica i dettagli qui sotto.` : ' Tutte le consegne assegnate sono state sincronizzate.'} Controlla e associa i nomi non riconosciuti.`;
+      input.value = '';
+    } catch (e) {
+      $('importStatus').textContent = 'Importazione non riuscita: ' + e.message;
+      alert('CSV non importato: ' + e.message);
+    }
+  }
+
+  function exportAllRidersCsv() { exportRiderCsv(); }
+
+  function exportAdminCsv() {
+    const headers = ['Tipo', 'Riga', 'Numero atteso', 'Totale atteso', 'Soggetto', 'Numero', 'Totale', 'CASH', 'POS', 'Quota POS', 'Fattorino', 'Canale', 'Bonus F', 'Ora', 'Marsupio iniziale', 'Bonus F scalato'];
+    const bodyRows = [];
+    for (let i = 0; i < state.rowsCount; i++) {
+      for (let j = 0; j < S; j++) {
+        const c = state.subjects[i][j];
+        bodyRows.push(['GRIGLIA', i + 1, state.refRows[i].an, state.refRows[i].at, state.names[j], c.num, c.total, c.cash ? '1' : '0', c.pos ? '1' : '0', c.posAmt || '']);
+      }
+    }
+    state.deliveries.forEach(d => bodyRows.push(['CONSEGNA', '', '', '', d.subjectIdx >= 0 ? state.names[d.subjectIdx] : 'DA ASSOCIARE', d.num, d.total, d.cash ? '1' : '0', d.pos ? '1' : '0', d.posAmt || '', d.riderName || '', d.channel || '', d.bonusF || '', d.createdAt || '']));
+    state.channels.forEach(ch => bodyRows.push(['CANALE', '', '', '', '', '', '', '', '', '', '', ch]));
+    Object.entries(state.riderMappings || {}).forEach(([rider, subjectIdx]) => bodyRows.push(['MAPPATURA', '', '', '', Number.isInteger(subjectIdx) && subjectIdx >= 0 && subjectIdx < S ? state.names[subjectIdx] : '', '', '', '', '', '', rider]));
+    bodyRows.push(['IMPOSTAZIONI', '', '', '', '', '', '', '', '', '', '', '', '', '', state.marsupioStart || '0', state.bonusFScaled ? '1' : '0']);
+    state.names.forEach((name, idx) => bodyRows.push(['MARSUPIO_SOGGETTO', '', '', '', name, '', '', '', '', '', '', '', '', '', state.marsupioStartBySubject?.[idx] ?? '', state.bonusFScaledBySubject?.[idx] ? '1' : '0']));
+    const csv = '﻿' + [headers, ...bodyRows].map(r => headers.map((_, i) => `"${String(r[i] ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'verifica-numeri-admin-completo.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function logTest(msg, passed = true) {
+    const log = $('testLog');
+    const div = document.createElement('div');
+    div.className = 'testItem';
+    div.innerHTML = `<b style="color:${passed ? 'var(--green)' : 'var(--red)'}">${passed ? '[PASS]' : '[FAIL]'}</b> ${esc(msg)}`;
+    log.appendChild(div);
+  }
+
+  function runStressTest() {
+    $('testLog').innerHTML = '';
+    const backup = JSON.parse(JSON.stringify(state));
+    let allPassed = true;
+    const assert = (cond, label) => { if (!cond) allPassed = false; logTest(label, !!cond); };
+    try {
+      state.role = 'admin';
+      state.adminPin = DEFAULT_PIN;
+      state.rowsCount = 150;
+      state.names = ['Test Uno', 'Test Due', 'Test Tre', 'Test Quattro', 'Test Cinque', 'Test Sei', 'Test Sette', 'Test Otto', 'Test Nove', 'Test Dieci'];
+      state.refRows = Array.from({ length: 150 }, () => ({ an: '', at: '' }));
+      state.subjects = Array.from({ length: 150 }, () => Array.from({ length: S }, blankSubjectCell));
+      state.expenses = Array.from({ length: 10 }, (_, i) => ({ label: i === 0 ? 'EF test' : '', raw: '' }));
+      state.marsupioStart = '100,00';
+      state.riderMappings = {};
+      state.channels = [...DEFAULT_CHANNELS];
+      state.deliveries = [];
+      state.bonusFScaled = false;
+      state.bonusFScaledBySubject = {};
+      state.marsupioStartBySubject = {};
+      state.filters = { search: '', status: 'all', subject: '', channel: '' };
+      $('marsupioStartInput').value = state.marsupioStart;
+      renderNames(); renderChannels(); renderGrid(); renderExpenses(); renderDeliveries(); renderRiderMappings();
+      recomputeAll();
+
+      assert(state.rowsCount === 150 && state.subjects.length === 150 && state.subjects[149].length === 10, 'Struttura iniziale: 150 righe × 10 soggetti');
+      assert(state.adminPin === '2511', 'PIN predefinito 2511 verificato nel profilo di test isolato');
+      assert(parseAmt('1.234,56') === 1234.56 && parseAmt('12,50') === 12.5 && parseAmt('12.50') === 12.5, 'Lettura importi italiani e decimali');
+      assert(normNum('00042') === normNum('42'), 'Normalizzazione numeri con zeri iniziali');
+      assert(nameKey('  José   Rossi ') === nameKey('Jose Rossi'), 'Associazione nomi: maiuscole, spazi e accenti normalizzati');
+      assert(resolveSubjectIndex('test uno') === 0, 'Riconoscimento automatico soggetto con nome corrispondente');
+
+      state.refRows[0] = { an: '101', at: '20,00' };
+      state.refRows[1] = { an: '102', at: '15,00' };
+      const d = { id: 'test_delivery_1', subjectIdx: 0, riderName: 'Test Uno', num: '101', total: '20,00', channel: 'Telefono', bonusF: '5,00', cash: true, pos: false, posAmt: '', createdAt: '10:00' };
+      state.deliveries.push(d);
+      assert(syncDeliveryToGrid(d) && state.subjects[d._gridBinding.rowIdx][0].num === '101', 'Registrazione consegna: trasferimento nella colonna del soggetto');
+      recomputeAll();
+      assert(parseAmt($('rCashSum').textContent) === 20 && parseAmt($('rMarsupioTotal').textContent) === 120, 'Pagamento CASH: Cash e marsupio fattorino aggiornati');
+      assert(parseAmt($('admCashSum').textContent) === 20 && $('adminSubjectWallets').textContent.includes('120,00 €'), 'Riepilogo Admin: marsupio individuale coerente con iniziale + CASH');
+
+      // Simula la correzione amministrativa direttamente nella griglia: CASH -> POS.
+      const boundCell = state.subjects[d._gridBinding.rowIdx][0];
+      boundCell.cash = false; boundCell.pos = true; boundCell.posAmt = '';
+      assert(syncGridCellToDelivery(boundCell, d._gridBinding.rowIdx, 0), 'Admin: modifica pagamento propaga alla consegna collegata');
+      recomputeAll();
+      assert(parseAmt($('admCashSum').textContent) === 0 && parseAmt($('admPosScaled').textContent) === 20, 'Admin: CASH -> POS aggiorna immediatamente i totali generali');
+      assert($('adminSubjectWallets').textContent.includes('100,00 €'), 'Admin: CASH -> POS aggiorna il marsupio individuale senza POS');
+
+      d.cash = true; d.pos = false; d.posAmt = ''; syncDeliveryToGrid(d); recomputeAll();
+      assert(parseAmt($('admCashSum').textContent) === 20 && parseAmt($('admPosScaled').textContent) === 0, 'Admin: ripristino pagamento CASH aggiornato');
+
+      d.cash = false; d.pos = true; syncDeliveryToGrid(d); recomputeAll();
+      assert(parseAmt($('rPosScaled').textContent) === 20 && parseAmt($('rMarsupioTotal').textContent) === 100, 'Pagamento POS: accredito bancario escluso dal marsupio');
+
+      d.cash = true; d.pos = true; d.posAmt = '7,50'; syncDeliveryToGrid(d); recomputeAll();
+      assert(getPosDeducted(d) === 7.5 && getCashAmount(d) === 12.5 && parseAmt($('rMarsupioTotal').textContent) === 112.5, 'Pagamento misto: nel marsupio entra solo la quota Cash');
+      assert(validateDeliveryFields({ num: '1', total: '20', cash: true, pos: true, posAmt: '20', bonusF: '' }) !== '', 'Validazione: pagamento misto pari al totale rifiutato');
+      assert(validateDeliveryFields({ num: '1', total: '20', cash: false, pos: false, posAmt: '', bonusF: '' }) !== '', 'Validazione: assenza metodo di pagamento rifiutata');
+      assert(validateDeliveryFields({ num: '1', total: '20', cash: true, pos: false, posAmt: '', bonusF: '-1' }) !== '', 'Validazione: Bonus F negativo rifiutato');
+
+      state.bonusFScaled = false; state.bonusFScaledBySubject = {0:false}; recomputeAll();
+      assert(parseAmt($('rBonusPendingAmt').textContent) === 5 && parseAmt($('rMinusBonus').textContent) === 112.5, 'Bonus F non sottratto prima della conferma');
+      state.bonusFScaledBySubject[0] = true; recomputeAll();
+      assert($('adminSubjectWallets').textContent.includes('107,50 €'), 'Admin: Bonus F sottratto solo dopo conferma manuale del singolo soggetto');
+      state.bonusFScaled = true; recomputeAll();
+      assert(parseAmt($('rBonusScaledAmt').textContent) === 5 && parseAmt($('rMinusBonus').textContent) === 107.5, 'Bonus F sottratto solo dopo la spunta');
+      assert(state.subjects[d._gridBinding.rowIdx][0].bonusF === '5,00', 'Bonus F resta visibile e collegato alla riga del soggetto dopo la spunta');
+
+      // Sposta la consegna su un altro soggetto: la vecchia cella deve essere ripristinata.
+      const oldRow = d._gridBinding.rowIdx;
+      d.subjectIdx = 1; d.riderName = 'Test Due'; syncDeliveryToGrid(d);
+      assert(!String(state.subjects[oldRow][0].num || '').trim() && state.subjects[d._gridBinding.rowIdx][1].num === '101', 'Modifica fattorino: rimozione dalla vecchia colonna e trasferimento nella nuova');
+      const newRow = d._gridBinding.rowIdx;
+      releaseDeliveryBinding(d);
+      assert(!String(state.subjects[newRow][1].num || '').trim(), 'Eliminazione consegna: cella generata rimossa dalla griglia');
+
+      // Conserva i dati manuali preesistenti se una consegna li sostituisce.
+      state.subjects[4][2] = { num: '222', total: '9,00', cash: true, pos: false, posAmt: '' };
+      const manual = { id: 'test_manual', subjectIdx: 2, riderName: 'Test Tre', num: '222', total: '10,00', cash: true, pos: false, posAmt: '' };
+      assert(syncDeliveryToGrid(manual), 'Collegamento consegna a numero già presente');
+      releaseDeliveryBinding(manual);
+      assert(state.subjects[4][2].total === '9,00', 'Ripristino del dato manuale preesistente dopo rimozione consegna');
+
+      // Il pieno griglia non deve mai sovrascrivere la prima riga.
+      state.rowsCount = 500;
+      state.refRows = Array.from({ length: 500 }, () => ({ an: '', at: '' }));
+      state.subjects = Array.from({ length: 500 }, (_, i) => Array.from({ length: S }, (_, j) => ({ num: `X${i}_${j}`, total: '1', cash: true, pos: false, posAmt: '' })));
+      const firstBefore = state.subjects[0][3].num;
+      const full = { id: 'test_full', subjectIdx: 3, riderName: 'Test Quattro', num: '9999', total: '1', cash: true, pos: false, posAmt: '' };
+      assert(syncDeliveryToGrid(full) === false && state.subjects[0][3].num === firstBefore, 'Griglia piena: blocca la sincronizzazione senza sovrascrivere dati');
+
+      const csvRows = parseCsvText('ID;Fattorino;Numero;Totale;Canale;CASH;POS;Quota POS;Bonus F;Ora\r\n"x1";"Rossi; Mario";"1";"12,50";"Telefono";"SI";"NO";"0";"1,00";"19:00"');
+      assert(csvRows.length === 2 && csvRows[1][1] === 'Rossi; Mario' && csvRows[1][3] === '12,50', 'Lettura CSV: delimitatori, virgolette e campi con punto e virgola');
+      assert(stableImportId(['Mario Rossi', '12', '10,00', 'Telefono', '19:00']) === stableImportId(['Mario Rossi', '12', '10,00', 'Telefono', '19:00']), 'Import CSV senza ID: identificativo deterministico anti-duplicato');
+
+      // Duplicate-number logic in the grid.
+      state.rowsCount = 150;
+      state.refRows = Array.from({ length: 150 }, () => ({ an: '', at: '' }));
+      state.subjects = Array.from({ length: 150 }, () => Array.from({ length: S }, blankSubjectCell));
+      state.refRows[0] = { an: '101', at: '20,00' };
+      state.subjects[0][0] = { num: '101', total: '20,00', cash: true, pos: false, posAmt: '' };
+      state.subjects[1][1] = { num: '101', total: '20,00', cash: true, pos: false, posAmt: '' };
+      renderGrid(); recomputeAll();
+      assert($('issuesCount').textContent.includes('2'), 'Rilevamento duplicati del numero tra soggetti');
+
+      // V12: audit, anomaly scan and immutable archive snapshot.
+      const auditBefore = (state.auditLog || []).length;
+      audit('TEST AUDIT', 'verifica registro');
+      assert((state.auditLog || []).length === auditBefore + 1 && $('auditLogList').textContent.includes('TEST AUDIT'), 'V12: registro modifiche persistente e visibile');
+      recomputeAll();
+      assert($('anomalyCount') && Number($('anomalyCount').textContent.split(' ')[0]) > 0, 'V12: controllo anomalie rileva duplicati e incongruenze');
+      const archiveBefore = (state.shiftArchives || []).length;
+      closeAndArchiveShift();
+      assert((state.shiftArchives || []).length === archiveBefore + 1 && state.shiftArchives.at(-1).snapshot && state.shiftArchives.at(-1).deliveryCount === state.deliveries.length, 'V12: chiusura turno crea archivio con fotografia dei dati');
+      assert(typeof exportSubjectCsv === 'function', 'V12: esportazione individuale per soggetto disponibile');
+
+      logTest(`Esito: ${allPassed ? 'TUTTI I TEST INTERNI SUPERATI' : 'UNO O PIÙ TEST FALLITI'}`, allPassed);
+    } catch (e) {
+      allPassed = false;
+      logTest('Errore durante il collaudo: ' + e.message, false);
+    } finally {
+      state = backup;
+      renderNames(); renderChannels(); renderGrid(); renderExpenses(); renderDeliveries(); renderRiderMappings();
+      $('marsupioStartInput').value = state.marsupioStart || '';
+      recomputeAll();
+      saveLocal();
+    }
+  }
+
+  function loadDemoScenario() {
+    if (!confirm('Lo scenario di collaudo sostituirà temporaneamente i dati attuali e verrà salvato. Prima esporta un backup se ti serve conservarli. Continuare?')) return;
+    state.rowsCount = 150;
+    state.names = ['Marco', 'Luca', 'Sara', 'Giulia', 'Davide', 'Elena', 'Matteo', 'Chiara', 'Alessia', 'Soggetto 10'];
+    state.refRows = Array.from({ length: 150 }, (_, idx) => {
+      if (idx === 0) return { an: '10', at: '25,00' };
+      if (idx === 1) return { an: '24', at: '18,50' };
+      if (idx === 79) return { an: '80', at: '30,00' };
+      return { an: '', at: '' };
+    });
+    state.subjects = Array.from({ length: 150 }, () =>
+      Array.from({ length: S }, () => ({ num: '', total: '', cash: false, pos: false, posAmt: '', bonusF: '' }))
+    );
+    state.marsupioStart = '150,00';
+    state.lastRiderName = '';
+    state.bonusFScaled = false;
+    state.deliveries = [
+      { id: 'd_1', subjectIdx: 0, num: '10', total: '25,00', channel: 'Telefono', bonusF: '3,00', cash: true, pos: false, posAmt: '', createdAt: '19:15' },
+      { id: 'd_2', subjectIdx: 2, num: '24', total: '18,50', channel: 'Just Eat', bonusF: '0', cash: false, pos: true, posAmt: '', createdAt: '19:40' },
+      { id: 'd_3', subjectIdx: 4, num: '80', total: '30,00', channel: 'Sofia', bonusF: '2,00', cash: true, pos: false, posAmt: '', createdAt: '20:05' }
+    ];
+    state.deliveries.forEach(syncDeliveryToGrid);
+    state.expenses[0] = { label: 'Voci fuori (EF)', raw: '5,00' };
+
+    renderNames();
+    renderChannels();
+    renderGrid();
+    renderExpenses();
+    renderDeliveries();
+    renderRiderMappings();
+    $('marsupioStartInput').value = state.marsupioStart;
+    recomputeAll();
+    scheduleSave();
+    logTest('Scenario collaudo caricato (righe 1, 2, 80, canali Telefono/Just Eat/Sofia, Bonus F per soggetto).', true);
+  }
+
+  function bindEvents() {
+    $('btnSwitchRider').onclick = () => setRole('rider');
+    $('btnSwitchAdmin').onclick = () => {
+      if (state.role === 'admin') return;
+      $('loginSection').classList.remove('hidden');
+      $('adminSection').classList.add('hidden');
+      $('riderSection').classList.add('hidden');
+      $('adminPinInput').focus();
+    };
+    $('btnLogout').onclick = () => setRole('none');
+
+    $('openRiderDirect').onclick = () => setRole('rider');
+    $('openAdminAuth').onclick = () => {
+      const val = $('adminPinInput').value.trim();
+      if (val === state.adminPin) {
+        $('adminPinInput').value = '';
+        setRole('admin');
+      } else {
+        alert('Codice amministratore non valido.');
+      }
+    };
+    $('adminPinInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') $('openAdminAuth').click();
+    });
+
+    if ($('riderSelect')) $('riderSelect').onchange = e => { state.activeRiderIdx = Number(e.target.value || 0); scheduleSave(); };
+    $('riderNameInput').addEventListener('input', e => { state.lastRiderName = e.target.value.trim(); scheduleSave(); });
+    $('riderNameInput').value = state.lastRiderName || '';
+    $('importRiderCsvBtn').onclick = () => importRiderCsv();
+    $('importCsvForSubjectBtn').onclick = () => importRiderCsv(Number($('targetImportSubject').value));
+    $('exportAllRidersCsvBtn').onclick = exportAllRidersCsv;
+    $('importRiderCsvInput').addEventListener('change', () => { const f=$('importRiderCsvInput').files[0]; if (f) { $('importStatus').textContent = 'File selezionato: ' + f.name + '. Controlla l’anteprima e poi premi Importa.'; renderImportPreview(f); } else renderImportPreview(null); });
+    $('closeShiftBtn').onclick = closeAndArchiveShift;
+    $('runAiAuditBtn').onclick = () => { const issues=runLocalAssistant(); $('archiveStatus').textContent=issues.length?`Controllo completato: ${issues.length} anomalie da verificare.`:'Controllo completato: nessuna anomalia rilevata.'; };
+    $('runRetentionBtn').onclick = () => { if(!confirm('Eseguire la cancellazione dei dettagli operativi più vecchi di 7 giorni? I dati eliminati non saranno più disponibili in questa app.'))return; runRetentionCleanup(); };
+    $('exportAuditBtn').onclick = () => downloadText('verifica-numeri-registro-modifiche.csv', 'Data;Operazione;Dettaglio\n'+(state.auditLog||[]).map(x=>[new Date(x.at).toLocaleString('it-IT'),x.action,x.detail].map(v=>'+String(v??).replace(/"/g,)+').join(';')).join('\n'), 'text/csv;charset=utf-8');
+    $('exportArchivesBtn').onclick = () => downloadText('verifica-numeri-archivio-turni.json', JSON.stringify(state.shiftArchives||[],null,2), 'application/json');
+    $('marsupioStartInput').addEventListener('input', e => {
+      state.marsupioStart = e.target.value;
+      recomputeAll();
+      scheduleSave();
+    });
+
+    $('addChannelBtn').onclick = () => addChannelFromInput('newChannelInput');
+    $('adminAddChannelBtn').onclick = () => addChannelFromInput('adminNewChannelInput');
+    ['newChannelInput', 'adminNewChannelInput'].forEach(id => $(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); addChannelFromInput(id); }
+    }));
+
+    const syncNewDelMixed = () => {
+      const show = $('delCashCheck').checked && $('delPosCheck').checked;
+      $('delMixedWrap').classList.toggle('hidden', !show);
+    };
+    $('delCashCheck').onchange = syncNewDelMixed;
+    $('delPosCheck').onchange = syncNewDelMixed;
+    $('addDeliveryBtn').onclick = addDeliveryFromForm;
+    $('filterChannelSelect').onchange = renderDeliveries;
+
+    $('clearRiderDeliveries').onclick = () => {
+      if (confirm('Eliminare tutte le consegne del fattorino?')) {
+        state.deliveries.forEach(releaseDeliveryBinding);
+        state.deliveries = [];
+        renderGrid();
+        renderDeliveries();
+        renderRiderMappings();
+        recomputeAll();
+        scheduleSave();
+      }
+    };
+
+    $('rBonusScaledCheck').onchange = e => {
+      state.bonusFScaled = e.target.checked;
+      state.bonusFManualConfirmed = true;
+      recomputeAll();
+      scheduleSave();
+    };
+
+    $('riderExportCsv').onclick = exportRiderCsv;
+    $('riderExportPdf').onclick = () => window.print();
+    $('exportCsvBtn').onclick = exportAdminCsv;
+
+    $('jumpSummary').onclick = () => $('summaryPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('addRow').onclick = () => {
+      if (state.rowsCount >= 500) return alert('Massimo 500 righe.');
+      state.rowsCount++;
+      renderGrid();
+      recomputeAll();
+      scheduleSave();
+    };
+    $('removeRow').onclick = () => {
+      if (state.rowsCount <= 1) return alert('Deve restare almeno una riga.');
+      const last = state.rowsCount - 1;
+      const ref = state.refRows[last];
+      const hasData = String(ref?.an || '').trim() || String(ref?.at || '').trim() || state.subjects[last].some(c => String(c.num || '').trim() || String(c.total || '').trim());
+      const hasBinding = state.deliveries.some(d => d._gridBinding?.rowIdx === last);
+      if (hasData || hasBinding) return alert('L’ultima riga contiene dati o consegne collegate. Svuotala o sposta i dati prima di rimuoverla, così evitiamo perdite.');
+      state.rowsCount--;
+      renderGrid();
+      recomputeAll();
+      scheduleSave();
+    };
+    $('clearAll').onclick = () => {
+      if (!pendingClearAll) {
+        pendingClearAll = true;
+        $('clearAll').textContent = 'CONFERMA AZZERAMENTO TOTALE';
+        $('clearAll').classList.add('warn');
+        if ($('importStatus')) $('importStatus').textContent = 'Premi di nuovo “Conferma azzeramento totale” per cancellare tutti i dati operativi.';
+        return;
+      }
+      pendingClearAll = false;
+      $('clearAll').textContent = 'Azzera tutto';
+      $('clearAll').classList.remove('warn');
+      pendingClearSubjectIdx = null;
+      clearTimeout(saveTimer);
+      state.refRows = Array.from({ length: state.rowsCount }, () => ({ an: '', at: '' }));
+      state.subjects = Array.from({ length: state.rowsCount }, () => Array.from({ length: S }, () => blankSubjectCell()));
+      state.deliveries = [];
+      state.riderMappings = {};
+      state.marsupioStart = '';
+      state.bonusFScaled = false;
+      state.bonusFManualConfirmed = false;
+      state.bonusFScaledBySubject = {};
+      state.marsupioStartBySubject = {};
+      state.lastRiderName = '';
+      state.filters = { search: '', status: 'all', subject: '', channel: '' };
+      state.activeRiderIdx = 0;
+      state.expenses = [];
+      audit('AZZERAMENTO GENERALE', 'Dati operativi azzerati dall’amministratore');
+      ['marsupioStartInput','riderNameInput','delNumInput','delTotInput','delBonusInput','delPosAmtInput','adminNewChannelInput','newChannelInput','searchNumInput'].forEach(id => { if ($(id)) $(id).value = ''; });
+      $('delCashCheck').checked = true; $('delPosCheck').checked = false; $('delMixedWrap').classList.add('hidden');
+      $('delChannelSelect').value = state.channels[0] || '';
+      $('filterChannelSelect').value = '';
+      $('filterSubjectSelect').value = '';
+      $('searchNumInput').value = '';
+      $('filterStatusSelect').value = 'all';
+      $('importStatus').textContent = 'Dati operativi azzerati. Nomi soggetti e canali conservati.';
+      renderNames(); renderChannels(); renderGrid(); renderExpenses(); renderDeliveries(); renderRiderMappings();
+      recomputeAll();
+      saveLocal();
+    };
+
+    $('saveSnapshot').onclick = saveSnapshotIDB;
+    $('restoreBtn').onclick = async () => {
+      try {
+        let loaded = null;
+        let db;
+        try {
+          db = await openIDB();
+          loaded = await new Promise((res, rej) => {
+            const tx = db.transaction('snapshots', 'readonly');
+            const req = tx.objectStore('snapshots').getAll();
+            req.onsuccess = () => {
+              const all = req.result || [];
+              all.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+              res(all.length ? all[all.length - 1].payload : null);
+            };
+            req.onerror = () => rej(req.error);
+          });
+        } catch (_) {
+          loaded = null;
+        } finally {
+          if (db) db.close();
+        }
+        if (!loaded) {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return alert('Nessuna copia di sicurezza trovata.');
+          loaded = JSON.parse(raw);
+        }
+        state = { ...state, ...loaded, role: state.role, riderMappings: loaded.riderMappings || {} };
+        initUI();
+        $('saveStatus').textContent = 'Copia di sicurezza ripristinata.';
+      } catch (e) {
+        alert('Errore nel ripristino: ' + e.message);
+      }
+    };
+
+    $('searchNumInput').addEventListener('input', e => {
+      state.filters.search = e.target.value;
+      applyRowFilters();
+      scheduleSave();
+    });
+    $('filterStatusSelect').onchange = e => {
+      state.filters.status = e.target.value;
+      recomputeAll();
+      scheduleSave();
+    };
+    $('filterSubjectSelect').onchange = e => {
+      state.filters.subject = e.target.value;
+      applyRowFilters();
+      scheduleSave();
+    };
+    $('resetFiltersBtn').onclick = () => {
+      state.filters = { search: '', status: 'all', subject: '', channel: '' };
+      $('searchNumInput').value = '';
+      $('filterStatusSelect').value = 'all';
+      $('filterSubjectSelect').value = '';
+      recomputeAll();
+      scheduleSave();
+    };
+    $('jumpAnomalyBtn').onclick = () => {
+      const badRow = document.querySelector('tbody tr.row-bad:not(.row-hidden)') || document.querySelector('tbody tr.row-bad');
+      if (badRow) badRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      else alert('Nessuna anomalia rilevata sulle righe.');
+    };
+
+    // PIN management
+    $('updateAdminPinBtn').onclick = () => {
+      const p1 = $('newAdminPinInput').value.trim();
+      const p2 = $('confirmAdminPinInput').value.trim();
+      if (p1.length < 4) return alert('Inserisci un codice di almeno 4 caratteri.');
+      if (p1 !== p2) return alert('I due codici non coincidono.');
+      state.adminPin = p1;
+      $('newAdminPinInput').value = '';
+      $('confirmAdminPinInput').value = '';
+      $('pinStatusMsg').textContent = 'Nuovo codice amministratore personale salvato.';
+      scheduleSave();
+    };
+    $('resetDefaultPinBtn').onclick = () => {
+      state.adminPin = DEFAULT_PIN;
+      $('pinStatusMsg').textContent = 'Codice amministratore ripristinato su 2511.';
+      scheduleSave();
+    };
+
+    $('runStressTestBtn').onclick = runStressTest;
+    $('loadDemoScenarioBtn').onclick = loadDemoScenario;
+  }
+
+  function initUI() {
+    state.rowsCount = Number.isInteger(state.rowsCount) ? Math.max(1, Math.min(500, state.rowsCount)) : 150;
+    if (!Array.isArray(state.refRows)) state.refRows = [];
+    if (!Array.isArray(state.subjects)) state.subjects = [];
+    ensureSize(state.rowsCount);
+    state.refRows = state.refRows.map(r => ({ an: String(r?.an ?? ''), at: String(r?.at ?? '') }));
+    state.subjects = state.subjects.map(row => Array.from({ length: S }, (_, j) => ({ ...blankSubjectCell(), ...(row?.[j] || {}), bonusF: String(row?.[j]?.bonusF ?? '') })));
+    if (!Array.isArray(state.expenses)) state.expenses = [];
+    if (!Array.isArray(state.deliveries)) state.deliveries = [];
+    if (!Array.isArray(state.auditLog)) state.auditLog = [];
+    if (!Array.isArray(state.shiftArchives)) state.shiftArchives = [];
+    if (!state.walletClosures || typeof state.walletClosures !== 'object') state.walletClosures = {};
+    if (!Array.isArray(state.operationalPurges)) state.operationalPurges = [];
+    state.retentionDays = 7;
+    if (typeof state.bonusFScaled !== 'boolean') state.bonusFScaled = false;
+    if (!state.bonusFScaledBySubject || typeof state.bonusFScaledBySubject !== 'object') state.bonusFScaledBySubject = {};
+    if (!state.marsupioStartBySubject || typeof state.marsupioStartBySubject !== 'object') state.marsupioStartBySubject = {};
+    // Migrazione una tantum: la nuova conferma F per soggetto parte sempre disattivata.
+    if (!state.bonusFScaleMigrationDone) { state.bonusFScaled = false; state.bonusFManualConfirmed = false; state.bonusFScaleMigrationDone = true; }
+    if (!state.bonusFManualConfirmed) state.bonusFScaled = false;
+    state.deliveries.forEach(d => { d.paymentChannel = d.paymentChannel || (d.pos ? 'BANCOMAT' : 'CASH'); });
+    state.deliveries.forEach(d => { if (!d.createdAtISO || !Number.isFinite(Date.parse(d.createdAtISO))) d.createdAtISO = new Date().toISOString(); });
+    state.deliveries.forEach(d => {
+      d.subjectIdx = Number.isInteger(d.subjectIdx) && d.subjectIdx >= 0 && d.subjectIdx < S ? d.subjectIdx : resolveSubjectIndex(d.riderName);
+      if (d._gridBinding && Number.isInteger(d._gridBinding.rowIdx)) {
+        const boundCell = state.subjects[d._gridBinding.rowIdx]?.[d._gridBinding.subjectIdx];
+        if (boundCell && boundCell._deliveryId === d.id) boundCell.bonusF = String(d.bonusF || '');
+      }
+      // Migra i collegamenti creati dalle versioni precedenti: solo celle che
+      // coincidono su numero, importo e pagamento vengono considerate generate.
+      if (!d._gridBinding && d.subjectIdx >= 0 && d.subjectIdx < S && d.num) {
+        const ri = state.subjects.findIndex(row => {
+          const c = row[d.subjectIdx];
+          const cTot = parseAmt(c.total), dTot = parseAmt(d.total), cPos = parseAmt(c.posAmt), dPos = parseAmt(d.posAmt);
+          return normNum(c.num) === normNum(d.num) && cTot !== null && dTot !== null && Math.abs(cTot - dTot) < 0.005 && !!c.cash === !!d.cash && !!c.pos === !!d.pos && ((cPos === null && dPos === null) || (cPos !== null && dPos !== null && Math.abs(cPos - dPos) < 0.005));
+        });
+        if (ri >= 0 && !state.subjects[ri][d.subjectIdx]._deliveryId) {
+          const cell = state.subjects[ri][d.subjectIdx];
+          cell._deliveryId = d.id;
+          cell.bonusF = String(d.bonusF || '');
+          d._gridBinding = { rowIdx: ri, subjectIdx: d.subjectIdx, previousCell: blankSubjectCell() };
+        }
+      }
+    });
+    renderNames();
+    renderChannels();
+    renderGrid();
+    renderExpenses();
+    renderDeliveries();
+    $('marsupioStartInput').value = state.marsupioStart || '';
+    $('riderNameInput').value = state.lastRiderName || '';
+    $('pinStatusMsg').textContent = state.adminPin === DEFAULT_PIN
+      ? 'Codice amministratore attivo: predefinito (2511).'
+      : 'Codice amministratore attivo: personale impostato.';
+    applyRoleVisibility();
+    recomputeAll();
+    renderGuidedWalletClosures();
+    runLocalAssistant();
+    runRetentionCleanup();
+  }
+
+  // Load saved state if present
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      state = {
+        ...state,
+        ...parsed,
+        role: 'none',
+        riderMappings: parsed.riderMappings && typeof parsed.riderMappings === 'object' ? parsed.riderMappings : {},
+        names: Array.isArray(parsed.names) && parsed.names.length === S ? parsed.names : state.names,
+        channels: Array.isArray(parsed.channels) && parsed.channels.length ? parsed.channels : [...DEFAULT_CHANNELS],
+        lastRiderName: String(parsed.lastRiderName || ''),
+        deliveries: Array.isArray(parsed.deliveries) ? parsed.deliveries.map(d => ({ ...d, subjectIdx: Number.isInteger(d.subjectIdx) ? d.subjectIdx : -1 })) : [],
+        expenses: Array.isArray(parsed.expenses) && parsed.expenses.length === 10 ? parsed.expenses : state.expenses,
+        adminPin: typeof parsed.adminPin === 'string' && parsed.adminPin.length >= 4 ? parsed.adminPin : DEFAULT_PIN
+      };
+    }
+  } catch (_) {}
+
+  bindEvents();
+  initUI();
+})();
 </script>
-</body></html>
+</body>
+</html>
