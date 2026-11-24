@@ -273,7 +273,7 @@ button{justify-content:center}
       <div class="loginCard">
         <div>
           <h2>Accesso Fattorino (Libero)</h2>
-          <p>Entra subito per registrare consegne (partono sempre in <b>CASH</b>), spostare su <b>POS</b>, gestire i canali, inserire <b>Bonus F</b>, modificare righe ed esportare CSV/PDF.</p>
+          <p>Entra subito per registrare consegne (partono sempre in <b>CASH</b>), spostare su <b>POS</b>, gestire i canali, selezionare la zona (il Bonus F viene calcolato automaticamente), modificare righe ed esportare CSV/PDF.</p>
         </div>
         <div>
           <button class="success" id="openRiderDirect">Entra come Fattorino</button>
@@ -335,7 +335,7 @@ button{justify-content:center}
         <div class="fieldStack"><label for="delNumInput">Numero Consegna</label><input id="delNumInput" inputmode="numeric" placeholder="Es. 12"></div>
         <div class="fieldStack"><label for="delTotInput">Totale Consegna (€)</label><input id="delTotInput" inputmode="decimal" placeholder="0,00"></div>
         <div class="fieldStack"><label for="delChannelSelect">Canale Incasso</label><select id="delChannelSelect"></select></div>
-        <div class="fieldStack"><label for="delBonusInput">Bonus F (€)</label><input id="delBonusInput" inputmode="decimal" placeholder="0,00"></div>
+        <div class="fieldStack"><label for="delZoneSelect">Zona consegna</label><select id="delZoneSelect" required></select><small class="hint" id="delZoneBonusPreview">Bonus F calcolato automaticamente dalla zona.</small></div>
       </div>
       <div class="toolbar" style="margin-top:10px">
         <div class="btnGroup">
@@ -385,7 +385,7 @@ button{justify-content:center}
       </div>
       <div class="bonusBox">
         <div class="toolbar">
-          <div><strong>Bonus F (Manuale — Nessuna sottrazione automatica)</strong><div class="hint" style="margin:2px 0 0">Totale Bonus F: <b id="rBonusTotal">0,00 €</b> · Scalate: <b id="rBonusScaledAmt">0,00 €</b> · In attesa: <b id="rBonusPendingAmt">0,00 €</b></div></div>
+          <div><strong>Bonus F automatico da zona</strong><div class="hint" style="margin:2px 0 0">Totale Bonus F: <b id="rBonusTotal">0,00 €</b> · Scalate: <b id="rBonusScaledAmt">0,00 €</b> · In attesa: <b id="rBonusPendingAmt">0,00 €</b></div></div>
           <label class="checkWrap"><input type="checkbox" id="rBonusScaledCheck"><span>Scalato F (aggiorna Marsupio)</span></label>
         </div>
         <div class="hint" id="rBonusReminder" style="margin:0;color:var(--amber)"></div>
@@ -422,6 +422,16 @@ button{justify-content:center}
         <button class="secondary small" id="adminAddChannelBtn" type="button">+ Aggiungi</button>
       </div>
       <div class="channelList" id="adminChannelChips"></div>
+    </div>
+    <div class="panel" id="zoneAdminPanel">
+      <strong>Zone consegna e Bonus F automatico</strong>
+      <p class="hint">Imposta qui le zone e il relativo importo. Il fattorino seleziona soltanto la zona: il valore viene registrato automaticamente nel Bonus F. Le modifiche ai prezzi valgono solo per le nuove consegne; lo storico conserva il prezzo applicato al momento della registrazione.</p>
+      <div class="riderForm" style="margin-top:8px">
+        <div class="fieldStack"><label for="adminZoneName">Nome zona</label><input id="adminZoneName" placeholder="Es. Brescia Ovest"></div>
+        <div class="fieldStack"><label for="adminZoneAmount">Importo Bonus F (€)</label><input id="adminZoneAmount" inputmode="decimal" placeholder="Es. 2,50"></div>
+      </div>
+      <div class="btnGroup" style="margin-top:8px"><button type="button" class="success small" id="adminAddZoneBtn">+ Aggiungi zona</button></div>
+      <div id="adminZoneList" class="subjectSummary" style="margin-top:10px"></div>
     </div>
     <div class="panel">
       <div class="toolbar">
@@ -607,6 +617,7 @@ button{justify-content:center}
     lastRiderName: '',
     riderMappings: {},
     channels: [...DEFAULT_CHANNELS],
+    zones: [{ id: 'zone_poncarale', name: 'Poncarale', amount: '1,00' }, { id: 'zone_fuori', name: 'Fuori', amount: '2,00' }],
     deliveries: [],
     bonusFScaled: false,
     bonusFManualConfirmed: false,
@@ -1108,6 +1119,76 @@ Controlla questi dati prima di premere Importa.`;
     if (curFiltCh && state.channels.includes(curFiltCh)) $('filterChannelSelect').value = curFiltCh;
   }
 
+  function normalizeZones() {
+    if (!Array.isArray(state.zones)) state.zones = [];
+    const seen = new Set();
+    state.zones = state.zones.map((z, i) => ({
+      id: String(z?.id || `zone_${i}_${Date.now()}`),
+      name: String(z?.name || '').trim().replace(/\s+/g, ' '),
+      amount: String(z?.amount ?? '0,00').trim()
+    })).filter(z => {
+      const amount = parseAmt(z.amount);
+      const key = nameKey(z.name);
+      if (!key || seen.has(key) || amount === null || !Number.isFinite(amount) || amount < 0) return false;
+      seen.add(key); z.amount = fmtAmountInput(amount); return true;
+    });
+    if (!state.zones.length) state.zones = [];
+  }
+
+  function fmtAmountInput(value) { return Number(value).toFixed(2).replace('.', ','); }
+
+  function renderZones() {
+    normalizeZones();
+    const select = $('delZoneSelect');
+    if (select) {
+      const previous = select.value;
+      select.innerHTML = state.zones.map(z => `<option value="${esc(z.id)}">${esc(z.name)} · ${fmtEur(parseAmt(z.amount)||0)}</option>`).join('');
+      if (previous && state.zones.some(z => z.id === previous)) select.value = previous;
+      if (!state.zones.length) select.innerHTML = '<option value="">Nessuna zona disponibile: chiedi all’Amministratore di crearne una</option>';
+      updateZoneBonusPreview();
+    }
+    const list = $('adminZoneList');
+    if (list) list.innerHTML = state.zones.length ? state.zones.map(z => {
+      const used = (state.deliveries||[]).filter(d => d.zoneId === z.id).length;
+      return `<div class="subjectStat"><div style="flex:1;min-width:0"><strong>${esc(z.name)}</strong><small>${fmtEur(parseAmt(z.amount)||0)} per consegna · ${used} consegne nello storico · nuovo prezzo solo per nuove consegne</small><div class="btnGroup" style="margin-top:5px"><input data-zone-amount="${esc(z.id)}" inputmode="decimal" value="${esc(z.amount)}" aria-label="Importo zona ${esc(z.name)}" style="width:105px"><button type="button" class="secondary small" data-save-zone="${esc(z.id)}">Aggiorna prezzo</button></div></div><button type="button" class="danger small" data-remove-zone="${esc(z.id)}" ${used ? 'disabled title="Zona già utilizzata: conserva lo storico"' : ''}>Rimuovi</button></div>`;
+    }).join('') : '<div class="hint">Nessuna zona configurata.</div>';
+    list?.querySelectorAll('[data-save-zone]').forEach(btn => btn.addEventListener('click', () => {
+      const z = state.zones.find(x => x.id === btn.dataset.saveZone); if (!z) return;
+      const raw = list.querySelector(`[data-zone-amount="${btn.dataset.saveZone}"]`)?.value || '';
+      const amount = parseAmt(raw);
+      if (amount === null || !Number.isFinite(amount) || amount < 0) { alert('Inserisci un importo valido e non negativo.'); return; }
+      const previous = z.amount; z.amount = fmtAmountInput(amount);
+      audit('MODIFICA PREZZO ZONA', `${z.name}: ${previous} → ${z.amount} € (solo nuove consegne)`);
+      renderZones(); saveLocal();
+    }));
+    list?.querySelectorAll('[data-remove-zone]').forEach(btn => btn.addEventListener('click', () => {
+      const id = btn.dataset.removeZone;
+      if ((state.deliveries||[]).some(d => d.zoneId === id)) { alert('Questa zona è già presente nello storico e non può essere rimossa. Puoi impostare un nuovo importo per le nuove consegne.'); return; }
+      const z = state.zones.find(x => x.id === id); if (!z) return;
+      if (!confirm(`Rimuovere la zona ${z.name}?`)) return;
+      state.zones = state.zones.filter(x => x.id !== id);
+      audit('RIMOZIONE ZONA', z.name); renderZones(); saveLocal();
+    }));
+  }
+
+  function updateZoneBonusPreview() {
+    const z = state.zones?.find(x => x.id === $('delZoneSelect')?.value);
+    const preview = $('delZoneBonusPreview');
+    if (preview) preview.textContent = z ? `Bonus F automatico: ${fmtEur(parseAmt(z.amount)||0)}` : 'Nessuna zona disponibile: contatta l’Amministratore.';
+  }
+
+  function addZoneFromAdmin() {
+    const name = String($('adminZoneName')?.value || '').trim().replace(/\s+/g, ' ');
+    const raw = String($('adminZoneAmount')?.value || '').trim();
+    const amount = parseAmt(raw);
+    if (!name) { alert('Inserisci il nome della zona.'); $('adminZoneName').focus(); return; }
+    if (amount === null || !Number.isFinite(amount) || amount < 0) { alert('Inserisci un importo valido e non negativo.'); $('adminZoneAmount').focus(); return; }
+    if (state.zones.some(z => nameKey(z.name) === nameKey(name))) { alert('Esiste già una zona con questo nome.'); return; }
+    state.zones.push({ id: 'zone_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), name, amount: fmtAmountInput(amount) });
+    $('adminZoneName').value = ''; $('adminZoneAmount').value = '';
+    audit('AGGIUNTA ZONA', `${name} · ${fmtEur(amount)} Bonus F`); renderZones(); saveLocal();
+  }
+
   function canonicalChannel(value) {
     const ch = String(value || '').trim().replace(/\s+/g, ' ');
     if (!ch) return state.channels[0] || 'Telefono';
@@ -1159,7 +1240,7 @@ Controlla questi dati prima di premere Importa.`;
                 <label><input type="checkbox" data-r="${i}" data-s="${j}" data-f="pos" ${cell.pos ? 'checked' : ''}>POS</label>
               </div>
               <input class="subPosAmt ${cell.cash && cell.pos ? '' : 'hidden'}" data-r="${i}" data-s="${j}" data-f="posAmt" inputmode="decimal" value="${esc(cell.posAmt)}" placeholder="Quota POS €">
-              <input class="subBonusF" data-r="${i}" data-s="${j}" data-f="bonusF" inputmode="decimal" value="${esc(cell.bonusF || '')}" placeholder="Bonus F €" aria-label="Bonus F soggetto ${j + 1} riga ${i + 1}">
+              <input class="subBonusF" data-r="${i}" data-s="${j}" data-f="bonusF" inputmode="decimal" value="${esc(cell.bonusF || '')}" placeholder="Da zona" aria-label="Bonus F automatico soggetto ${j + 1} riga ${i + 1}" readonly title="Bonus F calcolato dalla zona selezionata. I valori storici restano visibili.">
             </div>
           </td>
         `;
@@ -1505,7 +1586,8 @@ Controlla questi dati prima di premere Importa.`;
     const num = $('delNumInput').value.trim();
     const total = $('delTotInput').value.trim();
     const channel = $('delChannelSelect').value || state.channels[0] || 'Telefono';
-    const bonusF = $('delBonusInput').value.trim();
+    const selectedZone = state.zones.find(z => z.id === $('delZoneSelect').value);
+    const bonusF = selectedZone ? fmtAmountInput(parseAmt(selectedZone.amount)||0) : '';
     const cash = $('delCashCheck').checked;
     const pos = $('delPosCheck').checked;
     const posAmt = $('delPosAmtInput').value.trim();
@@ -1513,6 +1595,7 @@ Controlla questi dati prima di premere Importa.`;
     const subjectIdx = resolveSubjectIndex(riderName);
 
     if (!riderName) { alert('Inserisci il tuo nome e cognome.'); $('riderNameInput').focus(); return; }
+    if (!selectedZone) { alert('Seleziona una zona di consegna. Se non è disponibile, chiedi all’Amministratore di configurarla.'); $('delZoneSelect').focus(); return; }
     const validationError = validateDeliveryFields({ num, total, cash, pos, posAmt, bonusF });
     if (validationError) { alert(validationError); return; }
     if (num) {
@@ -1535,6 +1618,9 @@ Controlla questi dati prima di premere Importa.`;
       num,
       total,
       channel,
+      zoneId: selectedZone.id,
+      zoneName: selectedZone.name,
+      zoneAmount: bonusF,
       paymentChannel: pos ? 'BANCOMAT' : 'CASH',
       bonusF,
       cash,
@@ -1553,7 +1639,8 @@ Controlla questi dati prima di premere Importa.`;
 
     $('delNumInput').value = '';
     $('delTotInput').value = '';
-    $('delBonusInput').value = '';
+    if ($('delZoneSelect') && state.zones.length) $('delZoneSelect').value = state.zones[0].id;
+    updateZoneBonusPreview();
     $('delPosAmtInput').value = '';
     $('delCashCheck').checked = true;
     $('delPosCheck').checked = false;
@@ -1562,7 +1649,7 @@ Controlla questi dati prima di premere Importa.`;
     renderGrid();
     renderDeliveries();
     renderRiderMappings();
-    renderAuditLog(); renderShiftArchives();
+    renderAuditLog(); renderShiftArchives(); renderZones();
     recomputeAll();
     saveLocal();
   }
@@ -1591,7 +1678,7 @@ Controlla questi dati prima di premere Importa.`;
           <div class="deliveryTop">
             <div>
               <div class="deliveryNum">N. ${esc(d.num || '—')}</div>
-              <div class="hint" style="margin:2px 0 0">${esc(d.riderName || state.names[d.subjectIdx] || 'Nome da verificare')} · ${d.subjectIdx >= 0 ? 'Associato' : 'Da associare'} · ${esc(d.channel)} · ${esc(d.createdAt || '')}</div>
+              <div class="hint" style="margin:2px 0 0">${esc(d.riderName || state.names[d.subjectIdx] || 'Nome da verificare')} · ${d.subjectIdx >= 0 ? 'Associato' : 'Da associare'} · ${esc(d.channel)} · ${esc(d.zoneName || 'Zona non indicata')} · ${esc(d.createdAt || '')}</div>
             </div>
             <div class="deliveryTot">${tot !== null && !Number.isNaN(tot) ? fmtEur(tot) : '0,00 €'}</div>
           </div>
@@ -1610,7 +1697,7 @@ Controlla questi dati prima di premere Importa.`;
             <select data-ef="channel">
               ${state.channels.map(c => `<option value="${esc(c)}" ${c === d.channel ? 'selected' : ''}>${esc(c)}</option>`).join('')}
             </select>
-            <input type="text" inputmode="decimal" data-ef="bonusF" value="${esc(d.bonusF)}" placeholder="Bonus F €">
+            ${d.zoneId ? `<select data-ef="zoneId">${state.zones.map(z => `<option value="${esc(z.id)}" ${z.id === d.zoneId ? 'selected' : ''}>${esc(z.name)} · ${fmtEur(parseAmt(z.amount)||0)}</option>`).join('')}</select>` : `<div class="hint" style="grid-column:span 2">Bonus F storico: ${fmtEur(parseAmt(d.bonusF)||0)} (dato precedente, non modificabile)</div>`}
             <label class="checkWrap"><input type="checkbox" data-ef="cash" ${d.cash ? 'checked' : ''}><span>CASH</span></label>
             <label class="checkWrap"><input type="checkbox" data-ef="pos" ${d.pos ? 'checked' : ''}><span>POS</span></label>
             <input type="text" inputmode="decimal" data-ef="posAmt" value="${esc(d.posAmt)}" placeholder="Quota POS € (misto)" style="grid-column:span 2">
@@ -1649,7 +1736,7 @@ Controlla questi dati prima di premere Importa.`;
           num: box.querySelector('[data-ef="num"]').value.trim(),
           total: box.querySelector('[data-ef="total"]').value.trim(),
           channel: box.querySelector('[data-ef="channel"]').value,
-          bonusF: box.querySelector('[data-ef="bonusF"]').value.trim(),
+          ...(box.querySelector('[data-ef="zoneId"]') ? (() => { const z=state.zones.find(x=>x.id===box.querySelector('[data-ef="zoneId"]').value); return z ? { zoneId:z.id, zoneName:z.name, zoneAmount:fmtAmountInput(parseAmt(z.amount)||0), bonusF:fmtAmountInput(parseAmt(z.amount)||0) } : {}; })() : {}),
           cash: box.querySelector('[data-ef="cash"]').checked,
           pos: box.querySelector('[data-ef="pos"]').checked,
           posAmt: box.querySelector('[data-ef="posAmt"]').value.trim()
@@ -2016,7 +2103,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function buildRiderCsv(rowsToExport, fallbackName = '') {
-    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO'];
+    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Zona', 'Quota Zona', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO'];
     const rows = rowsToExport.map(d => [
       d.id,
       String(d.riderName || fallbackName || '').trim(),
@@ -2028,6 +2115,8 @@ Controlla questi dati prima di premere Importa.`;
       d.pos ? 'SI' : 'NO',
       d.posAmt || '0',
       d.bonusF || '0',
+      d.zoneName || '',
+      d.zoneAmount || '',
       d.createdAt || '',
       d.pos ? 'BANCOMAT' : 'CASH',
       d.subjectIdx >= 0 ? (state.bonusFScaledBySubject?.[d.subjectIdx] ? 'SI' : 'NO') : (state.bonusFManualConfirmed && state.bonusFScaled ? 'SI' : 'NO'),
@@ -2140,7 +2229,7 @@ Controlla questi dati prima di premere Importa.`;
       const ix = {
         id: col('id'), rider: col('fattorino', 'nome fattorino'), assigned: col('soggetto assegnato'),
         num: col('numero'), total: col('totale'), channel: col('canale'), cash: col('cash'), pos: col('pos'),
-        posAmt: col('quota pos'), bonus: col('bonus f'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), createdAtISO: col('data creazione iso')
+        posAmt: col('quota pos'), bonus: col('bonus f'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), zone: col('zona'), zoneAmount: col('quota zona'), createdAtISO: col('data creazione iso')
       };
       if (ix.num < 0 || ix.total < 0 || (ix.rider < 0 && ix.assigned < 0)) throw new Error('CSV non compatibile: servono le colonne Fattorino, Numero e Totale.');
       const prepared = [];
@@ -2161,7 +2250,7 @@ Controlla questi dati prima di premere Importa.`;
         const id = get('id') || stableImportId([riderName, num, total, channel, cash, pos, posAmt, bonusF, createdAt]);
         const importedCreatedAt = get('createdAtISO');
         const createdAtISO = importedCreatedAt && Number.isFinite(Date.parse(importedCreatedAt)) ? new Date(importedCreatedAt).toISOString() : new Date().toISOString();
-        prepared.push({ id, riderName, num, total, channel, paymentChannel, cash, pos, posAmt, bonusF, createdAt, createdAtISO, bonusScaled });
+        prepared.push({ id, riderName, num, total, channel, paymentChannel, cash, pos, posAmt, bonusF, zoneName:get('zone'), zoneAmount:get('zoneAmount'), createdAt, createdAtISO, bonusScaled });
       });
 
       // Se l'Admin importa direttamente in una colonna, il nome nel CSV deve corrispondere
@@ -2202,7 +2291,8 @@ Controlla questi dati prima di premere Importa.`;
         const assignedIdx = Number.isInteger(targetSubjectIdx) && targetSubjectIdx >= 0 && targetSubjectIdx < S ? targetSubjectIdx : resolveSubjectIndex(item.riderName);
         if (Number.isInteger(targetSubjectIdx) && targetSubjectIdx >= 0 && targetSubjectIdx < S) state.riderMappings[nameKey(item.riderName)] = targetSubjectIdx;
         if (item.bonusScaled && assignedIdx >= 0) { state.bonusFScaledBySubject = state.bonusFScaledBySubject || {}; state.bonusFScaledBySubject[assignedIdx] = true; }
-        const d = { ...old, ...item, channel: canonicalChannel(item.channel), subjectIdx: assignedIdx };
+        const matchedZone = state.zones.find(z => item.zoneName && nameKey(z.name) === nameKey(item.zoneName));
+        const d = { ...old, ...item, ...(matchedZone ? { zoneId: matchedZone.id, zoneName: matchedZone.name, zoneAmount: item.zoneAmount || item.bonusF } : {}), channel: canonicalChannel(item.channel), subjectIdx: assignedIdx };
         if (existing >= 0) {
           releaseDeliveryBinding(old);
           state.deliveries[existing] = d;
@@ -2292,6 +2382,13 @@ Controlla questi dati prima di premere Importa.`;
       assert(normNum('00042') === normNum('42'), 'Normalizzazione numeri con zeri iniziali');
       assert(nameKey('  José   Rossi ') === nameKey('Jose Rossi'), 'Associazione nomi: maiuscole, spazi e accenti normalizzati');
       assert(resolveSubjectIndex('test uno') === 0, 'Riconoscimento automatico soggetto con nome corrispondente');
+      assert(Array.isArray(state.zones) && state.zones.some(z=>nameKey(z.name)==='poncarale' && parseAmt(z.amount)===1) && state.zones.some(z=>nameKey(z.name)==='fuori' && parseAmt(z.amount)===2), 'Zone predefinite: Poncarale 1,00 € e Fuori 2,00 €');
+      const testZone = state.zones.find(z=>nameKey(z.name)==='fuori');
+      assert(!!testZone && fmtAmountInput(parseAmt(testZone.amount))==='2,00', 'Calcolo automatico Bonus F in base alla zona selezionata');
+      const zoneSnapshot = testZone ? { zoneId:testZone.id, zoneName:testZone.name, zoneAmount:fmtAmountInput(parseAmt(testZone.amount)), bonusF:fmtAmountInput(parseAmt(testZone.amount)) } : null;
+      if (testZone) testZone.amount = '9,99';
+      assert(!!zoneSnapshot && zoneSnapshot.bonusF === '2,00' && zoneSnapshot.zoneAmount === '2,00', 'Storico zona: la modifica del prezzo non altera il Bonus F già registrato');
+      if (testZone) testZone.amount = '2,00';
 
       state.refRows[0] = { an: '101', at: '20,00' };
       state.refRows[1] = { an: '102', at: '15,00' };
@@ -2417,6 +2514,7 @@ Controlla questi dati prima di premere Importa.`;
 
     renderNames();
     renderChannels();
+    renderZones();
     renderGrid();
     renderExpenses();
     renderDeliveries();
@@ -2476,6 +2574,8 @@ Controlla questi dati prima di premere Importa.`;
     });
 
     $('addChannelBtn').onclick = () => addChannelFromInput('newChannelInput');
+    if ($('adminAddZoneBtn')) $('adminAddZoneBtn').onclick = addZoneFromAdmin;
+    if ($('delZoneSelect')) $('delZoneSelect').onchange = updateZoneBonusPreview;
     $('adminAddChannelBtn').onclick = () => addChannelFromInput('adminNewChannelInput');
     ['newChannelInput', 'adminNewChannelInput'].forEach(id => $(id).addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); addChannelFromInput(id); }
@@ -2567,7 +2667,7 @@ Controlla questi dati prima di premere Importa.`;
       state.activeRiderIdx = 0;
       state.expenses = [];
       audit('AZZERAMENTO GENERALE', 'Dati operativi azzerati dall’amministratore');
-      ['marsupioStartInput','riderNameInput','delNumInput','delTotInput','delBonusInput','delPosAmtInput','adminNewChannelInput','newChannelInput','searchNumInput'].forEach(id => { if ($(id)) $(id).value = ''; });
+      ['marsupioStartInput','riderNameInput','delNumInput','delTotInput','delPosAmtInput','adminNewChannelInput','newChannelInput','searchNumInput'].forEach(id => { if ($(id)) $(id).value = ''; });
       $('delCashCheck').checked = true; $('delPosCheck').checked = false; $('delMixedWrap').classList.add('hidden');
       $('delChannelSelect').value = state.channels[0] || '';
       $('filterChannelSelect').value = '';
@@ -2770,6 +2870,8 @@ Controlla questi dati prima di premere Importa.`;
     if (typeof state.riderProfileConfirmed !== 'boolean') state.riderProfileConfirmed = false;
     if (!Array.isArray(state.expenses)) state.expenses = [];
     if (!Array.isArray(state.deliveries)) state.deliveries = [];
+    if (!Array.isArray(state.zones)) state.zones = [{ id: 'zone_poncarale', name: 'Poncarale', amount: '1,00' }, { id: 'zone_fuori', name: 'Fuori', amount: '2,00' }];
+    normalizeZones();
     if (!Array.isArray(state.auditLog)) state.auditLog = [];
     if (!Array.isArray(state.shiftArchives)) state.shiftArchives = [];
     if (!state.walletClosures || typeof state.walletClosures !== 'object') state.walletClosures = {};
@@ -2807,6 +2909,7 @@ Controlla questi dati prima di premere Importa.`;
     });
     renderNames();
     renderChannels();
+    renderZones();
     renderGrid();
     renderExpenses();
     renderDeliveries();
