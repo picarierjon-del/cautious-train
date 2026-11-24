@@ -341,6 +341,7 @@ button{justify-content:center}
         <div class="btnGroup">
           <label class="checkWrap"><input type="checkbox" id="delCashCheck" checked><span>CASH</span></label>
           <label class="checkWrap"><input type="checkbox" id="delPosCheck"><span>POS</span></label>
+          <label class="checkWrap"><input type="checkbox" id="delPaidCheck"><span>Già pagato (non incassare)</span></label>
           <div id="delMixedWrap" class="hidden" style="display:flex;align-items:center;gap:6px"><span class="hint" style="margin:0">Quota POS €:</span><input id="delPosAmtInput" inputmode="decimal" placeholder="0,00" style="width:110px"></div>
         </div>
         <button class="success" id="addDeliveryBtn">+ Registra Consegna</button>
@@ -504,6 +505,7 @@ button{justify-content:center}
       <div class="panelSub">
         <strong>Totali per canale di provenienza e metodo d'incasso</strong>
         <div id="admChannelTotals" class="subjectSummary"></div>
+        <div class="panelSub" id="adminPaidOrdersPanel"><strong>Riepilogo ordini per stato di pagamento</strong><p class="hint">Gli ordini già pagati sono esclusi da CASH, POS e marsupio. Qui restano visibili separatamente per controllo.</p><div id="adminPaidPaymentChart" class="subjectSummary"></div></div>
       </div>
       <div id="verdictBox" class="verdict">Inserisci i dati per avviare la verifica.</div><div class="panelSub"><div class="toolbar"><strong>Controllo automatico anomalie</strong><span id="anomalyCount" class="badge">0 anomalie</span></div><div id="anomalyList" class="anomalyList"><div class="anomalyItem good">Nessun controllo eseguito.</div></div></div>
       <div hidden aria-hidden="true"><span id="admMarsupioStart"></span><span id="admMarsupioTotal"></span><span id="admMinusBonus"></span><span id="admRemainMarsupio"></span><span id="netAssigned"></span><div id="expensesContainer"></div></div>
@@ -689,7 +691,7 @@ button{justify-content:center}
         issues.push(`${name}: consegna ${d.num || '(numero mancante)'} senza TOTALE valido.`);
       if (num && seen.has(num)) issues.push(`${name}: numero consegna ${d.num} DUPLICATO.`);
       if (num) seen.add(num);
-      const err = validateDeliveryFields({num:d.num,total:d.total,cash:!!d.cash,pos:!!d.pos,posAmt:d.posAmt,bonusF:d.bonusF});
+      const err = validateDeliveryFields({num:d.num,total:d.total,cash:!!d.cash,pos:!!d.pos,posAmt:d.posAmt,bonusF:d.bonusF,paid:!!d.paid});
       if (err) issues.push(`${name}: consegna ${d.num || '(senza numero)'} – ${err}`);
       if (d.gridSyncError) issues.push(`${name}: consegna ${d.num || d.id} non sincronizzata – ${d.gridSyncError}`);
       if (!d.id) issues.push(`${name}: consegna ${d.num || i+1} senza ID univoco.`);
@@ -709,7 +711,7 @@ button{justify-content:center}
         if (a === null || !Number.isFinite(a) || a <= 0) issues.push(`${name}: riga ${r+1} – totale non valido per la consegna ${num}.`);
         const linked = deliveries.find(d => normNum(d.num) === normNum(num));
         if (!linked) {
-          const err = validateDeliveryFields({num:c.num,total:c.total,cash:!!c.cash,pos:!!c.pos,posAmt:c.posAmt,bonusF:c.bonusF});
+          const err = validateDeliveryFields({num:c.num,total:c.total,cash:!!c.cash,pos:!!c.pos,posAmt:c.posAmt,bonusF:c.bonusF,paid:!!c.paid});
           if (err) issues.push(`${name}: riga ${r+1} (${num}) – ${err}`);
         }
       }
@@ -739,7 +741,7 @@ ${preflight.slice(0,12).join('\n')}`);return;}}const inp=el.querySelector(`[data
   }
   function runLocalAssistant(){
     const issues=[];const seen=new Set();
-    (state.deliveries||[]).forEach(d=>{const k=nameKey(d.riderName)+'|'+normNum(d.num);if(!normNum(d.num))issues.push(`Consegna senza numero (${d.riderName||'nome mancante'}).`);if(k!=='|'&&seen.has(k))issues.push(`Possibile duplicato: ${d.riderName} n. ${d.num}.`);seen.add(k);const e=validateDeliveryFields({num:d.num,total:d.total,cash:!!d.cash,pos:!!d.pos,posAmt:d.posAmt,bonusF:d.bonusF});if(e)issues.push(`${d.riderName||'Fattorino'} n. ${d.num}: ${e}`);if(!Number.isInteger(d.subjectIdx)||d.subjectIdx<0||d.subjectIdx>=S)issues.push(`Consegna ${d.num}: soggetto non associato.`);});
+    (state.deliveries||[]).forEach(d=>{const k=nameKey(d.riderName)+'|'+normNum(d.num);if(!normNum(d.num))issues.push(`Consegna senza numero (${d.riderName||'nome mancante'}).`);if(k!=='|'&&seen.has(k))issues.push(`Possibile duplicato: ${d.riderName} n. ${d.num}.`);seen.add(k);const e=validateDeliveryFields({num:d.num,total:d.total,cash:!!d.cash,pos:!!d.pos,posAmt:d.posAmt,bonusF:d.bonusF,paid:!!d.paid});if(e)issues.push(`${d.riderName||'Fattorino'} n. ${d.num}: ${e}`);if(!Number.isInteger(d.subjectIdx)||d.subjectIdx<0||d.subjectIdx>=S)issues.push(`Consegna ${d.num}: soggetto non associato.`);});
     getReconciliationIssues().forEach(x=>issues.push(x));
     state.names.forEach((name,idx)=>{const n=subjectWalletNumbers(idx);const c=state.walletClosures?.[idx];if(c?.closedAt&&Math.abs(Number(c.theoretical)-n.theoretical)>0.009)issues.push(`${name}: dati cambiati dopo la chiusura del marsupio. Riapri e riconta.`);if(n.theoretical<0)issues.push(`${name}: marsupio negativo.`);});
     const out=$('aiControlSummary');if(out)out.innerHTML=issues.length?issues.slice(0,60).map(x=>`<div class="aiIssue warn">${esc(x)}</div>`).join(''):'<div class="aiIssue good">Nessuna anomalia rilevata dalle regole automatiche. Verifica comunque il conteggio fisico dei marsupi.</div>';
@@ -826,7 +828,7 @@ ${preflight.slice(0,12).join('\n')}`);return;}}const inp=el.querySelector(`[data
       if(!n) issues.push(`Consegna senza numero: ${d.riderName || 'fattorino non indicato'}`);
       const key=rider+'|'+n;
       if(n && seenNums.has(key)) issues.push(`Possibile duplicato: ${d.riderName || 'fattorino'} · n. ${d.num}`); else if(n) seenNums.set(key,d.id);
-      const err=validateDeliveryFields({num:d.num,total:d.total,cash:!!d.cash,pos:!!d.pos,posAmt:d.posAmt,bonusF:d.bonusF});
+      const err=validateDeliveryFields({num:d.num,total:d.total,cash:!!d.cash,pos:!!d.pos,posAmt:d.posAmt,bonusF:d.bonusF,paid:!!d.paid});
       if(err) issues.push(`Consegna ${d.num || d.id}: ${err}`);
       if(d.gridSyncError) issues.push(`Consegna ${d.num}: ${d.gridSyncError}`);
       if(!Number.isInteger(d.subjectIdx) || d.subjectIdx<0 || d.subjectIdx>=S) issues.push(`Da associare: ${d.riderName || 'nome mancante'} · n. ${d.num}`);
@@ -889,6 +891,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function getPosDeducted(entry) {
+    if (entry?.paid) return 0;
     const tot = parseAmt(entry.total);
     const validTot = tot !== null && !Number.isNaN(tot) ? tot : 0;
     if (!entry.pos) return 0;
@@ -901,6 +904,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function getCashAmount(entry) {
+    if (entry?.paid) return 0;
     const tot = parseAmt(entry.total);
     const validTot = tot !== null && !Number.isNaN(tot) ? tot : 0;
     if (!entry.cash) return 0;
@@ -1412,12 +1416,12 @@ Controlla questi dati prima di premere Importa.`;
     return true;
   }
 
-  function validateDeliveryFields({ num, total, cash, pos, posAmt, bonusF }) {
+  function validateDeliveryFields({ num, total, cash, pos, posAmt, bonusF, paid = false }) {
     const n = parseAmt(total);
     if (!String(num || '').trim()) return 'Inserisci il numero della consegna.';
     if (n === null || Number.isNaN(n) || n <= 0) return 'Inserisci un totale valido e maggiore di zero.';
-    if (!cash && !pos) return 'Seleziona almeno un metodo di pagamento: CASH o POS.';
-    if (cash && pos) {
+    if (!paid && !cash && !pos) return 'Seleziona almeno un metodo di pagamento: CASH o POS.';
+    if (!paid && cash && pos) {
       const p = parseAmt(posAmt);
       if (p === null || Number.isNaN(p) || p <= 0 || p >= n) return 'Nel pagamento misto la quota POS deve essere maggiore di zero e inferiore al totale.';
     }
@@ -1429,6 +1433,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function paymentBreakdown(entry) {
+    if (entry?.paid) return { cash: 0, bancomat: 0 };
     const cash = getCashAmount(entry);
     const pos = getPosDeducted(entry);
     return { cash: Math.round(cash * 100) / 100, bancomat: Math.round(pos * 100) / 100 };
@@ -1452,6 +1457,28 @@ Controlla questi dati prima di premere Importa.`;
     rows.push(`<div class="subjectStat"><div><strong>Totale CASH</strong><small>Contanti da consegnare</small></div><b>${fmtEur(byPayment.CASH)}</b></div>`);
     rows.push(`<div class="subjectStat"><div><strong>Totale BANCOMAT</strong><small>Accredito elettronico — escluso dal marsupio</small></div><b>${fmtEur(byPayment.BANCOMAT)}</b></div>`);
     el.innerHTML = rows.join('') || '<p class="hint">Nessun incasso registrato.</p>';
+  }
+
+  function renderAdminPaidPaymentChart(deliveries) {
+    const el = $('adminPaidPaymentChart'); if (!el) return;
+    const sums = { cash:0, pos:0, paid:0, cashCount:0, posCount:0, paidCount:0, mixedCount:0 };
+    (deliveries || []).forEach(d => {
+      const total = Math.max(0, parseAmt(d.total) || 0);
+      if (d.paid) { sums.paid += total; sums.paidCount++; return; }
+      const p = paymentBreakdown(d);
+      sums.cash += p.cash; sums.pos += p.bancomat;
+      if (p.cash > 0) sums.cashCount++;
+      if (p.bancomat > 0) sums.posCount++;
+      if (p.cash > 0 && p.bancomat > 0) sums.mixedCount++;
+    });
+    const max = Math.max(sums.cash, sums.pos, sums.paid, 1);
+    const rows = [
+      ['CASH',sums.cash,sums.cashCount,'Contanti da incassare'],
+      ['POS / BANCOMAT',sums.pos,sums.posCount,'Pagamenti elettronici'],
+      ['GIÀ PAGATI',sums.paid,sums.paidCount,'Esclusi da CASH, POS e marsupio']
+    ];
+    el.innerHTML = rows.map(([label,value,count,note]) => `<div class="kpiBox"><span>${label}</span><b>${fmtEur(value)}</b><small class="hint">${count} ordini · ${note}</small><div style="height:10px;background:var(--panel2);border-radius:8px;overflow:hidden;margin-top:8px"><div style="height:100%;width:${Math.max(0,Math.min(100,value/max*100))}%;background:var(--blue);border-radius:8px"></div></div></div>`).join('') +
+      `<div class="kpiBox info"><span>Ordini misti CASH + POS</span><b>${sums.mixedCount}</b><small class="hint">Contati nelle rispettive quote</small></div>`;
   }
 
   function renderPaymentTotals(containerId, deliveries) {
@@ -1608,14 +1635,16 @@ Controlla questi dati prima di premere Importa.`;
     const selectedZone = state.zones.find(z => z.id === $('delZoneSelect').value);
     const bonusF = selectedZone ? fmtAmountInput(parseAmt(selectedZone.amount)||0) : '';
     const cash = $('delCashCheck').checked;
-    const pos = $('delPosCheck').checked;
+    const paid = $('delPaidCheck').checked;
+    const pos = paid ? false : $('delPosCheck').checked;
+    const effectiveCash = paid ? false : cash;
     const posAmt = $('delPosAmtInput').value.trim();
     const riderName = $('riderNameInput').value.trim();
     const subjectIdx = resolveSubjectIndex(riderName);
 
     if (!riderName) { alert('Inserisci il tuo nome e cognome.'); $('riderNameInput').focus(); return; }
     if (!selectedZone) { alert('Seleziona una zona di consegna. Se non è disponibile, chiedi all’Amministratore di configurarla.'); $('delZoneSelect').focus(); return; }
-    const validationError = validateDeliveryFields({ num, total, cash, pos, posAmt, bonusF });
+    const validationError = validateDeliveryFields({ num, total, cash:effectiveCash, pos, posAmt, bonusF, paid });
     if (validationError) { alert(validationError); return; }
     if (num) {
       const duplicate = state.deliveries.find(d => nameKey(d.riderName || (d.subjectIdx >= 0 ? state.names[d.subjectIdx] : '')) === nameKey(riderName) && normNum(d.num) === normNum(num));
@@ -1640,9 +1669,10 @@ Controlla questi dati prima di premere Importa.`;
       zoneId: selectedZone.id,
       zoneName: selectedZone.name,
       zoneAmount: bonusF,
-      paymentChannel: pos ? 'BANCOMAT' : 'CASH',
+      paymentChannel: paid ? 'GIA_PAGATO' : (pos ? 'BANCOMAT' : 'CASH'),
       bonusF,
-      cash,
+      paid,
+      cash: effectiveCash,
       pos,
       posAmt,
       createdAt: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
@@ -1651,7 +1681,7 @@ Controlla questi dati prima di premere Importa.`;
 
     state.lastRiderName = riderName;
     state.deliveries.unshift(del);
-    audit('NUOVA CONSEGNA', `${riderName} · n. ${num} · ${fmtEur(parseAmt(total)||0)} · ${channel}`);
+    audit('NUOVA CONSEGNA', `${riderName} · n. ${num} · ${fmtEur(parseAmt(total)||0)} · ${paid ? 'GIÀ PAGATO' : (pos ? 'POS' : 'CASH')} · ${channel}`);
     const gridSynced = syncDeliveryToGrid(del);
     if (!gridSynced) $('importStatus').textContent = del.gridSyncError;
     else if (subjectIdx < 0) $('importStatus') && ($('importStatus').textContent = `Consegna registrata per ${riderName}. Il nome dovrà essere associato dall’Admin.`);
@@ -1661,8 +1691,10 @@ Controlla questi dati prima di premere Importa.`;
     if ($('delZoneSelect') && state.zones.length) $('delZoneSelect').value = state.zones[0].id;
     updateZoneBonusPreview();
     $('delPosAmtInput').value = '';
+    $('delCashCheck').disabled = false; $('delPosCheck').disabled = false; $('delPosAmtInput').disabled = false;
     $('delCashCheck').checked = true;
     $('delPosCheck').checked = false;
+    $('delPaidCheck').checked = false;
     $('delMixedWrap').classList.add('hidden');
 
     renderGrid();
@@ -1702,7 +1734,7 @@ Controlla questi dati prima di premere Importa.`;
             <div class="deliveryTot">${tot !== null && !Number.isNaN(tot) ? fmtEur(tot) : '0,00 €'}</div>
           </div>
           <div class="badgeRow">
-            <span class="badge ${d.pos && !d.cash ? 'pos' : 'cash'}">${esc(payLabel)}</span>
+            <span class="badge ${d.paid ? 'bonus' : (d.pos && !d.cash ? 'pos' : 'cash')}">${d.paid ? 'GIÀ PAGATO · NON DA INCASSARE' : esc(payLabel)}</span>
             ${bAmt !== null && !Number.isNaN(bAmt) && bAmt > 0 ? `<span class="badge bonus">Bonus F: ${fmtEur(bAmt)}</span>` : ''}
           </div>
           <div class="btnGroup">
@@ -1719,6 +1751,7 @@ Controlla questi dati prima di premere Importa.`;
             ${d.zoneId ? `<select data-ef="zoneId">${state.zones.map(z => `<option value="${esc(z.id)}" ${z.id === d.zoneId ? 'selected' : ''}>${esc(z.name)} · ${fmtEur(parseAmt(z.amount)||0)}</option>`).join('')}</select>` : `<div class="hint" style="grid-column:span 2">Bonus F storico: ${fmtEur(parseAmt(d.bonusF)||0)} (dato precedente, non modificabile)</div>`}
             <label class="checkWrap"><input type="checkbox" data-ef="cash" ${d.cash ? 'checked' : ''}><span>CASH</span></label>
             <label class="checkWrap"><input type="checkbox" data-ef="pos" ${d.pos ? 'checked' : ''}><span>POS</span></label>
+            <label class="checkWrap" style="grid-column:span 2"><input type="checkbox" data-ef="paid" ${d.paid ? 'checked' : ''}><span>Già pagato (escludi dagli incassi)</span></label>
             <input type="text" inputmode="decimal" data-ef="posAmt" value="${esc(d.posAmt)}" placeholder="Quota POS € (misto)" style="grid-column:span 2">
             <div class="btnGroup" style="grid-column:span 2">
               <button type="button" class="success small" data-save-del="${esc(d.id)}">Salva riga</button>
@@ -1756,8 +1789,9 @@ Controlla questi dati prima di premere Importa.`;
           total: box.querySelector('[data-ef="total"]').value.trim(),
           channel: box.querySelector('[data-ef="channel"]').value,
           ...(box.querySelector('[data-ef="zoneId"]') ? (() => { const z=state.zones.find(x=>x.id===box.querySelector('[data-ef="zoneId"]').value); return z ? { zoneId:z.id, zoneName:z.name, zoneAmount:fmtAmountInput(parseAmt(z.amount)||0), bonusF:fmtAmountInput(parseAmt(z.amount)||0) } : {}; })() : {}),
-          cash: box.querySelector('[data-ef="cash"]').checked,
-          pos: box.querySelector('[data-ef="pos"]').checked,
+          cash: box.querySelector('[data-ef="paid"]').checked ? false : box.querySelector('[data-ef="cash"]').checked,
+          pos: box.querySelector('[data-ef="paid"]').checked ? false : box.querySelector('[data-ef="pos"]').checked,
+          paid: box.querySelector('[data-ef="paid"]').checked,
           posAmt: box.querySelector('[data-ef="posAmt"]').value.trim()
         };
         if (!updated.riderName) { alert('Inserisci il nome del fattorino.'); return; }
@@ -2075,6 +2109,7 @@ Controlla questi dati prima di premere Importa.`;
     if ($('netAssigned')) $('netAssigned').textContent = fmtEur(netAssigned);
 
     renderChannelTotals('admChannelTotals', state.deliveries);
+    renderAdminPaidPaymentChart(state.deliveries);
     renderBonusBySubject();
     renderAdminWallets();
     if ($('subjectSummary')) {
@@ -2137,7 +2172,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function buildRiderCsv(rowsToExport, fallbackName = '') {
-    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Zona', 'Quota Zona', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO', 'Importo F già sottratto'];
+    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Zona', 'Quota Zona', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO', 'Importo F già sottratto', 'Già pagato'];
     const rows = rowsToExport.map(d => [
       d.id,
       String(d.riderName || fallbackName || '').trim(),
@@ -2155,7 +2190,8 @@ Controlla questi dati prima di premere Importa.`;
       d.pos ? 'BANCOMAT' : 'CASH',
       d.subjectIdx >= 0 ? (bonusScaledAmountForSubject(d.subjectIdx) >= bonusTotalForSubject(d.subjectIdx)-0.005 ? 'SI' : 'NO') : (state.bonusFManualConfirmed && state.bonusFScaled ? 'SI' : 'NO'),
       d.createdAtISO || '',
-      fmtAmountInput(d.subjectIdx >= 0 ? bonusScaledAmountForSubject(d.subjectIdx) : (Number(state.bonusFScaledAmount)||0))
+      fmtAmountInput(d.subjectIdx >= 0 ? bonusScaledAmountForSubject(d.subjectIdx) : (Number(state.bonusFScaledAmount)||0)),
+      d.paid ? 'SI' : 'NO'
     ]);
     return '\uFEFF' + [headers, ...rows].map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
   }
@@ -2264,7 +2300,7 @@ Controlla questi dati prima di premere Importa.`;
       const ix = {
         id: col('id'), rider: col('fattorino', 'nome fattorino'), assigned: col('soggetto assegnato'),
         num: col('numero'), total: col('totale'), channel: col('canale'), cash: col('cash'), pos: col('pos'),
-        posAmt: col('quota pos'), bonus: col('bonus f'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), scaledAmount: col('importo f già sottratto'), zone: col('zona'), zoneAmount: col('quota zona'), createdAtISO: col('data creazione iso')
+        posAmt: col('quota pos'), bonus: col('bonus f'), paid: col('già pagato', 'gia pagato'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), scaledAmount: col('importo f già sottratto'), zone: col('zona'), zoneAmount: col('quota zona'), createdAtISO: col('data creazione iso')
       };
       if (ix.num < 0 || ix.total < 0 || (ix.rider < 0 && ix.assigned < 0)) throw new Error('CSV non compatibile: servono le colonne Fattorino, Numero e Totale.');
       const prepared = [];
@@ -2275,20 +2311,21 @@ Controlla questi dati prima di premere Importa.`;
         const cash = /^(si|1|true|yes)$/i.test(get('cash'));
         const pos = /^(si|1|true|yes)$/i.test(get('pos'));
         const posAmt = get('posAmt'), bonusF = get('bonus');
+        const paid = /^(si|1|true|yes)$/i.test(get('paid'));
         const paymentChannel = get('paymentChannel') || (pos ? 'BANCOMAT' : 'CASH');
         const bonusScaled = /^(si|1|true|yes)$/i.test(get('bonusScaled'));
         const scaledAmountRaw = get('scaledAmount');
         const bonusScaledAmount = scaledAmountRaw ? parseAmt(scaledAmountRaw) : null;
         if (scaledAmountRaw && (bonusScaledAmount === null || !Number.isFinite(bonusScaledAmount) || bonusScaledAmount < 0)) throw new Error(`Riga CSV ${n + 2}: importo F già sottratto non valido.`);
         if (!riderName) throw new Error(`Riga CSV ${n + 2}: nome fattorino mancante.`);
-        const validationError = validateDeliveryFields({ num, total, cash, pos, posAmt, bonusF });
+        const validationError = validateDeliveryFields({ num, total, cash: paid ? false : cash, pos: paid ? false : pos, posAmt, bonusF, paid });
         if (validationError) throw new Error(`Riga CSV ${n + 2}: ${validationError}`);
         const channel = get('channel') || state.channels[0] || 'Telefono';
         const createdAt = get('time');
         const id = get('id') || stableImportId([riderName, num, total, channel, cash, pos, posAmt, bonusF, createdAt]);
         const importedCreatedAt = get('createdAtISO');
         const createdAtISO = importedCreatedAt && Number.isFinite(Date.parse(importedCreatedAt)) ? new Date(importedCreatedAt).toISOString() : new Date().toISOString();
-        prepared.push({ id, riderName, num, total, channel, paymentChannel, cash, pos, posAmt, bonusF, zoneName:get('zone'), zoneAmount:get('zoneAmount'), createdAt, createdAtISO, bonusScaled, bonusScaledAmount });
+        prepared.push({ id, riderName, num, total, channel, paymentChannel, cash:paid?false:cash, pos:paid?false:pos, paid, posAmt, bonusF, zoneName:get('zone'), zoneAmount:get('zoneAmount'), createdAt, createdAtISO, bonusScaled, bonusScaledAmount });
       });
 
       // Se l'Admin importa direttamente in una colonna, il nome nel CSV deve corrispondere
@@ -2450,6 +2487,15 @@ Controlla questi dati prima di premere Importa.`;
       recomputeAll();
       assert(parseAmt($('rCashSum').textContent) === 20 && parseAmt($('rMarsupioTotal').textContent) === 120, 'Pagamento CASH: Cash e marsupio fattorino aggiornati');
       assert(parseAmt($('admCashSum').textContent) === 20 && $('adminSubjectWallets').textContent.includes('120,00 €'), 'Riepilogo Admin: marsupio individuale coerente con iniziale + CASH');
+
+      const paidTest = { id:'test_paid_1', subjectIdx:0, riderName:'Test Uno', num:'PAID-1', total:'35,00', channel:'Just Eat', bonusF:'2,00', cash:false, pos:false, paid:true, posAmt:'', createdAt:'10:05' };
+      state.deliveries.push(paidTest);
+      assert(paymentBreakdown(paidTest).cash === 0 && paymentBreakdown(paidTest).bancomat === 0, 'Ordine già pagato: escluso completamente da CASH e POS');
+      assert(subjectWalletNumbers(0).cash === 20 && subjectWalletNumbers(0).bancomat === 0, 'Ordine già pagato: non aumenta il marsupio del fattorino');
+      renderAdminPaidPaymentChart(state.deliveries);
+      assert($('adminPaidPaymentChart').textContent.includes('GIÀ PAGATI') && $('adminPaidPaymentChart').textContent.includes('35,00 €'), 'Riepilogo Admin: ordini già pagati separati dal CASH e POS');
+      state.deliveries = state.deliveries.filter(x=>x.id!=='test_paid_1');
+      recomputeAll();
 
       // Simula la correzione amministrativa direttamente nella griglia: CASH -> POS.
       const boundCell = state.subjects[d._gridBinding.rowIdx][0];
@@ -2656,6 +2702,20 @@ Controlla questi dati prima di premere Importa.`;
     };
     $('delCashCheck').onchange = syncNewDelMixed;
     $('delPosCheck').onchange = syncNewDelMixed;
+    $('delPaidCheck').onchange = () => {
+      const paid = $('delPaidCheck').checked;
+      $('delCashCheck').disabled = paid;
+      $('delPosCheck').disabled = paid;
+      $('delPosAmtInput').disabled = paid;
+      if (paid) {
+        $('delCashCheck').checked = false;
+        $('delPosCheck').checked = false;
+        $('delPosAmtInput').value = '';
+      } else {
+        $('delCashCheck').checked = true;
+      }
+      syncNewDelMixed();
+    };
     $('addDeliveryBtn').onclick = addDeliveryFromForm;
     $('filterChannelSelect').onchange = renderDeliveries;
 
