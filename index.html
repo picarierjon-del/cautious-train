@@ -386,9 +386,9 @@ button{justify-content:center}
       <div class="bonusBox">
         <div class="toolbar">
           <div><strong>Bonus F automatico da zona</strong><div class="hint" style="margin:2px 0 0">Totale Bonus F: <b id="rBonusTotal">0,00 €</b> · Scalate: <b id="rBonusScaledAmt">0,00 €</b> · In attesa: <b id="rBonusPendingAmt">0,00 €</b></div></div>
-          <label class="checkWrap"><input type="checkbox" id="rBonusScaledCheck"><span>Scalato F (aggiorna Marsupio)</span></label>
+          <label class="checkWrap"><input type="checkbox" id="rBonusScaledCheck"><span>Ho sottratto le F dal marsupio</span></label>
         </div>
-        <div class="hint" id="rBonusReminder" style="margin:0;color:var(--amber)"></div>
+        <div class="hint" id="rBonusReminder" style="margin:0;color:var(--amber)">La casella resta deselezionata finché non confermi manualmente di aver tolto le F dal marsupio. Le nuove F successive restano in attesa.</div>
       </div>
     </div>
   </section>
@@ -620,8 +620,10 @@ button{justify-content:center}
     zones: [{ id: 'zone_poncarale', name: 'Poncarale', amount: '1,00' }, { id: 'zone_fuori', name: 'Fuori', amount: '2,00' }],
     deliveries: [],
     bonusFScaled: false,
+    bonusFScaledAmount: 0,
     bonusFManualConfirmed: false,
     bonusFScaledBySubject: {},
+    bonusFScaledAmountBySubject: {},
     marsupioStartBySubject: {},
     filters: { search: '', status: 'all', subject: '', channel: '' },
     auditLog: [],
@@ -670,7 +672,7 @@ button{justify-content:center}
     const has=ds.length>0||state.subjects.some(r=>String(r[idx]?.num||'').trim()||String(r[idx]?.total||'').trim());
     const sr=Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject||{},idx)?parseAmt(state.marsupioStartBySubject[idx]):(has?parseAmt(state.marsupioStart):0);
     const start=sr===null||Number.isNaN(sr)?0:sr;
-    const bonus=!!state.bonusFScaledBySubject?.[idx]?bonusTotalForSubject(idx):0;
+    const bonus=bonusScaledAmountForSubject(idx);
     return {start,cash,bancomat,bonus,theoretical:Math.round((start+cash-bonus)*100)/100,ds};
   }
   // Controllo obbligatorio di completezza e coerenza prima della chiusura di un marsupio.
@@ -857,8 +859,8 @@ Controlla questi dati prima di premere Importa.`;
 
   function exportSubjectCsv(idx) {
     const name=state.names[idx] || `Soggetto ${idx+1}`;
-    const rows=[['Fattorino','Numero','Totale','Canale','Metodo','CASH','BANCOMAT','Bonus F','F scalata','Ora','Creato ISO']];
-    state.deliveries.filter(d=>d.subjectIdx===idx).forEach(d=>{const p=paymentBreakdown(d);rows.push([d.riderName||name,d.num,d.total,d.channel,p.bancomat>0?(p.cash>0?'MISTO':'BANCOMAT'):'CASH',fmtEur(p.cash),fmtEur(p.bancomat),d.bonusF||'',state.bonusFScaledBySubject?.[idx]?'SI':'NO',d.createdAt||'',d.createdAtISO||'']);});
+    const rows=[['Fattorino','Numero','Totale','Canale','Metodo','CASH','BANCOMAT','Bonus F','F scalata','Ora','Creato ISO','Importo F già sottratto']];
+    state.deliveries.filter(d=>d.subjectIdx===idx).forEach(d=>{const p=paymentBreakdown(d);rows.push([d.riderName||name,d.num,d.total,d.channel,p.bancomat>0?(p.cash>0?'MISTO':'BANCOMAT'):'CASH',fmtEur(p.cash),fmtEur(p.bancomat),d.bonusF||'',bonusScaledAmountForSubject(idx)>=bonusTotalForSubject(idx)-0.005?'SI':'NO',d.createdAt||'',d.createdAtISO||'',fmtAmountInput(bonusScaledAmountForSubject(idx))]);});
     const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');
     downloadText(`verifica-numeri-${name.replace(/[^a-z0-9_-]/gi,'_')}.csv`,csv,'text/csv;charset=utf-8');
   }
@@ -1469,6 +1471,17 @@ Controlla questi dati prima di premere Importa.`;
     return entries.reduce((sum,d)=>sum+(parseAmt(d.bonusF)||0),0) + manualCells.reduce((sum,c)=>sum+(parseAmt(c.bonusF)||0),0);
   }
 
+  // Importo esatto già sottratto dal fattorino; compatibile con i vecchi CSV booleani.
+  function bonusScaledAmountForSubject(idx) {
+    const total = bonusTotalForSubject(idx);
+    const map = state.bonusFScaledAmountBySubject || {};
+    if (Object.prototype.hasOwnProperty.call(map, idx)) {
+      const raw = parseAmt(map[idx]);
+      return Math.max(0, Math.min(total, raw === null || !Number.isFinite(raw) ? 0 : raw));
+    }
+    return state.bonusFScaledBySubject?.[idx] ? total : 0;
+  }
+
   function renderBonusBySubject() {
     const el = $('bonusFBySubject');
     if (!el) return;
@@ -1478,9 +1491,10 @@ Controlla questi dati prima di premere Importa.`;
       state.subjects.forEach(row => { const c=row[idx]; if (c && parseAmt(c.bonusF)>0 && !state.deliveries.some(d=>d.subjectIdx===idx && normNum(d.num)===normNum(c.num))) manualCells.push({num:c.num, bonusF:c.bonusF}); });
       const total = bonusTotalForSubject(idx);
       const details = entries.map(d=>`N. ${esc(d.num)}: ${fmtEur(parseAmt(d.bonusF)||0)}`).concat(manualCells.map(c=>`N. ${esc(c.num)} (manuale): ${fmtEur(parseAmt(c.bonusF)||0)}`));
-      const scaled = !!state.bonusFScaledBySubject?.[idx];
+      const scaledAmt = bonusScaledAmountForSubject(idx);
+      const pendingAmt = Math.max(0, total-scaledAmt);
       const armed = pendingClearSubjectIdx === idx;
-      return `<div class="subjectStat"><div><strong>${esc(name || `Soggetto ${idx+1}`)}</strong><small>${details.length ? details.join(' · ') : 'Nessun Bonus F'} · ${scaled ? 'Scalatura confermata manualmente' : 'In attesa di conferma manuale'}</small></div><b>${fmtEur(total)}</b><button type="button" class="danger small" data-clear-subject="${idx}" aria-label="${armed ? 'Conferma pulizia' : 'Pulisci soggetto'}">${armed ? 'Conferma pulizia' : 'Pulisci soggetto'}</button></div>`;
+      return `<div class="subjectStat"><div><strong>${esc(name || `Soggetto ${idx+1}`)}</strong><small>${details.length ? details.join(' · ') : 'Nessun Bonus F'} · Sottratte ${fmtEur(scaledAmt)} · In attesa ${fmtEur(pendingAmt)}</small></div><b>${fmtEur(total)}</b><button type="button" class="danger small" data-clear-subject="${idx}" aria-label="${armed ? 'Conferma pulizia' : 'Pulisci soggetto'}">${armed ? 'Conferma pulizia' : 'Pulisci soggetto'}</button></div>`;
     });
     el.innerHTML = rows.join('');
     el.querySelectorAll('[data-clear-subject]').forEach(btn => btn.addEventListener('click', () => clearSubjectData(Number(btn.dataset.clearSubject))));
@@ -1503,19 +1517,21 @@ Controlla questi dati prima di premere Importa.`;
         if (!linked) { cash += getCashAmount(c); bancomat += getPosDeducted(c); }
       });
       const bonus = bonusTotalForSubject(idx);
-      const scaled = !!state.bonusFScaledBySubject?.[idx];
+      const scaledAmount = bonusScaledAmountForSubject(idx);
+      const pendingAmount = Math.max(0, bonus-scaledAmount);
+      const scaled = bonus > 0 && pendingAmount < 0.005;
       const hasActivity = ds.length > 0 || state.subjects.some(row => String(row[idx]?.num || '').trim() || String(row[idx]?.total || '').trim());
       const startRaw = Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject || {}, idx) ? parseAmt(state.marsupioStartBySubject[idx]) : (hasActivity ? legacyStart : 0);
       const start = startRaw === null || Number.isNaN(startRaw) ? 0 : startRaw;
       const total = Math.round((start + cash) * 100) / 100;
-      const remain = Math.round((total - (scaled ? bonus : 0)) * 100) / 100;
+      const remain = Math.round((total - scaledAmount) * 100) / 100;
       return `<article class="walletSubjectCard">
         <div class="toolbar"><strong>${esc(name || `Soggetto ${idx+1}`)}</strong><b>${fmtEur(total + bancomat)}</b></div>
         <div class="walletMetrics">
           <div class="walletMetric"><small>Marsupio iniziale (modificabile)</small><input inputmode="decimal" aria-label="Marsupio iniziale ${esc(name)}" data-wallet-start="${idx}" value="${esc(Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject || {}, idx) ? state.marsupioStartBySubject[idx] : (hasActivity ? state.marsupioStart : '0'))}" style="width:100%;margin-top:4px"></div>
           <div class="walletMetric"><small>Cash da consegnare</small><b>${fmtEur(cash)}</b></div>
           <div class="walletMetric"><small>Bancomat / POS (banca)</small><b>${fmtEur(bancomat)}</b></div>
-          <div class="walletMetric"><small>Bonus F totale</small><b>${fmtEur(bonus)}</b></div>
+          <div class="walletMetric"><small>Bonus F totale</small><b>${fmtEur(bonus)}</b><small>Già sottratte: ${fmtEur(scaledAmount)} · Da sottrarre: ${fmtEur(pendingAmount)}</small></div>
         </div>
         <div class="walletActions"><label><input type="checkbox" data-wallet-scaled="${idx}" ${scaled?'checked':''}> F scalate confermate</label><button type="button" class="secondary small" data-wallet-export="${idx}">Esporta CSV</button><button type="button" class="danger small" data-wallet-clear="${idx}">${pendingClearSubjectIdx === idx ? 'Conferma pulizia definitiva' : 'Pulisci soggetto'}</button></div>
         <div class="walletRemain">RIMANENTE NEL MARSUPIO<br>${fmtEur(remain)}</div>
@@ -1536,6 +1552,8 @@ Controlla questi dati prima di premere Importa.`;
       const idx = Number(input.dataset.walletScaled);
       state.bonusFScaledBySubject = state.bonusFScaledBySubject || {};
       state.bonusFScaledBySubject[idx] = input.checked;
+      state.bonusFScaledAmountBySubject = state.bonusFScaledAmountBySubject || {};
+      state.bonusFScaledAmountBySubject[idx] = input.checked ? bonusTotalForSubject(idx) : 0;
       audit('CONFERMA BONUS F', `${state.names[idx]}: ${input.checked ? 'scalatura confermata' : 'scalatura revocata'}`);
       recomputeAll(); scheduleSave();
     }));
@@ -1575,6 +1593,7 @@ Controlla questi dati prima di premere Importa.`;
     mappedKeys.forEach(k => { delete state.riderMappings[k]; });
     state.bonusFScaledBySubject = state.bonusFScaledBySubject || {};
     delete state.bonusFScaledBySubject[idx];
+    if (state.bonusFScaledAmountBySubject) delete state.bonusFScaledAmountBySubject[idx];
     state.marsupioStartBySubject = state.marsupioStartBySubject || {};
     delete state.marsupioStartBySubject[idx];
     renderGrid(); renderDeliveries(); renderRiderMappings(); recomputeAll();
@@ -1774,6 +1793,16 @@ Controlla questi dati prima di premere Importa.`;
     });
   }
 
+  function bonusTotalForRider() {
+    let total = (state.deliveries || []).reduce((sum, d) => sum + (parseAmt(d.bonusF) || 0), 0);
+    state.subjects.forEach((row, rowIdx) => row.forEach((cell, subjIdx) => {
+      if (!String(cell?.bonusF || '').trim()) return;
+      const linked = (state.deliveries || []).some(d => d.subjectIdx === subjIdx && normNum(d.num) === normNum(cell.num));
+      if (!linked) total += parseAmt(cell.bonusF) || 0;
+    }));
+    return Math.round(total * 100) / 100;
+  }
+
   function recomputeAll() {
     ensureSize(state.rowsCount);
 
@@ -1969,8 +1998,13 @@ Controlla questi dati prima di premere Importa.`;
       }
     }));
 
-    const bonusScaledAmt = state.bonusFScaled ? bonusTotal : 0;
-    const bonusPendingAmt = state.bonusFScaled ? 0 : bonusTotal;
+    // Il fattorino conferma l'importo effettivamente sottratto, non un interruttore
+    // permanente: nuove F aggiunte dopo la conferma restano in attesa.
+    const confirmedBonusRaw = Number(state.bonusFScaledAmount);
+    const confirmedBonus = Number.isFinite(confirmedBonusRaw) ? Math.max(0, confirmedBonusRaw) : 0;
+    const bonusScaledAmt = Math.min(Math.round(confirmedBonus * 100) / 100, bonusTotal);
+    const bonusPendingAmt = Math.max(0, Math.round((bonusTotal - bonusScaledAmt) * 100) / 100);
+    state.bonusFScaled = bonusTotal > 0 && bonusPendingAmt < 0.005;
 
     // Riepilogo fattorino calcolato direttamente dalle consegne registrate.
     // Non dipende dall'associazione Admin: così CASH/POS si aggiornano subito anche con nome non ancora verificato.
@@ -1989,10 +2023,10 @@ Controlla questi dati prima di premere Importa.`;
     const adminMinusBonus = state.names.reduce((sum, _name, idx) => {
       const subjectCash = subjCash[idx] || 0;
       const subjectBonus = bonusTotalForSubject(idx);
-      const subjectScaled = !!state.bonusFScaledBySubject?.[idx];
+      const subjectScaledAmount = bonusScaledAmountForSubject(idx);
       const subjectStartRaw = Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject || {}, idx) ? parseAmt(state.marsupioStartBySubject[idx]) : ((subjCount[idx] || 0) > 0 ? mStart : 0);
       const subjectStart = subjectStartRaw === null || Number.isNaN(subjectStartRaw) ? 0 : subjectStartRaw;
-      return sum + subjectStart + subjectCash - (subjectScaled ? subjectBonus : 0);
+      return sum + subjectStart + subjectCash - subjectScaledAmount;
     }, 0);
 
     // Rider UI
@@ -2009,15 +2043,15 @@ Controlla questi dati prima di premere Importa.`;
     if ($('rBonusTotal')) $('rBonusTotal').textContent = fmtEur(bonusTotal);
     if ($('rBonusScaledAmt')) $('rBonusScaledAmt').textContent = fmtEur(bonusScaledAmt);
     if ($('rBonusPendingAmt')) $('rBonusPendingAmt').textContent = fmtEur(bonusPendingAmt);
-    if ($('rBonusScaledCheck')) $('rBonusScaledCheck').checked = !!state.bonusFScaled;
+    if ($('rBonusScaledCheck')) $('rBonusScaledCheck').checked = bonusTotal > 0 && bonusPendingAmt < 0.005;
 
     if ($('rBonusReminder')) {
       if (bonusTotal <= 0) {
-        $('rBonusReminder').textContent = 'Nessun Bonus F inserito. Se inserisci Bonus F, non viene sottratto in automatico finché non spunti "Scalato F".';
-      } else if (state.bonusFScaled) {
-        $('rBonusReminder').textContent = `Scalato F ATTIVO: scalati ${fmtEur(bonusScaledAmt)} dal marsupio. Totale meno le F: ${fmtEur(minusBonusTotal)} · Rimanente nel marsupio: ${fmtEur(remainMarsupio)}.`;
+        $('rBonusReminder').textContent = 'Nessun Bonus F inserito. Quando sono presenti delle F, restano nel conteggio finché non confermi manualmente di averle sottratte dal marsupio.';
+      } else if (bonusPendingAmt < 0.005) {
+        $('rBonusReminder').textContent = `Conferma manuale completata: ${fmtEur(bonusScaledAmt)} di F sottratte dal marsupio. Rimanente da consegnare: ${fmtEur(remainMarsupio)}.`;
       } else {
-        $('rBonusReminder').textContent = `ATTENZIONE: Bonus F pari a ${fmtEur(bonusPendingAmt)} NON sottratto in automatico. Spunta "Scalato F" quando hai scalato l'importo dal marsupio.`;
+        $('rBonusReminder').textContent = `${fmtEur(bonusScaledAmt)} di F già confermate come sottratte. Restano ${fmtEur(bonusPendingAmt)} da sottrarre. Seleziona la casella soltanto dopo aver tolto fisicamente anche questo importo dal marsupio.`;
       }
     }
 
@@ -2103,7 +2137,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function buildRiderCsv(rowsToExport, fallbackName = '') {
-    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Zona', 'Quota Zona', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO'];
+    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Zona', 'Quota Zona', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO', 'Importo F già sottratto'];
     const rows = rowsToExport.map(d => [
       d.id,
       String(d.riderName || fallbackName || '').trim(),
@@ -2119,8 +2153,9 @@ Controlla questi dati prima di premere Importa.`;
       d.zoneAmount || '',
       d.createdAt || '',
       d.pos ? 'BANCOMAT' : 'CASH',
-      d.subjectIdx >= 0 ? (state.bonusFScaledBySubject?.[d.subjectIdx] ? 'SI' : 'NO') : (state.bonusFManualConfirmed && state.bonusFScaled ? 'SI' : 'NO'),
-      d.createdAtISO || ''
+      d.subjectIdx >= 0 ? (bonusScaledAmountForSubject(d.subjectIdx) >= bonusTotalForSubject(d.subjectIdx)-0.005 ? 'SI' : 'NO') : (state.bonusFManualConfirmed && state.bonusFScaled ? 'SI' : 'NO'),
+      d.createdAtISO || '',
+      fmtAmountInput(d.subjectIdx >= 0 ? bonusScaledAmountForSubject(d.subjectIdx) : (Number(state.bonusFScaledAmount)||0))
     ]);
     return '\uFEFF' + [headers, ...rows].map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
   }
@@ -2229,7 +2264,7 @@ Controlla questi dati prima di premere Importa.`;
       const ix = {
         id: col('id'), rider: col('fattorino', 'nome fattorino'), assigned: col('soggetto assegnato'),
         num: col('numero'), total: col('totale'), channel: col('canale'), cash: col('cash'), pos: col('pos'),
-        posAmt: col('quota pos'), bonus: col('bonus f'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), zone: col('zona'), zoneAmount: col('quota zona'), createdAtISO: col('data creazione iso')
+        posAmt: col('quota pos'), bonus: col('bonus f'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), scaledAmount: col('importo f già sottratto'), zone: col('zona'), zoneAmount: col('quota zona'), createdAtISO: col('data creazione iso')
       };
       if (ix.num < 0 || ix.total < 0 || (ix.rider < 0 && ix.assigned < 0)) throw new Error('CSV non compatibile: servono le colonne Fattorino, Numero e Totale.');
       const prepared = [];
@@ -2242,6 +2277,9 @@ Controlla questi dati prima di premere Importa.`;
         const posAmt = get('posAmt'), bonusF = get('bonus');
         const paymentChannel = get('paymentChannel') || (pos ? 'BANCOMAT' : 'CASH');
         const bonusScaled = /^(si|1|true|yes)$/i.test(get('bonusScaled'));
+        const scaledAmountRaw = get('scaledAmount');
+        const bonusScaledAmount = scaledAmountRaw ? parseAmt(scaledAmountRaw) : null;
+        if (scaledAmountRaw && (bonusScaledAmount === null || !Number.isFinite(bonusScaledAmount) || bonusScaledAmount < 0)) throw new Error(`Riga CSV ${n + 2}: importo F già sottratto non valido.`);
         if (!riderName) throw new Error(`Riga CSV ${n + 2}: nome fattorino mancante.`);
         const validationError = validateDeliveryFields({ num, total, cash, pos, posAmt, bonusF });
         if (validationError) throw new Error(`Riga CSV ${n + 2}: ${validationError}`);
@@ -2250,7 +2288,7 @@ Controlla questi dati prima di premere Importa.`;
         const id = get('id') || stableImportId([riderName, num, total, channel, cash, pos, posAmt, bonusF, createdAt]);
         const importedCreatedAt = get('createdAtISO');
         const createdAtISO = importedCreatedAt && Number.isFinite(Date.parse(importedCreatedAt)) ? new Date(importedCreatedAt).toISOString() : new Date().toISOString();
-        prepared.push({ id, riderName, num, total, channel, paymentChannel, cash, pos, posAmt, bonusF, zoneName:get('zone'), zoneAmount:get('zoneAmount'), createdAt, createdAtISO, bonusScaled });
+        prepared.push({ id, riderName, num, total, channel, paymentChannel, cash, pos, posAmt, bonusF, zoneName:get('zone'), zoneAmount:get('zoneAmount'), createdAt, createdAtISO, bonusScaled, bonusScaledAmount });
       });
 
       // Se l'Admin importa direttamente in una colonna, il nome nel CSV deve corrispondere
@@ -2283,14 +2321,25 @@ Controlla questi dati prima di premere Importa.`;
       }
 
       // Prima valida tutto il file, poi modifica lo stato: importazione atomica.
-      if (ix.bonusScaled >= 0 && prepared.length) { state.bonusFScaled = prepared.some(x => x.bonusScaled); state.bonusFManualConfirmed = true; }
+      // L'importazione CSV NON deve selezionare la conferma del fattorino:
+      // solo il fattorino può dichiarare manualmente di aver sottratto le F dal marsupio.
       let added = 0, updated = 0;
       prepared.forEach(item => {
         const existing = state.deliveries.findIndex(d => d.id === item.id);
         const old = existing >= 0 ? state.deliveries[existing] : {};
         const assignedIdx = Number.isInteger(targetSubjectIdx) && targetSubjectIdx >= 0 && targetSubjectIdx < S ? targetSubjectIdx : resolveSubjectIndex(item.riderName);
         if (Number.isInteger(targetSubjectIdx) && targetSubjectIdx >= 0 && targetSubjectIdx < S) state.riderMappings[nameKey(item.riderName)] = targetSubjectIdx;
-        if (item.bonusScaled && assignedIdx >= 0) { state.bonusFScaledBySubject = state.bonusFScaledBySubject || {}; state.bonusFScaledBySubject[assignedIdx] = true; }
+        if (assignedIdx >= 0) {
+          state.bonusFScaledBySubject = state.bonusFScaledBySubject || {};
+          state.bonusFScaledAmountBySubject = state.bonusFScaledAmountBySubject || {};
+          if (item.bonusScaledAmount !== null && item.bonusScaledAmount !== undefined) {
+            state.bonusFScaledAmountBySubject[assignedIdx] = item.bonusScaledAmount;
+            state.bonusFScaledBySubject[assignedIdx] = false;
+          } else if (item.bonusScaled) {
+            state.bonusFScaledBySubject[assignedIdx] = true;
+            delete state.bonusFScaledAmountBySubject[assignedIdx];
+          }
+        }
         const matchedZone = state.zones.find(z => item.zoneName && nameKey(z.name) === nameKey(item.zoneName));
         const d = { ...old, ...item, ...(matchedZone ? { zoneId: matchedZone.id, zoneName: matchedZone.name, zoneAmount: item.zoneAmount || item.bonusF } : {}), channel: canonicalChannel(item.channel), subjectIdx: assignedIdx };
         if (existing >= 0) {
@@ -2321,7 +2370,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function exportAdminCsv() {
-    const headers = ['Tipo', 'Riga', 'Numero atteso', 'Totale atteso', 'Soggetto', 'Numero', 'Totale', 'CASH', 'POS', 'Quota POS', 'Fattorino', 'Canale', 'Bonus F', 'Ora', 'Marsupio iniziale', 'Bonus F scalato'];
+    const headers = ['Tipo', 'Riga', 'Numero atteso', 'Totale atteso', 'Soggetto', 'Numero', 'Totale', 'CASH', 'POS', 'Quota POS', 'Fattorino', 'Canale', 'Bonus F', 'Ora', 'Marsupio iniziale', 'Bonus F scalato', 'Importo F già sottratto'];
     const bodyRows = [];
     for (let i = 0; i < state.rowsCount; i++) {
       for (let j = 0; j < S; j++) {
@@ -2332,8 +2381,8 @@ Controlla questi dati prima di premere Importa.`;
     state.deliveries.forEach(d => bodyRows.push(['CONSEGNA', '', '', '', d.subjectIdx >= 0 ? state.names[d.subjectIdx] : 'DA ASSOCIARE', d.num, d.total, d.cash ? '1' : '0', d.pos ? '1' : '0', d.posAmt || '', d.riderName || '', d.channel || '', d.bonusF || '', d.createdAt || '']));
     state.channels.forEach(ch => bodyRows.push(['CANALE', '', '', '', '', '', '', '', '', '', '', ch]));
     Object.entries(state.riderMappings || {}).forEach(([rider, subjectIdx]) => bodyRows.push(['MAPPATURA', '', '', '', Number.isInteger(subjectIdx) && subjectIdx >= 0 && subjectIdx < S ? state.names[subjectIdx] : '', '', '', '', '', '', rider]));
-    bodyRows.push(['IMPOSTAZIONI', '', '', '', '', '', '', '', '', '', '', '', '', '', state.marsupioStart || '0', state.bonusFScaled ? '1' : '0']);
-    state.names.forEach((name, idx) => bodyRows.push(['MARSUPIO_SOGGETTO', '', '', '', name, '', '', '', '', '', '', '', '', '', state.marsupioStartBySubject?.[idx] ?? '', state.bonusFScaledBySubject?.[idx] ? '1' : '0']));
+    bodyRows.push(['IMPOSTAZIONI', '', '', '', '', '', '', '', '', '', '', '', '', '', state.marsupioStart || '0', state.bonusFScaled ? '1' : '0', fmtAmountInput(Number(state.bonusFScaledAmount)||0)]);
+    state.names.forEach((name, idx) => bodyRows.push(['MARSUPIO_SOGGETTO', '', '', '', name, '', '', '', '', '', '', '', '', '', state.marsupioStartBySubject?.[idx] ?? '', state.bonusFScaledBySubject?.[idx] ? '1' : '0', fmtAmountInput(bonusScaledAmountForSubject(idx))]));
     const csv = '﻿' + [headers, ...bodyRows].map(r => headers.map((_, i) => `"${String(r[i] ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -2368,7 +2417,10 @@ Controlla questi dati prima di premere Importa.`;
       state.channels = [...DEFAULT_CHANNELS];
       state.deliveries = [];
       state.bonusFScaled = false;
+      state.bonusFScaledAmount = 0;
+      state.bonusFManualConfirmed = false;
       state.bonusFScaledBySubject = {};
+      state.bonusFScaledAmountBySubject = {};
       state.marsupioStartBySubject = {};
       state.filters = { search: '', status: 'all', subject: '', channel: '' };
       $('marsupioStartInput').value = state.marsupioStart;
@@ -2419,13 +2471,23 @@ Controlla questi dati prima di premere Importa.`;
       assert(validateDeliveryFields({ num: '1', total: '20', cash: false, pos: false, posAmt: '', bonusF: '' }) !== '', 'Validazione: assenza metodo di pagamento rifiutata');
       assert(validateDeliveryFields({ num: '1', total: '20', cash: true, pos: false, posAmt: '', bonusF: '-1' }) !== '', 'Validazione: Bonus F negativo rifiutato');
 
-      state.bonusFScaled = false; state.bonusFScaledBySubject = {0:false}; recomputeAll();
+      state.bonusFScaled = false; state.bonusFScaledAmount = 0; state.bonusFScaledBySubject = {0:false}; recomputeAll();
       assert(parseAmt($('rBonusPendingAmt').textContent) === 5 && parseAmt($('rMinusBonus').textContent) === 112.5, 'Bonus F non sottratto prima della conferma');
       state.bonusFScaledBySubject[0] = true; recomputeAll();
       assert($('adminSubjectWallets').textContent.includes('107,50 €'), 'Admin: Bonus F sottratto solo dopo conferma manuale del singolo soggetto');
-      state.bonusFScaled = true; recomputeAll();
-      assert(parseAmt($('rBonusScaledAmt').textContent) === 5 && parseAmt($('rMinusBonus').textContent) === 107.5, 'Bonus F sottratto solo dopo la spunta');
+      $('rBonusScaledCheck').checked = true;
+      $('rBonusScaledCheck').dispatchEvent(new Event('change'));
+      recomputeAll();
+      assert(state.bonusFScaledAmount === 5 && parseAmt($('rBonusScaledAmt').textContent) === 5 && parseAmt($('rMinusBonus').textContent) === 107.5, 'Bonus F sottratto solo dopo l’effettiva spunta manuale del fattorino');
       assert(state.subjects[d._gridBinding.rowIdx][0].bonusF === '5,00', 'Bonus F resta visibile e collegato alla riga del soggetto dopo la spunta');
+      // Nuove consegne dopo una sottrazione confermata: la spunta deve tornare in attesa e sottrarre solo il vecchio importo.
+      const priorScaled = state.bonusFScaledAmount;
+      state.deliveries.push({ id:'d_bonus_new', subjectIdx:0, num:'102', total:'10,00', channel:'Telefono', bonusF:'2,00', cash:true, pos:false, posAmt:'', createdAt:'20:10' });
+      recomputeAll();
+      assert(parseAmt($('rBonusScaledAmt').textContent) === 5 && parseAmt($('rBonusPendingAmt').textContent) === 2 && !$('rBonusScaledCheck').checked, 'Nuove F dopo la conferma: conserva le F già sottratte e lascia le nuove in attesa');
+      state.deliveries = state.deliveries.filter(x=>x.id!=='d_bonus_new');
+      state.bonusFScaledAmount = priorScaled;
+      recomputeAll();
 
       // Sposta la consegna su un altro soggetto: la vecchia cella deve essere ripristinata.
       const oldRow = d._gridBinding.rowIdx;
@@ -2453,6 +2515,12 @@ Controlla questi dati prima di premere Importa.`;
       const csvRows = parseCsvText('ID;Fattorino;Numero;Totale;Canale;CASH;POS;Quota POS;Bonus F;Ora\r\n"x1";"Rossi; Mario";"1";"12,50";"Telefono";"SI";"NO";"0";"1,00";"19:00"');
       assert(csvRows.length === 2 && csvRows[1][1] === 'Rossi; Mario' && csvRows[1][3] === '12,50', 'Lettura CSV: delimitatori, virgolette e campi con punto e virgola');
       assert(stableImportId(['Mario Rossi', '12', '10,00', 'Telefono', '19:00']) === stableImportId(['Mario Rossi', '12', '10,00', 'Telefono', '19:00']), 'Import CSV senza ID: identificativo deterministico anti-duplicato');
+      const exactBonusProbe = { id:'probe_exact_bonus', subjectIdx:0, num:'EXACT', total:'1,00', bonusF:'7,00', cash:true, pos:false, posAmt:'' };
+      state.deliveries.push(exactBonusProbe);
+      state.bonusFScaledAmountBySubject = {0: 5};
+      assert(bonusScaledAmountForSubject(0) === 5 && bonusTotalForSubject(0) === 7, 'Importo F già sottratto parziale esatto disponibile per esportazione e quadratura Admin');
+      state.deliveries = state.deliveries.filter(x=>x.id!=='probe_exact_bonus');
+      state.bonusFScaledAmountBySubject = {};
 
       // Duplicate-number logic in the grid.
       state.rowsCount = 150;
@@ -2504,6 +2572,7 @@ Controlla questi dati prima di premere Importa.`;
     state.marsupioStart = '150,00';
     state.lastRiderName = '';
     state.bonusFScaled = false;
+    state.bonusFScaledAmount = 0;
     state.deliveries = [
       { id: 'd_1', subjectIdx: 0, num: '10', total: '25,00', channel: 'Telefono', bonusF: '3,00', cash: true, pos: false, posAmt: '', createdAt: '19:15' },
       { id: 'd_2', subjectIdx: 2, num: '24', total: '18,50', channel: 'Just Eat', bonusF: '0', cash: false, pos: true, posAmt: '', createdAt: '19:40' },
@@ -2594,6 +2663,9 @@ Controlla questi dati prima di premere Importa.`;
       if (confirm('Eliminare tutte le consegne del fattorino?')) {
         state.deliveries.forEach(releaseDeliveryBinding);
         state.deliveries = [];
+        state.bonusFScaled = false;
+        state.bonusFScaledAmount = 0;
+        state.bonusFManualConfirmed = false;
         renderGrid();
         renderDeliveries();
         renderRiderMappings();
@@ -2603,7 +2675,9 @@ Controlla questi dati prima di premere Importa.`;
     };
 
     $('rBonusScaledCheck').onchange = e => {
-      state.bonusFScaled = e.target.checked;
+      // La spunta conferma tutto il Bonus F attualmente accumulato.
+      // Se viene tolta, nessun importo viene considerato sottratto.
+      state.bonusFScaledAmount = e.target.checked ? Math.max(0, bonusTotalForRider()) : 0;
       state.bonusFManualConfirmed = true;
       recomputeAll();
       scheduleSave();
@@ -2659,6 +2733,7 @@ Controlla questi dati prima di premere Importa.`;
       state.riderMappings = {};
       state.marsupioStart = '';
       state.bonusFScaled = false;
+      state.bonusFScaledAmount = 0;
       state.bonusFManualConfirmed = false;
       state.bonusFScaledBySubject = {};
       state.marsupioStartBySubject = {};
@@ -2806,8 +2881,10 @@ Controlla questi dati prima di premere Importa.`;
         marsupioStart:state.marsupioStart||'',
         marsupioStartBySubject:JSON.parse(JSON.stringify(state.marsupioStartBySubject||{})),
         bonusFScaled:!!state.bonusFScaled,
+        bonusFScaledAmount:Number(state.bonusFScaledAmount)||0,
         bonusFManualConfirmed:!!state.bonusFManualConfirmed,
         bonusFScaledBySubject:JSON.parse(JSON.stringify(state.bonusFScaledBySubject||{})),
+        bonusFScaledAmountBySubject:JSON.parse(JSON.stringify(state.bonusFScaledAmountBySubject||{})),
         auditLog:JSON.parse(JSON.stringify(state.auditLog||[]))
       };
       state.shiftArchives=Array.isArray(state.shiftArchives)?state.shiftArchives:[];
@@ -2831,8 +2908,10 @@ Controlla questi dati prima di premere Importa.`;
     state.marsupioStart='';
     state.marsupioStartBySubject={};
     state.bonusFScaled=false;
+    state.bonusFScaledAmount=0;
     state.bonusFManualConfirmed=false;
     state.bonusFScaledBySubject={};
+    state.bonusFScaledAmountBySubject={};
     state.riderProfileConfirmed=false;
     state.lastRiderName='';
     state.activeBusinessDate=today;
@@ -2878,11 +2957,20 @@ Controlla questi dati prima di premere Importa.`;
     if (!Array.isArray(state.operationalPurges)) state.operationalPurges = [];
     state.retentionDays = 7;
     if (typeof state.bonusFScaled !== 'boolean') state.bonusFScaled = false;
+    if (!Number.isFinite(Number(state.bonusFScaledAmount))) state.bonusFScaledAmount = 0;
     if (!state.bonusFScaledBySubject || typeof state.bonusFScaledBySubject !== 'object') state.bonusFScaledBySubject = {};
+    if (!state.bonusFScaledAmountBySubject || typeof state.bonusFScaledAmountBySubject !== 'object') state.bonusFScaledAmountBySubject = {};
     if (!state.marsupioStartBySubject || typeof state.marsupioStartBySubject !== 'object') state.marsupioStartBySubject = {};
-    // Migrazione una tantum: la nuova conferma F per soggetto parte sempre disattivata.
-    if (!state.bonusFScaleMigrationDone) { state.bonusFScaled = false; state.bonusFManualConfirmed = false; state.bonusFScaleMigrationDone = true; }
-    if (!state.bonusFManualConfirmed) state.bonusFScaled = false;
+    // Migrazione una tantum: la conferma del fattorino parte deselezionata
+    // anche per chi aggiorna da una versione precedente. Da questo momento
+    // soltanto il click manuale del fattorino può attivare la sottrazione F.
+    if (!state.bonusFManualOnlyMigrationDone) {
+      state.bonusFScaled = false;
+      state.bonusFScaledAmount = 0;
+      state.bonusFManualConfirmed = false;
+      state.bonusFManualOnlyMigrationDone = true;
+    }
+    if (!state.bonusFManualConfirmed) { state.bonusFScaled = false; state.bonusFScaledAmount = 0; }
     state.deliveries.forEach(d => { d.paymentChannel = d.paymentChannel || (d.pos ? 'BANCOMAT' : 'CASH'); });
     state.deliveries.forEach(d => { if (!d.createdAtISO || !Number.isFinite(Date.parse(d.createdAtISO))) d.createdAtISO = new Date().toISOString(); });
     state.deliveries.forEach(d => {
