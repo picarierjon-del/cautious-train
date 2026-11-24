@@ -1477,8 +1477,28 @@ Controlla questi dati prima di premere Importa.`;
       ['POS / BANCOMAT',sums.pos,sums.posCount,'Pagamenti elettronici'],
       ['GIÀ PAGATI',sums.paid,sums.paidCount,'Esclusi da CASH, POS e marsupio']
     ];
+    const detail = (kind) => {
+      const selected = (deliveries || []).filter(d => {
+        if (kind === 'paid') return !!d.paid;
+        if (d.paid) return false;
+        const p = paymentBreakdown(d);
+        if (kind === 'cash') return p.cash > 0 && p.bancomat === 0;
+        if (kind === 'pos') return p.bancomat > 0 && p.cash === 0;
+        if (kind === 'mixed') return p.cash > 0 && p.bancomat > 0;
+        return false;
+      });
+      if (!selected.length) return '<p class="hint">Nessuna consegna.</p>';
+      return `<div class="subjectSummary">${selected.map(d => {
+        const p = paymentBreakdown(d);
+        const when = d.createdAt || (d.createdAtISO ? new Date(d.createdAtISO).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : '');
+        const method = d.paid ? 'GIÀ PAGATO' : (p.cash > 0 && p.bancomat > 0 ? `MISTO · CASH ${fmtEur(p.cash)} + POS ${fmtEur(p.bancomat)}` : p.bancomat > 0 ? 'POS / BANCOMAT' : 'CASH');
+        return `<div class="subjectStat"><div><strong>Consegna n. ${esc(d.num || '—')} · ${esc(d.riderName || (d.subjectIdx >= 0 ? state.names[d.subjectIdx] : '') || 'Fattorino non indicato')}</strong><small>${esc(when)} · ${esc(d.channel || 'Canale non indicato')} · ${method}</small></div><b>${fmtEur(parseAmt(d.total) || 0)}</b></div>`;
+      }).join('')}</div>`;
+    };
+    const panels = rows.map(([label,value,count,note],i) => `<details class="panelSub" ${i===0?'open':''}><summary><strong>${label}</strong> · ${count} consegne · ${fmtEur(value)}</summary><p class="hint">${note}</p>${detail(i===0?'cash':i===1?'pos':'paid')}</details>`).join('');
+    const mixedPanel = `<details class="panelSub"><summary><strong>PAGAMENTI MISTI CASH + POS</strong> · ${sums.mixedCount} consegne</summary><p class="hint">Ogni consegna è riportata una sola volta, con la quota CASH e la quota POS separate.</p>${detail('mixed')}</details>`;
     el.innerHTML = rows.map(([label,value,count,note]) => `<div class="kpiBox"><span>${label}</span><b>${fmtEur(value)}</b><small class="hint">${count} ordini · ${note}</small><div style="height:10px;background:var(--panel2);border-radius:8px;overflow:hidden;margin-top:8px"><div style="height:100%;width:${Math.max(0,Math.min(100,value/max*100))}%;background:var(--blue);border-radius:8px"></div></div></div>`).join('') +
-      `<div class="kpiBox info"><span>Ordini misti CASH + POS</span><b>${sums.mixedCount}</b><small class="hint">Contati nelle rispettive quote</small></div>`;
+      `<div class="kpiBox info"><span>Ordini misti CASH + POS</span><b>${sums.mixedCount}</b><small class="hint">Contati nelle rispettive quote</small></div>` + panels + mixedPanel;
   }
 
   function renderPaymentTotals(containerId, deliveries) {
