@@ -505,7 +505,7 @@ button{justify-content:center}
       <div class="panelSub">
         <strong>Totali per canale di provenienza e metodo d'incasso</strong>
         <div id="admChannelTotals" class="subjectSummary"></div>
-        <div class="panelSub" id="adminPaidOrdersPanel"><strong>Riepilogo ordini per stato di pagamento</strong><p class="hint">Gli ordini già pagati sono esclusi da CASH, POS e marsupio. Qui restano visibili separatamente per controllo.</p><div id="adminPaidPaymentChart" class="subjectSummary"></div></div>
+        <div class="panelSub" id="adminPaidOrdersPanel"><strong>Riepilogo ordini per stato di pagamento</strong><p class="hint">Gli ordini già pagati sono esclusi da CASH, POS e marsupio. Qui restano visibili separatamente per controllo.</p><label for="adminPaymentNameFilter"><strong>Cerca consegne per nome fattorino</strong></label><input id="adminPaymentNameFilter" type="search" placeholder="Scrivi il nome del fattorino…" autocomplete="off"><div class="formGrid" style="margin-top:10px"><div class="fieldStack"><label for="adminOriginFilter">Canale di provenienza ordine</label><select id="adminOriginFilter"><option value="">Tutti i canali</option></select></div><div class="fieldStack"><label for="adminMethodFilter">Tipologia di pagamento</label><select id="adminMethodFilter"><option value="">Tutti i pagamenti</option><option value="cash">CASH</option><option value="pos">POS / BANCOMAT</option><option value="mixed">MISTO CASH + POS</option><option value="paid">GIÀ PAGATO</option></select></div></div><p class="hint">Filtra insieme per fattorino, provenienza (Telefono, Just Eat, Deliveroo, Sofia o altri canali) e tipologia di pagamento. I riepiloghi e gli elenchi sottostanti si aggiornano in base ai filtri scelti.</p><div id="adminPaidPaymentChart" class="subjectSummary"></div></div>
       </div>
       <div id="verdictBox" class="verdict">Inserisci i dati per avviare la verifica.</div><div class="panelSub"><div class="toolbar"><strong>Controllo automatico anomalie</strong><span id="anomalyCount" class="badge">0 anomalie</span></div><div id="anomalyList" class="anomalyList"><div class="anomalyItem good">Nessun controllo eseguito.</div></div></div>
       <div hidden aria-hidden="true"><span id="admMarsupioStart"></span><span id="admMarsupioTotal"></span><span id="admMinusBonus"></span><span id="admRemainMarsupio"></span><span id="netAssigned"></span><div id="expensesContainer"></div></div>
@@ -618,6 +618,7 @@ button{justify-content:center}
     activeRiderIdx: 0,
     lastRiderName: '',
     riderMappings: {},
+    riderOpeningBalancesByName: {},
     channels: [...DEFAULT_CHANNELS],
     zones: [{ id: 'zone_poncarale', name: 'Poncarale', amount: '1,00' }, { id: 'zone_fuori', name: 'Fuori', amount: '2,00' }],
     deliveries: [],
@@ -1123,6 +1124,8 @@ Controlla questi dati prima di premere Importa.`;
     const curFiltCh = $('filterChannelSelect')?.value || '';
     $('filterChannelSelect').innerHTML = `<option value="">Tutti i canali</option>` + state.channels.map(ch => `<option value="${esc(ch)}">${esc(ch)}</option>`).join('');
     if (curFiltCh && state.channels.includes(curFiltCh)) $('filterChannelSelect').value = curFiltCh;
+    const adminOrigin = $('adminOriginFilter');
+    if (adminOrigin) { const selectedOrigin = adminOrigin.value; adminOrigin.innerHTML = '<option value="">Tutti i canali</option>' + state.channels.map(ch => `<option value="${esc(ch)}">${esc(ch)}</option>`).join(''); if (state.channels.includes(selectedOrigin)) adminOrigin.value = selectedOrigin; }
   }
 
   function normalizeZones() {
@@ -1439,30 +1442,58 @@ Controlla questi dati prima di premere Importa.`;
     return { cash: Math.round(cash * 100) / 100, bancomat: Math.round(pos * 100) / 100 };
   }
 
-  function renderChannelTotals(containerId, deliveries) {
+  function renderChannelTotals(containerId, deliveries, showOrderDetails = false) {
     const el = $(containerId);
     if (!el) return;
     const byOrigin = new Map();
-    const byPayment = { CASH: 0, BANCOMAT: 0 };
-    deliveries.forEach(d => {
+    const grand = { cash:0, pos:0, paid:0, cashOnlyCount:0, posOnlyCount:0, mixedCount:0, paidCount:0, totalCount:0 };
+    (deliveries || []).forEach(d => {
       const origin = String(d.channel || 'Non specificato').trim() || 'Non specificato';
       const parts = paymentBreakdown(d);
-      if (!byOrigin.has(origin)) byOrigin.set(origin, { cash: 0, bancomat: 0, total: 0 });
+      if (!byOrigin.has(origin)) byOrigin.set(origin, { cash:0, pos:0, paid:0, cashOnlyCount:0, posOnlyCount:0, mixedCount:0, paidCount:0, count:0, orders:[] });
       const item = byOrigin.get(origin);
-      item.cash += parts.cash; item.bancomat += parts.bancomat; item.total += parts.cash + parts.bancomat;
-      byPayment.CASH += parts.cash; byPayment.BANCOMAT += parts.bancomat;
+      item.count++; grand.totalCount++;
+      const isPaid = !!d.paid;
+      const isMixed = !isPaid && parts.cash > 0 && parts.bancomat > 0;
+      const isCash = !isPaid && parts.cash > 0 && parts.bancomat === 0;
+      const isPos = !isPaid && parts.bancomat > 0 && parts.cash === 0;
+      if (isPaid) { const amount = Math.max(0, parseAmt(d.total) || 0); item.paid += amount; item.paidCount++; grand.paid += amount; grand.paidCount++; }
+      else {
+        item.cash += parts.cash; item.pos += parts.bancomat;
+        grand.cash += parts.cash; grand.pos += parts.bancomat;
+        if (isMixed) { item.mixedCount++; grand.mixedCount++; }
+        else if (isCash) { item.cashOnlyCount++; grand.cashOnlyCount++; }
+        else if (isPos) { item.posOnlyCount++; grand.posOnlyCount++; }
+      }
+      item.orders.push({ d, parts, isPaid, isMixed, isCash, isPos });
     });
-    const rows = [...byOrigin.entries()].sort((a,b)=>a[0].localeCompare(b[0],'it')).map(([name,v]) =>
-      `<div class="subjectStat"><div><strong>${esc(name)}</strong><small>CASH ${fmtEur(v.cash)} · BANCOMAT ${fmtEur(v.bancomat)}</small></div><b>${fmtEur(v.total)}</b></div>`);
-    rows.push(`<div class="subjectStat"><div><strong>Totale CASH</strong><small>Contanti da consegnare</small></div><b>${fmtEur(byPayment.CASH)}</b></div>`);
-    rows.push(`<div class="subjectStat"><div><strong>Totale BANCOMAT</strong><small>Accredito elettronico — escluso dal marsupio</small></div><b>${fmtEur(byPayment.BANCOMAT)}</b></div>`);
-    el.innerHTML = rows.join('') || '<p class="hint">Nessun incasso registrato.</p>';
+    const euro = v => fmtEur(v);
+    const channelCards = [...byOrigin.entries()].sort((a,b)=>a[0].localeCompare(b[0],'it')).map(([name,v]) => {
+      const orderRows = v.orders.map(({d,parts,isPaid,isMixed,isCash,isPos}) => {
+        const method = isPaid ? 'GIÀ PAGATO' : isMixed ? `MISTO · CASH ${euro(parts.cash)} + POS ${euro(parts.bancomat)}` : isPos ? 'POS / BANCOMAT' : isCash ? 'CASH' : 'Pagamento non specificato';
+        const rider = d.riderName || (d.subjectIdx >= 0 ? state.names[d.subjectIdx] : '') || 'Fattorino non indicato';
+        const time = d.createdAt || (d.createdAtISO ? new Date(d.createdAtISO).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : '');
+        return `<div class="subjectStat"><div><strong>Ordine ${esc(d.num || '—')} · ${esc(rider)}</strong><small>${esc(time)} · ${method}</small></div><b>${euro(isPaid ? (parseAmt(d.total)||0) : parts.cash + parts.bancomat)}</b></div>`;
+      }).join('');
+      return `<details class="panelSub"><summary><strong>${esc(name)}</strong> · ${v.count} consegne</summary><div class="kpiGrid" style="margin-top:10px"><div class="kpiBox"><span>CASH</span><b>${euro(v.cash)}</b><small class="hint">${v.cashOnlyCount} consegne solo CASH</small></div><div class="kpiBox"><span>POS / BANCOMAT</span><b>${euro(v.pos)}</b><small class="hint">${v.posOnlyCount} consegne solo POS</small></div><div class="kpiBox"><span>MISTI</span><b>${v.mixedCount}</b><small class="hint">Quote già ripartite tra CASH e POS</small></div><div class="kpiBox"><span>GIÀ PAGATI</span><b>${euro(v.paid)}</b><small class="hint">${v.paidCount} consegne · esclusi dagli incassi</small></div></div>${showOrderDetails ? `<div class="subjectSummary">${orderRows || '<p class="hint">Nessuna consegna.</p>'}</div>` : ''}</details>`;
+    });
+    el.innerHTML = `<div class="kpiGrid"><div class="kpiBox"><span>Totale CASH</span><b>${euro(grand.cash)}</b><small class="hint">${grand.cashOnlyCount} solo CASH · oltre alle quote CASH dei misti</small></div><div class="kpiBox"><span>Totale POS / BANCOMAT</span><b>${euro(grand.pos)}</b><small class="hint">${grand.posOnlyCount} solo POS · oltre alle quote POS dei misti</small></div><div class="kpiBox"><span>Pagamenti misti</span><b>${grand.mixedCount}</b><small class="hint">Consegne contate una volta sola</small></div><div class="kpiBox"><span>Già pagati</span><b>${euro(grand.paid)}</b><small class="hint">${grand.paidCount} consegne · non sono incassi da riscuotere</small></div></div><p class="hint">Riepilogo per singolo canale: apri una riga per vedere conteggi, importi e dettaglio di ogni consegna. I totali CASH/POS includono le rispettive quote dei pagamenti misti; i già pagati restano separati.</p>${channelCards.join('') || '<p class="hint">Nessuna consegna registrata.</p>'}`;
   }
 
   function renderAdminPaidPaymentChart(deliveries) {
     const el = $('adminPaidPaymentChart'); if (!el) return;
+    const searchName = String($('adminPaymentNameFilter')?.value || '').trim().toLocaleLowerCase('it');
+    const originFilter = String($('adminOriginFilter')?.value || '');
+    const methodFilter = String($('adminMethodFilter')?.value || '');
+    const filtered = (deliveries || []).filter(d => {
+      const name = String(d.riderName || (d.subjectIdx >= 0 ? state.names[d.subjectIdx] : '') || '').toLocaleLowerCase('it');
+      const origin = String(d.channel || 'Non specificato');
+      const p = paymentBreakdown(d);
+      const method = d.paid ? 'paid' : (p.cash > 0 && p.bancomat > 0 ? 'mixed' : p.bancomat > 0 ? 'pos' : 'cash');
+      return (!searchName || name.includes(searchName)) && (!originFilter || nameKey(origin) === nameKey(originFilter)) && (!methodFilter || method === methodFilter);
+    });
     const sums = { cash:0, pos:0, paid:0, cashCount:0, posCount:0, paidCount:0, mixedCount:0 };
-    (deliveries || []).forEach(d => {
+    filtered.forEach(d => {
       const total = Math.max(0, parseAmt(d.total) || 0);
       if (d.paid) { sums.paid += total; sums.paidCount++; return; }
       const p = paymentBreakdown(d);
@@ -1478,7 +1509,7 @@ Controlla questi dati prima di premere Importa.`;
       ['GIÀ PAGATI',sums.paid,sums.paidCount,'Esclusi da CASH, POS e marsupio']
     ];
     const detail = (kind) => {
-      const selected = (deliveries || []).filter(d => {
+      const selected = filtered.filter(d => {
         if (kind === 'paid') return !!d.paid;
         if (d.paid) return false;
         const p = paymentBreakdown(d);
@@ -1497,7 +1528,7 @@ Controlla questi dati prima di premere Importa.`;
     };
     const panels = rows.map(([label,value,count,note],i) => `<details class="panelSub" ${i===0?'open':''}><summary><strong>${label}</strong> · ${count} consegne · ${fmtEur(value)}</summary><p class="hint">${note}</p>${detail(i===0?'cash':i===1?'pos':'paid')}</details>`).join('');
     const mixedPanel = `<details class="panelSub"><summary><strong>PAGAMENTI MISTI CASH + POS</strong> · ${sums.mixedCount} consegne</summary><p class="hint">Ogni consegna è riportata una sola volta, con la quota CASH e la quota POS separate.</p>${detail('mixed')}</details>`;
-    el.innerHTML = rows.map(([label,value,count,note]) => `<div class="kpiBox"><span>${label}</span><b>${fmtEur(value)}</b><small class="hint">${count} ordini · ${note}</small><div style="height:10px;background:var(--panel2);border-radius:8px;overflow:hidden;margin-top:8px"><div style="height:100%;width:${Math.max(0,Math.min(100,value/max*100))}%;background:var(--blue);border-radius:8px"></div></div></div>`).join('') +
+    el.innerHTML = `<p class="hint">${searchName ? `${searchName ? `Nome: <strong>${esc($('adminPaymentNameFilter').value)}</strong> · ` : ''}${originFilter ? `Canale: <strong>${esc(originFilter)}</strong> · ` : ''}${methodFilter ? `Pagamento: <strong>${esc(methodFilter === 'paid' ? 'Già pagato' : methodFilter === 'mixed' ? 'Misto' : methodFilter.toUpperCase())}</strong> · ` : ''}${filtered.length} consegne trovate` : `Tutte le consegne · ${filtered.length} registrate`}</p>` + rows.map(([label,value,count,note]) => `<div class="kpiBox"><span>${label}</span><b>${fmtEur(value)}</b><small class="hint">${count} ordini · ${note}</small><div style="height:10px;background:var(--panel2);border-radius:8px;overflow:hidden;margin-top:8px"><div style="height:100%;width:${Math.max(0,Math.min(100,value/max*100))}%;background:var(--blue);border-radius:8px"></div></div></div>`).join('') +
       `<div class="kpiBox info"><span>Ordini misti CASH + POS</span><b>${sums.mixedCount}</b><small class="hint">Contati nelle rispettive quote</small></div>` + panels + mixedPanel;
   }
 
@@ -2128,7 +2159,7 @@ Controlla questi dati prima di premere Importa.`;
 
     if ($('netAssigned')) $('netAssigned').textContent = fmtEur(netAssigned);
 
-    renderChannelTotals('admChannelTotals', state.deliveries);
+    renderChannelTotals('admChannelTotals', state.deliveries, true);
     renderAdminPaidPaymentChart(state.deliveries);
     renderBonusBySubject();
     renderAdminWallets();
@@ -2192,7 +2223,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function buildRiderCsv(rowsToExport, fallbackName = '') {
-    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Zona', 'Quota Zona', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO', 'Importo F già sottratto', 'Già pagato'];
+    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Zona', 'Quota Zona', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO', 'Importo F già sottratto', 'Già pagato', 'Marsupio iniziale'];
     const rows = rowsToExport.map(d => [
       d.id,
       String(d.riderName || fallbackName || '').trim(),
@@ -2211,7 +2242,8 @@ Controlla questi dati prima di premere Importa.`;
       d.subjectIdx >= 0 ? (bonusScaledAmountForSubject(d.subjectIdx) >= bonusTotalForSubject(d.subjectIdx)-0.005 ? 'SI' : 'NO') : (state.bonusFManualConfirmed && state.bonusFScaled ? 'SI' : 'NO'),
       d.createdAtISO || '',
       fmtAmountInput(d.subjectIdx >= 0 ? bonusScaledAmountForSubject(d.subjectIdx) : (Number(state.bonusFScaledAmount)||0)),
-      d.paid ? 'SI' : 'NO'
+      d.paid ? 'SI' : 'NO',
+      state.marsupioStart || $('marsupioStartInput')?.value || ''
     ]);
     return '\uFEFF' + [headers, ...rows].map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
   }
@@ -2291,6 +2323,11 @@ Controlla questi dati prima di premere Importa.`;
       const idx = Number(row.querySelector('select').value);
       if (!key || !Number.isInteger(idx) || idx < 0 || idx >= S) return;
       state.riderMappings[key] = idx;
+      if (Object.prototype.hasOwnProperty.call(state.riderOpeningBalancesByName || {}, key)) {
+        state.marsupioStartBySubject = state.marsupioStartBySubject || {};
+        state.marsupioStartBySubject[idx] = state.riderOpeningBalancesByName[key];
+        delete state.riderOpeningBalancesByName[key];
+      }
       const mappedName = row.querySelector('strong').textContent;
       const affected = state.deliveries.filter(d => nameKey(d.riderName) === key);
       affected.forEach(d => { d.subjectIdx = idx; syncDeliveryToGrid(d); });
@@ -2320,10 +2357,11 @@ Controlla questi dati prima di premere Importa.`;
       const ix = {
         id: col('id'), rider: col('fattorino', 'nome fattorino'), assigned: col('soggetto assegnato'),
         num: col('numero'), total: col('totale'), channel: col('canale'), cash: col('cash'), pos: col('pos'),
-        posAmt: col('quota pos'), bonus: col('bonus f'), paid: col('già pagato', 'gia pagato'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), scaledAmount: col('importo f già sottratto'), zone: col('zona'), zoneAmount: col('quota zona'), createdAtISO: col('data creazione iso')
+        posAmt: col('quota pos'), bonus: col('bonus f'), paid: col('già pagato', 'gia pagato'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), scaledAmount: col('importo f già sottratto'), zone: col('zona'), zoneAmount: col('quota zona'), createdAtISO: col('data creazione iso'), marsupioStart: col('marsupio iniziale', 'marsupio start')
       };
       if (ix.num < 0 || ix.total < 0 || (ix.rider < 0 && ix.assigned < 0)) throw new Error('CSV non compatibile: servono le colonne Fattorino, Numero e Totale.');
       const prepared = [];
+      const importedStarts = new Map();
       rows.slice(1).forEach((r, n) => {
         const get = k => ix[k] >= 0 ? String(r[ix[k]] ?? '').trim() : '';
         const riderName = get('rider') || (get('assigned') === 'DA ASSOCIARE' ? '' : get('assigned'));
@@ -2332,6 +2370,14 @@ Controlla questi dati prima di premere Importa.`;
         const pos = /^(si|1|true|yes)$/i.test(get('pos'));
         const posAmt = get('posAmt'), bonusF = get('bonus');
         const paid = /^(si|1|true|yes)$/i.test(get('paid'));
+        const startRaw = get('marsupioStart');
+        if (startRaw) {
+          const startValue = parseAmt(startRaw);
+          if (startValue === null || !Number.isFinite(startValue) || startValue < 0) throw new Error(`Riga CSV ${n + 2}: marsupio iniziale non valido.`);
+          const startKey = nameKey(riderName);
+          if (importedStarts.has(startKey) && Math.abs(importedStarts.get(startKey).amount - startValue) > 0.005) throw new Error(`Il CSV contiene importi di marsupio iniziale discordanti per ${riderName}. Nessun dato è stato importato.`);
+          importedStarts.set(startKey, { amount: startValue, riderName });
+        }
         const paymentChannel = get('paymentChannel') || (pos ? 'BANCOMAT' : 'CASH');
         const bonusScaled = /^(si|1|true|yes)$/i.test(get('bonusScaled'));
         const scaledAmountRaw = get('scaledAmount');
@@ -2409,11 +2455,26 @@ Controlla questi dati prima di premere Importa.`;
         }
         syncDeliveryToGrid(d);
       });
-      audit('IMPORTAZIONE CSV', `${file.name}: ${added} nuove, ${updated} aggiornate${Number.isInteger(targetSubjectIdx) ? ` · soggetto ${state.names[targetSubjectIdx]}` : ''}`);
+      // Saldo di apertura per fattorino: sostituisce il valore del soggetto, non si somma alle consegne.
+      let startsUpdated = 0, startsUnmatched = 0;
+      state.riderOpeningBalancesByName = state.riderOpeningBalancesByName || {};
+      importedStarts.forEach((info, riderKey) => {
+        const idx = Number.isInteger(targetSubjectIdx) && targetSubjectIdx >= 0 && targetSubjectIdx < S ? targetSubjectIdx : resolveSubjectIndex(info.riderName);
+        const formattedStart = fmtAmountInput(info.amount);
+        if (idx >= 0) {
+          state.marsupioStartBySubject = state.marsupioStartBySubject || {};
+          state.marsupioStartBySubject[idx] = formattedStart;
+          startsUpdated++;
+        } else {
+          state.riderOpeningBalancesByName[riderKey] = formattedStart;
+          startsUnmatched++;
+        }
+      });
+      audit('IMPORTAZIONE CSV', `${file.name}: ${added} nuove, ${updated} aggiornate, ${startsUpdated} marsupi iniziali aggiornati${startsUnmatched ? `, ${startsUnmatched} da associare` : ''}${Number.isInteger(targetSubjectIdx) ? ` · soggetto ${state.names[targetSubjectIdx]}` : ''}`);
       runRetentionCleanup();
       renderChannels(); renderGrid(); renderDeliveries(); renderRiderMappings(); recomputeAll(); scheduleSave();
       const syncErrors = state.deliveries.filter(d => d.gridSyncError).length;
-      $('importStatus').textContent = `Importazione completata: ${added} nuove consegne, ${updated} aggiornate.${syncErrors ? ` Attenzione: ${syncErrors} non sincronizzate nella griglia; verifica i dettagli qui sotto.` : ' Tutte le consegne assegnate sono state sincronizzate.'} Controlla e associa i nomi non riconosciuti.`;
+      $('importStatus').textContent = `Importazione completata: ${added} nuove consegne, ${updated} aggiornate, ${startsUpdated} marsupi iniziali aggiornati${startsUnmatched ? `, ${startsUnmatched} da associare` : ''}.${syncErrors ? ` Attenzione: ${syncErrors} non sincronizzate nella griglia; verifica i dettagli qui sotto.` : ' Tutte le consegne assegnate sono state sincronizzate.'} Controlla e associa i nomi non riconosciuti.`;
       input.value = '';
     } catch (e) {
       $('importStatus').textContent = 'Importazione non riuscita: ' + e.message;
@@ -2471,6 +2532,7 @@ Controlla questi dati prima di premere Importa.`;
       state.expenses = Array.from({ length: 10 }, (_, i) => ({ label: i === 0 ? 'EF test' : '', raw: '' }));
       state.marsupioStart = '100,00';
       state.riderMappings = {};
+      state.riderOpeningBalancesByName = {};
       state.channels = [...DEFAULT_CHANNELS];
       state.deliveries = [];
       state.bonusFScaled = false;
@@ -2490,7 +2552,16 @@ Controlla questi dati prima di premere Importa.`;
       assert(parseAmt('1.234,56') === 1234.56 && parseAmt('12,50') === 12.5 && parseAmt('12.50') === 12.5, 'Lettura importi italiani e decimali');
       assert(normNum('00042') === normNum('42'), 'Normalizzazione numeri con zeri iniziali');
       assert(nameKey('  José   Rossi ') === nameKey('Jose Rossi'), 'Associazione nomi: maiuscole, spazi e accenti normalizzati');
+      state.marsupioStartBySubject[0] = fmtAmountInput(parseAmt('135,50'));
+      assert(parseAmt(state.marsupioStartBySubject[0]) === 135.5, 'CSV: marsupio iniziale assegnato al soggetto senza sommarlo alle consegne');
+      state.marsupioStartBySubject[0] = fmtAmountInput(parseAmt('135,50'));
+      assert(parseAmt(state.marsupioStartBySubject[0]) === 135.5, 'CSV ripetuto: marsupio iniziale idempotente, nessun doppio conteggio');
       assert(resolveSubjectIndex('test uno') === 0, 'Riconoscimento automatico soggetto con nome corrispondente');
+      state.riderOpeningBalancesByName['nome non associato'] = '88,00';
+      const pendingOpening = state.riderOpeningBalancesByName['nome non associato'];
+      state.riderMappings['nome non associato'] = 2;
+      state.marsupioStartBySubject[2] = pendingOpening; delete state.riderOpeningBalancesByName['nome non associato'];
+      assert(state.marsupioStartBySubject[2] === '88,00' && !state.riderOpeningBalancesByName['nome non associato'], 'Marsupio iniziale: trasferimento al soggetto quando si associa successivamente il nome');
       assert(Array.isArray(state.zones) && state.zones.some(z=>nameKey(z.name)==='poncarale' && parseAmt(z.amount)===1) && state.zones.some(z=>nameKey(z.name)==='fuori' && parseAmt(z.amount)===2), 'Zone predefinite: Poncarale 1,00 € e Fuori 2,00 €');
       const testZone = state.zones.find(z=>nameKey(z.name)==='fuori');
       assert(!!testZone && fmtAmountInput(parseAmt(testZone.amount))==='2,00', 'Calcolo automatico Bonus F in base alla zona selezionata');
@@ -2514,6 +2585,12 @@ Controlla questi dati prima di premere Importa.`;
       assert(subjectWalletNumbers(0).cash === 20 && subjectWalletNumbers(0).bancomat === 0, 'Ordine già pagato: non aumenta il marsupio del fattorino');
       renderAdminPaidPaymentChart(state.deliveries);
       assert($('adminPaidPaymentChart').textContent.includes('GIÀ PAGATI') && $('adminPaidPaymentChart').textContent.includes('35,00 €'), 'Riepilogo Admin: ordini già pagati separati dal CASH e POS');
+      renderChannelTotals('admChannelTotals', state.deliveries, true);
+      assert($('admChannelTotals').textContent.includes('Just Eat') && $('admChannelTotals').textContent.includes('35,00 €') && $('admChannelTotals').textContent.includes('GIÀ PAGATI'), 'Riepilogo per canale: importo e conteggio ordini già pagati');
+      const mixedTest = { id:'test_mixed_channel', subjectIdx:0, riderName:'Test Uno', num:'MIX-1', total:'30,00', channel:'Just Eat', cash:true, pos:true, posAmt:'12,00', paid:false, createdAt:'10:10' };
+      state.deliveries.push(mixedTest); renderChannelTotals('admChannelTotals', state.deliveries, true);
+      assert($('admChannelTotals').textContent.includes('MISTI') && $('admChannelTotals').textContent.includes('18,00 €') && $('admChannelTotals').textContent.includes('12,00 €'), 'Riepilogo per canale: pagamento misto ripartito correttamente CASH/POS');
+      state.deliveries = state.deliveries.filter(x=>x.id!=='test_mixed_channel'); renderChannelTotals('admChannelTotals', state.deliveries, true);
       state.deliveries = state.deliveries.filter(x=>x.id!=='test_paid_1');
       recomputeAll();
 
@@ -2696,6 +2773,9 @@ Controlla questi dati prima di premere Importa.`;
     $('exportAllRidersCsvBtn').onclick = exportAllRidersCsv;
     $('importRiderCsvInput').addEventListener('change', () => { const f=$('importRiderCsvInput').files[0]; if (f) { $('importStatus').textContent = 'File selezionato: ' + f.name + '. Controlla l’anteprima e poi premi Importa.'; renderImportPreview(f); } else renderImportPreview(null); });
     $('closeShiftBtn').onclick = closeAndArchiveShift;
+    if ($('adminPaymentNameFilter')) $('adminPaymentNameFilter').addEventListener('input', () => renderAdminPaidPaymentChart(state.deliveries));
+    if ($('adminOriginFilter')) $('adminOriginFilter').addEventListener('change', () => renderAdminPaidPaymentChart(state.deliveries));
+    if ($('adminMethodFilter')) $('adminMethodFilter').addEventListener('change', () => renderAdminPaidPaymentChart(state.deliveries));
     $('runAiAuditBtn').onclick = () => { const issues=runLocalAssistant(); $('archiveStatus').textContent=issues.length?`Controllo completato: ${issues.length} anomalie da verificare.`:'Controllo completato: nessuna anomalia rilevata.'; };
     $('runRetentionBtn').onclick = () => { if(!confirm('Eseguire la cancellazione dei dettagli operativi più vecchi di 7 giorni? I dati eliminati non saranno più disponibili in questa app.'))return; runRetentionCleanup(); };
     $('exportAuditBtn').onclick = () => downloadText('verifica-numeri-registro-modifiche.csv', 'Data;Operazione;Dettaglio\n'+(state.auditLog||[]).map(x=>[new Date(x.at).toLocaleString('it-IT'),x.action,x.detail].map(v=>'+String(v??).replace(/"/g,)+').join(';')).join('\n'), 'text/csv;charset=utf-8');
@@ -2862,7 +2942,7 @@ Controlla questi dati prima di premere Importa.`;
           if (!raw) return alert('Nessuna copia di sicurezza trovata.');
           loaded = JSON.parse(raw);
         }
-        state = { ...state, ...loaded, role: state.role, riderMappings: loaded.riderMappings || {} };
+        state = { ...state, ...loaded, role: state.role, riderMappings: loaded.riderMappings || {}, riderOpeningBalancesByName: loaded.riderOpeningBalancesByName || {} };
         initUI();
         $('saveStatus').textContent = 'Copia di sicurezza ripristinata.';
       } catch (e) {
@@ -3110,6 +3190,7 @@ Controlla questi dati prima di premere Importa.`;
         ...parsed,
         role: 'none',
         riderMappings: parsed.riderMappings && typeof parsed.riderMappings === 'object' ? parsed.riderMappings : {},
+        riderOpeningBalancesByName: parsed.riderOpeningBalancesByName && typeof parsed.riderOpeningBalancesByName === 'object' ? parsed.riderOpeningBalancesByName : {},
         names: Array.isArray(parsed.names) && parsed.names.length === S ? parsed.names : state.names,
         channels: Array.isArray(parsed.channels) && parsed.channels.length ? parsed.channels : [...DEFAULT_CHANNELS],
         lastRiderName: String(parsed.lastRiderName || ''),
