@@ -348,6 +348,19 @@ button{justify-content:center}
       </div>
     </div>
 
+    <!-- SPESE FATTORINO: movimenti immediati e tracciati -->
+    <div class="panel" id="riderExpensesPanel">
+      <strong>Spese e anticipi del fattorino</strong>
+      <p class="hint">La spesa viene sottratta immediatamente dal marsupio. Ogni movimento resta nello storico: non è possibile cancellarlo dal profilo fattorino.</p>
+      <div class="riderForm">
+        <div class="fieldStack"><label for="riderExpenseCategory">Categoria</label><select id="riderExpenseCategory"><option value="Benzina">Benzina</option><option value="Mercato">Spesa al mercato</option><option value="Materiale">Materiale / acquisti</option><option value="Altro">Altro motivo</option></select></div>
+        <div class="fieldStack"><label for="riderExpenseAmount">Importo (€)</label><input id="riderExpenseAmount" inputmode="decimal" placeholder="Es. 15,00"></div>
+        <div class="fieldStack"><label for="riderExpenseNote">Motivo / dettaglio</label><input id="riderExpenseNote" maxlength="180" placeholder="Es. benzina per consegne"></div>
+      </div>
+      <div class="toolbar" style="margin-top:8px"><button type="button" class="success" id="addRiderExpenseBtn">+ Registra e scala subito</button><b>Spese nette: <span id="riderExpenseTotal">0,00 €</span></b></div>
+      <div id="riderExpenseHistory" class="subjectSummary"></div>
+    </div>
+
     <!-- ELENCO CONSEGNE -->
     <div class="panel">
       <div class="toolbar">
@@ -384,6 +397,7 @@ button{justify-content:center}
         <strong style="display:block;margin-top:12px">Incassi per metodo</strong>
         <div id="rPaymentTotals" class="subjectSummary"></div>
       </div>
+      <div class="panelSub" style="margin-top:10px"><strong>Bonus F per zona</strong><p class="hint">Totale delle F maturate per zona e quota sottratta, ripartita proporzionalmente in base alle F maturate.</p><div id="rBonusByZone" class="subjectSummary"></div></div>
       <div class="bonusBox">
         <div class="toolbar">
           <div><strong>Bonus F automatico da zona</strong><div class="hint" style="margin:2px 0 0">Totale Bonus F: <b id="rBonusTotal">0,00 €</b> · Scalate: <b id="rBonusScaledAmt">0,00 €</b> · In attesa: <b id="rBonusPendingAmt">0,00 €</b></div></div>
@@ -501,6 +515,13 @@ button{justify-content:center}
         <strong>Situazione marsupio per singolo soggetto</strong>
         <p class="hint">Per ogni fattorino: marsupio iniziale + CASH − Bonus F solo se confermato. BANCOMAT/POS è mostrato a parte e non entra nel marsupio. La spunta è indipendente per ciascun soggetto.</p>
         <div id="adminSubjectWallets" class="subjectSummary"></div>
+      </div>
+      <div class="panelSub"><strong>Riepilogo Bonus F sottratti per zona</strong><p class="hint">F maturate per zona e quota delle F già sottratte, ripartita proporzionalmente in base al bonus maturato da ciascun fattorino.</p><div id="adminBonusByZone" class="subjectSummary"></div></div>
+      <div class="panelSub" id="adminRiderExpensesPanel">
+        <strong>Spese fattorini — controllo amministrativo</strong>
+        <p class="hint">Le spese registrate scalano subito il marsupio. Le rettifiche sono nuove registrazioni di storno: lo storico originale rimane intatto.</p>
+        <div id="adminRiderExpensesSummary" class="subjectSummary"></div>
+        <div id="adminRiderExpensesHistory" class="subjectSummary"></div>
       </div>
       <div class="panelSub">
         <strong>Totali per canale di provenienza e metodo d'incasso</strong>
@@ -622,6 +643,7 @@ button{justify-content:center}
     channels: [...DEFAULT_CHANNELS],
     zones: [{ id: 'zone_poncarale', name: 'Poncarale', amount: '1,00' }, { id: 'zone_fuori', name: 'Fuori', amount: '2,00' }],
     deliveries: [],
+    riderExpenses: [],
     bonusFScaled: false,
     bonusFScaledAmount: 0,
     bonusFManualConfirmed: false,
@@ -667,6 +689,78 @@ button{justify-content:center}
   }
 
   function cents(v){const n=parseAmt(v);return n===null||Number.isNaN(n)?0:Math.round(n*100);}
+  function expenseRiderKey(e){return nameKey(e?.riderName||'');}
+  function expenseSubjectIndex(e){
+    if(Number.isInteger(Number(e?.subjectIdx)) && Number(e.subjectIdx)>=0 && Number(e.subjectIdx)<S) return Number(e.subjectIdx);
+    const key=expenseRiderKey(e);
+    if(key && Number.isInteger(Number(state.riderMappings?.[key]))) return Number(state.riderMappings[key]);
+    const found=(state.names||[]).findIndex(n=>nameKey(n)===key);
+    return found;
+  }
+  function expenseNetForRider(name){const key=nameKey(name);return Math.round((state.riderExpenses||[]).filter(e=>expenseRiderKey(e)===key).reduce((a,e)=>a+(Number(e.amountCents)||0),0))/100;}
+  function expenseNetForSubject(idx){return Math.round((state.riderExpenses||[]).filter(e=>expenseSubjectIndex(e)===idx).reduce((a,e)=>a+(Number(e.amountCents)||0),0))/100;}
+  function addRiderExpense(){
+    const riderName=String(state.lastRiderName||$('riderNameInput')?.value||'').trim();
+    const amount=parseAmt($('riderExpenseAmount')?.value||'');
+    const category=String($('riderExpenseCategory')?.value||'Altro');
+    const note=String($('riderExpenseNote')?.value||'').trim();
+    if(!riderName||!state.riderProfileConfirmed||!riderProfileIsValid()){alert('Prima conferma il tuo nome e il marsupio iniziale.');return;}
+    if(amount===null||!Number.isFinite(amount)||amount<=0){alert('Inserisci un importo valido maggiore di zero.');$('riderExpenseAmount')?.focus();return;}
+    const id='exp_'+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'_'+Math.random().toString(36).slice(2));
+    const key=nameKey(riderName);
+    const subjectIdx=resolveSubjectIndex(riderName);
+    const entry={id,kind:'expense',category,amountCents:Math.round(amount*100),riderName,subjectIdx:Number.isInteger(subjectIdx)?subjectIdx:-1,note,createdAtISO:new Date().toISOString(),createdBy:riderName,refExpenseId:null};
+    state.riderExpenses=Array.isArray(state.riderExpenses)?state.riderExpenses:[];
+    state.riderExpenses.push(entry);
+    audit('SPESA FATTORINO',`${riderName} · ${category} · ${fmtEur(amount)}${note?' · '+note:''}`);
+    $('riderExpenseAmount').value='';$('riderExpenseNote').value='';
+    recomputeAll();renderRiderExpenseHistory();scheduleSave();
+  }
+  function reverseRiderExpense(id){
+    const original=(state.riderExpenses||[]).find(e=>e.id===id&&e.kind==='expense');
+    if(!original)return;
+    if((state.riderExpenses||[]).some(e=>e.kind==='reversal'&&e.refExpenseId===id)){alert('Questa spesa è già stata stornata.');return;}
+    if(!confirm(`Stornare ${fmtEur((Number(original.amountCents)||0)/100)} di ${original.riderName}? Verrà aggiunto un movimento opposto senza cancellare la spesa originale.`))return;
+    state.riderExpenses.push({id:'rev_'+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)),kind:'reversal',category:'Storno '+original.category,amountCents:-(Number(original.amountCents)||0),riderName:original.riderName,subjectIdx:original.subjectIdx,note:'Storno amministrativo della spesa '+id,createdAtISO:new Date().toISOString(),createdBy:'Amministrazione',refExpenseId:id});
+    audit('STORNO SPESA FATTORINO',`${original.riderName} · ${fmtEur((Number(original.amountCents)||0)/100)} · riferimento ${id}`);
+    recomputeAll();renderRiderExpenseHistory();scheduleSave();
+  }
+  function renderRiderExpenseHistory(){
+    const name=String(state.lastRiderName||$('riderNameInput')?.value||'').trim();
+    const rows=(state.riderExpenses||[]).filter(e=>expenseRiderKey(e)===nameKey(name)).slice().sort((a,b)=>String(b.createdAtISO).localeCompare(String(a.createdAtISO)));
+    const total=expenseNetForRider(name);
+    if($('riderExpenseTotal'))$('riderExpenseTotal').textContent=fmtEur(total);
+    if($('riderExpenseHistory'))$('riderExpenseHistory').innerHTML=rows.length?rows.map(e=>`<div class="subjectStat"><div><strong>${esc(e.kind==='reversal'?'STORNO · ':'')}${esc(e.category)}</strong><small>${new Date(e.createdAtISO).toLocaleString('it-IT')} · ${esc(e.note||'Nessun dettaglio')} · ID ${esc(e.id)}</small></div><b>${fmtEur((Number(e.amountCents)||0)/100)}</b></div>`).join(''):'<p class="hint">Nessuna spesa registrata.</p>';
+  }
+  function renderBonusByZone(){
+    const groups=new Map();
+    (state.deliveries||[]).forEach(d=>{
+      const bonus=Math.max(0,parseAmt(d.bonusF)||0);if(!bonus)return;
+      const zone=String(d.zoneName||'Zona non indicata');
+      const key=nameKey(zone)||'zona-non-indicata';
+      if(!groups.has(key))groups.set(key,{name:zone,total:0,scaled:0,count:0});
+      const g=groups.get(key);g.total+=bonus;g.count++;
+      const idx=expenseSubjectIndex({riderName:d.riderName,subjectIdx:d.subjectIdx});
+      let ratio=0;
+      if(idx>=0){const subjectTotal=bonusTotalForSubject(idx);ratio=subjectTotal>0?Math.min(1,bonusScaledAmountForSubject(idx)/subjectTotal):0;}
+      else {const riderTotal=bonusTotalForRider();ratio=riderTotal>0?Math.min(1,(Number(state.bonusFScaledAmount)||0)/riderTotal):0;}
+      g.scaled+=bonus*ratio;
+    });
+    const render=(elId,rows)=>{const el=$(elId);if(!el)return;el.innerHTML=rows.length?rows.sort((a,b)=>a.name.localeCompare(b.name,'it')).map(g=>`<div class="subjectStat"><div><strong>${esc(g.name)}</strong><small>${g.count} consegne · F maturate ${fmtEur(g.total)} · F sottratte ${fmtEur(g.scaled)}</small></div><b>${fmtEur(g.total)}</b></div>`).join(''):'<p class="hint">Nessun Bonus F associato a una zona.</p>';};
+    const admin=[...groups.values()];render('adminBonusByZone',admin);
+    const riderName=String(state.lastRiderName||$('riderNameInput')?.value||'').trim();
+    const riderGroups=new Map();
+    (state.deliveries||[]).filter(d=>nameKey(d.riderName)===nameKey(riderName)).forEach(d=>{const bonus=Math.max(0,parseAmt(d.bonusF)||0);if(!bonus)return;const zone=String(d.zoneName||'Zona non indicata'),key=nameKey(zone);if(!riderGroups.has(key))riderGroups.set(key,{name:zone,total:0,scaled:0,count:0});const g=riderGroups.get(key);g.total+=bonus;g.count++;const total=bonusTotalForRider();const ratio=total>0?Math.min(1,(Number(state.bonusFScaledAmount)||0)/total):0;g.scaled+=bonus*ratio;});
+    render('rBonusByZone',[...riderGroups.values()]);
+  }
+  function renderAdminRiderExpenses(){
+    const summary=$('adminRiderExpensesSummary'),history=$('adminRiderExpensesHistory');if(!summary||!history)return;
+    const names=[...new Set((state.riderExpenses||[]).map(e=>String(e.riderName||'').trim()).filter(Boolean))];
+    summary.innerHTML=names.length?names.map(n=>`<div class="subjectStat"><strong>${esc(n)}</strong><b>${fmtEur(expenseNetForRider(n))}</b></div>`).join(''):'<p class="hint">Nessuna spesa registrata.</p>';
+    const rows=(state.riderExpenses||[]).slice().sort((a,b)=>String(b.createdAtISO).localeCompare(String(a.createdAtISO)));
+    history.innerHTML=rows.length?rows.map(e=>{const reversed=e.kind==='expense'&&(state.riderExpenses||[]).some(x=>x.kind==='reversal'&&x.refExpenseId===e.id);return `<div class="subjectStat"><div><strong>${esc(e.riderName)} · ${esc(e.category)}${e.kind==='reversal'?' · STORNO':''}</strong><small>${new Date(e.createdAtISO).toLocaleString('it-IT')} · ${esc(e.note||'')} · ID ${esc(e.id)}${e.refExpenseId?' · Rif. '+esc(e.refExpenseId):''}</small></div><b>${fmtEur((Number(e.amountCents)||0)/100)}</b>${e.kind==='expense'&&!reversed?`<button class="secondary small" type="button" data-reverse-expense="${esc(e.id)}">Storna</button>`:''}</div>`;}).join(''):'<p class="hint">Nessun movimento disponibile.</p>';
+    history.querySelectorAll('[data-reverse-expense]').forEach(b=>b.addEventListener('click',()=>reverseRiderExpense(b.dataset.reverseExpense)));
+  }
   function subjectWalletNumbers(idx){
     const ds=(state.deliveries||[]).filter(d=>Number(d.subjectIdx)===idx);
     let cash=0,bancomat=0;
@@ -676,7 +770,8 @@ button{justify-content:center}
     const sr=Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject||{},idx)?parseAmt(state.marsupioStartBySubject[idx]):(has?parseAmt(state.marsupioStart):0);
     const start=sr===null||Number.isNaN(sr)?0:sr;
     const bonus=bonusScaledAmountForSubject(idx);
-    return {start,cash,bancomat,bonus,theoretical:Math.round((start+cash-bonus)*100)/100,ds};
+    const expenses=expenseNetForSubject(idx);
+    return {start,cash,bancomat,bonus,expenses,theoretical:Math.round((start+cash-bonus-expenses)*100)/100,ds};
   }
   // Controllo obbligatorio di completezza e coerenza prima della chiusura di un marsupio.
   function preflightSubject(idx) {
@@ -1602,7 +1697,8 @@ Controlla questi dati prima di premere Importa.`;
       const startRaw = Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject || {}, idx) ? parseAmt(state.marsupioStartBySubject[idx]) : (hasActivity ? legacyStart : 0);
       const start = startRaw === null || Number.isNaN(startRaw) ? 0 : startRaw;
       const total = Math.round((start + cash) * 100) / 100;
-      const remain = Math.round((total - scaledAmount) * 100) / 100;
+      const expenses = expenseNetForSubject(idx);
+      const remain = Math.round((total - scaledAmount - expenses) * 100) / 100;
       return `<article class="walletSubjectCard">
         <div class="toolbar"><strong>${esc(name || `Soggetto ${idx+1}`)}</strong><b>${fmtEur(total + bancomat)}</b></div>
         <div class="walletMetrics">
@@ -1610,10 +1706,11 @@ Controlla questi dati prima di premere Importa.`;
           <div class="walletMetric"><small>Cash da consegnare</small><b>${fmtEur(cash)}</b></div>
           <div class="walletMetric"><small>Bancomat / POS (banca)</small><b>${fmtEur(bancomat)}</b></div>
           <div class="walletMetric"><small>Bonus F totale</small><b>${fmtEur(bonus)}</b><small>Già sottratte: ${fmtEur(scaledAmount)} · Da sottrarre: ${fmtEur(pendingAmount)}</small></div>
+          <div class="walletMetric"><small>Spese nette registrate</small><b>${fmtEur(expenses)}</b></div>
         </div>
         <div class="walletActions"><label><input type="checkbox" data-wallet-scaled="${idx}" ${scaled?'checked':''}> F scalate confermate</label><button type="button" class="secondary small" data-wallet-export="${idx}">Esporta CSV</button><button type="button" class="danger small" data-wallet-clear="${idx}">${pendingClearSubjectIdx === idx ? 'Conferma pulizia definitiva' : 'Pulisci soggetto'}</button></div>
         <div class="walletRemain">RIMANENTE NEL MARSUPIO<br>${fmtEur(remain)}</div>
-        <small class="hint">Calcolo: iniziale + CASH${scaled?' − Bonus F scalate':''}. Il BANCOMAT è separato e non entra nel marsupio.</small>
+        <small class="hint">Calcolo: iniziale + CASH${scaled?' − Bonus F scalate':''} − spese nette. Il BANCOMAT è separato e non entra nel marsupio.</small>
       </article>`;
     }).join('');
     el.querySelectorAll('[data-wallet-start]').forEach(input => input.addEventListener('change', () => {
@@ -1638,6 +1735,8 @@ Controlla questi dati prima di premere Importa.`;
     el.querySelectorAll('[data-wallet-clear]').forEach(btn => btn.addEventListener('click', () => clearSubjectData(Number(btn.dataset.walletClear))));
     el.querySelectorAll('[data-wallet-export]').forEach(btn => btn.addEventListener('click', () => exportSubjectCsv(Number(btn.dataset.walletExport))));
     renderGuidedWalletClosures();
+    renderAdminRiderExpenses();
+    renderBonusByZone();
   }
 
   function clearSubjectData(idx) {
@@ -2101,9 +2200,10 @@ Controlla questi dati prima di premere Importa.`;
     // Marsupio calculations
     const mStartRaw = parseAmt(state.marsupioStart);
     const mStart = mStartRaw !== null && !Number.isNaN(mStartRaw) ? mStartRaw : 0;
+    const riderExpenseTotal = expenseNetForRider(state.lastRiderName || $('riderNameInput')?.value || '');
     const marsupioTotal = Math.round((mStart + riderCashSum) * 100) / 100;
-    const minusBonusTotal = Math.round((marsupioTotal - bonusScaledAmt) * 100) / 100;
-    const remainMarsupio = Math.round((marsupioTotal - bonusScaledAmt) * 100) / 100;
+    const minusBonusTotal = Math.round((marsupioTotal - bonusScaledAmt - riderExpenseTotal) * 100) / 100;
+    const remainMarsupio = minusBonusTotal;
     const adminMarsupioTotal = Math.round((mStart + cashSum) * 100) / 100;
     const adminMinusBonus = state.names.reduce((sum, _name, idx) => {
       const subjectCash = subjCash[idx] || 0;
@@ -2111,7 +2211,7 @@ Controlla questi dati prima di premere Importa.`;
       const subjectScaledAmount = bonusScaledAmountForSubject(idx);
       const subjectStartRaw = Object.prototype.hasOwnProperty.call(state.marsupioStartBySubject || {}, idx) ? parseAmt(state.marsupioStartBySubject[idx]) : ((subjCount[idx] || 0) > 0 ? mStart : 0);
       const subjectStart = subjectStartRaw === null || Number.isNaN(subjectStartRaw) ? 0 : subjectStartRaw;
-      return sum + subjectStart + subjectCash - subjectScaledAmount;
+      return sum + subjectStart + subjectCash - subjectScaledAmount - expenseNetForSubject(idx);
     }, 0);
 
     // Rider UI
@@ -2122,6 +2222,7 @@ Controlla questi dati prima di premere Importa.`;
     if ($('rMarsupioTotal')) $('rMarsupioTotal').textContent = fmtEur(marsupioTotal);
     if ($('rMinusBonus')) $('rMinusBonus').textContent = fmtEur(minusBonusTotal);
     if ($('rRemainMarsupio')) $('rRemainMarsupio').textContent = fmtEur(remainMarsupio);
+    renderRiderExpenseHistory();
 
     renderChannelTotals('rChannelTotals', state.deliveries);
     renderPaymentTotals('rPaymentTotals', state.deliveries);
@@ -2223,7 +2324,7 @@ Controlla questi dati prima di premere Importa.`;
   }
 
   function buildRiderCsv(rowsToExport, fallbackName = '') {
-    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Zona', 'Quota Zona', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO', 'Importo F già sottratto', 'Già pagato', 'Marsupio iniziale'];
+    const headers = ['ID', 'Fattorino', 'Soggetto assegnato', 'Numero', 'Totale', 'Canale', 'CASH', 'POS', 'Quota POS', 'Bonus F', 'Zona', 'Quota Zona', 'Ora', 'Canale incasso', 'Bonus F scalato', 'Data creazione ISO', 'Importo F già sottratto', 'Già pagato', 'Marsupio iniziale', 'Tipo movimento', 'Categoria spesa', 'Importo spesa centesimi', 'Dettaglio spesa', 'ID movimento', 'Riferimento movimento', 'Data movimento ISO'];
     const rows = rowsToExport.map(d => [
       d.id,
       String(d.riderName || fallbackName || '').trim(),
@@ -2243,9 +2344,15 @@ Controlla questi dati prima di premere Importa.`;
       d.createdAtISO || '',
       fmtAmountInput(d.subjectIdx >= 0 ? bonusScaledAmountForSubject(d.subjectIdx) : (Number(state.bonusFScaledAmount)||0)),
       d.paid ? 'SI' : 'NO',
-      state.marsupioStart || $('marsupioStartInput')?.value || ''
+      state.marsupioStart || $('marsupioStartInput')?.value || '',
+      'CONSEGNA', '', '', '', '', '', ''
     ]);
-    return '\uFEFF' + [headers, ...rows].map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
+    const riderName = String(fallbackName || state.lastRiderName || '').trim();
+    const expenseRows = (state.riderExpenses || []).filter(e => nameKey(e.riderName) === nameKey(riderName)).map(e => [
+      '', e.riderName || riderName, e.subjectIdx >= 0 ? (state.names[e.subjectIdx] || '') : 'DA ASSOCIARE', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+      e.kind === 'reversal' ? 'STORNO' : 'SPESA', e.category || 'Altro', Number(e.amountCents)||0, e.note || '', e.id, e.refExpenseId || '', e.createdAtISO || ''
+    ]);
+    return '\uFEFF' + [headers, ...rows, ...expenseRows].map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
   }
 
   function downloadRiderCsv(filename, rows, fallbackName = '') {
@@ -2272,12 +2379,13 @@ Controlla questi dati prima di premere Importa.`;
       const existingName = String(d.riderName || '').trim();
       return !existingName || nameKey(existingName) === nameKey(riderName);
     });
-    if (!rows.length) {
-      alert(`Non ci sono consegne da esportare per ${riderName}.`);
+    const riderExpenseRows = (state.riderExpenses || []).filter(e => nameKey(e.riderName) === nameKey(riderName));
+    if (!rows.length && !riderExpenseRows.length) {
+      alert(`Non ci sono consegne o spese da esportare per ${riderName}.`);
       return;
     }
     downloadRiderCsv(`fattorino-${riderName.replace(/[^a-z0-9_-]/gi, '_')}-consegne.csv`, rows, riderName);
-    if ($('importStatus')) $('importStatus').textContent = `CSV esportato per ${riderName}: ${rows.length} consegne. Il nome è riportato in ogni riga nella colonna Fattorino.`;
+    if ($('importStatus')) $('importStatus').textContent = `CSV esportato per ${riderName}: ${rows.length} consegne e ${riderExpenseRows.length} movimenti spesa/storno. Il nome è riportato in ogni riga.`;
   }
 
   function parseCsvText(text) {
@@ -2357,15 +2465,27 @@ Controlla questi dati prima di premere Importa.`;
       const ix = {
         id: col('id'), rider: col('fattorino', 'nome fattorino'), assigned: col('soggetto assegnato'),
         num: col('numero'), total: col('totale'), channel: col('canale'), cash: col('cash'), pos: col('pos'),
-        posAmt: col('quota pos'), bonus: col('bonus f'), paid: col('già pagato', 'gia pagato'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), scaledAmount: col('importo f già sottratto'), zone: col('zona'), zoneAmount: col('quota zona'), createdAtISO: col('data creazione iso'), marsupioStart: col('marsupio iniziale', 'marsupio start')
+        posAmt: col('quota pos'), bonus: col('bonus f'), paid: col('già pagato', 'gia pagato'), time: col('ora'), paymentChannel: col('canale incasso'), bonusScaled: col('bonus f scalato'), scaledAmount: col('importo f già sottratto'), zone: col('zona'), zoneAmount: col('quota zona'), createdAtISO: col('data creazione iso'), marsupioStart: col('marsupio iniziale', 'marsupio start'), type: col('tipo movimento'), expenseCategory: col('categoria spesa'), expenseCents: col('importo spesa centesimi'), expenseNote: col('dettaglio spesa'), expenseId: col('id movimento'), expenseRef: col('riferimento movimento'), expenseDate: col('data movimento iso')
       };
       if (ix.num < 0 || ix.total < 0 || (ix.rider < 0 && ix.assigned < 0)) throw new Error('CSV non compatibile: servono le colonne Fattorino, Numero e Totale.');
       const prepared = [];
+      const preparedExpenses = [];
       const importedStarts = new Map();
       rows.slice(1).forEach((r, n) => {
         const get = k => ix[k] >= 0 ? String(r[ix[k]] ?? '').trim() : '';
         const riderName = get('rider') || (get('assigned') === 'DA ASSOCIARE' ? '' : get('assigned'));
         const num = get('num'), total = get('total');
+        const movementType = get('type').toUpperCase();
+        if (movementType === 'SPESA' || movementType === 'STORNO') {
+          if (!riderName) throw new Error(`Riga CSV ${n + 2}: nome fattorino mancante nel movimento spesa.`);
+          const amountCents = Number(get('expenseCents'));
+          const movementId = get('expenseId');
+          if (!Number.isSafeInteger(amountCents) || amountCents === 0 || (movementType === 'SPESA' && amountCents < 0) || (movementType === 'STORNO' && amountCents > 0)) throw new Error(`Riga CSV ${n + 2}: importo spesa/storno non valido.`);
+          if (!movementId) throw new Error(`Riga CSV ${n + 2}: ID movimento mancante.`);
+          const movementDate = get('expenseDate');
+          preparedExpenses.push({id:movementId,kind:movementType==='STORNO'?'reversal':'expense',category:get('expenseCategory')||'Altro',amountCents,riderName,subjectIdx:-1,note:get('expenseNote'),createdAtISO:movementDate&&Number.isFinite(Date.parse(movementDate))?new Date(movementDate).toISOString():new Date().toISOString(),createdBy:riderName,refExpenseId:get('expenseRef')||null});
+          return;
+        }
         const cash = /^(si|1|true|yes)$/i.test(get('cash'));
         const pos = /^(si|1|true|yes)$/i.test(get('pos'));
         const posAmt = get('posAmt'), bonusF = get('bonus');
@@ -2406,6 +2526,8 @@ Controlla questi dati prima di premere Importa.`;
       }
 
       // Blocca duplicati logici anche se lo stesso ordine arriva con ID differenti.
+      const seenExpenseIds = new Set();
+      preparedExpenses.forEach(item => { if(seenExpenseIds.has(item.id)) throw new Error(`ID movimento duplicato nel CSV: ${item.id}. Nessun dato è stato importato.`); seenExpenseIds.add(item.id); const existing=(state.riderExpenses||[]).find(e=>e.id===item.id); if(existing && (Number(existing.amountCents)!==item.amountCents || existing.kind!==item.kind || nameKey(existing.riderName)!==nameKey(item.riderName))) throw new Error(`Conflitto sul movimento ${item.id}: i dati esistenti sono diversi. Nessun dato è stato importato.`); });
       const seenKeys = new Map();
       prepared.forEach((item, i) => {
         const key = nameKey(item.riderName) + '|' + normNum(item.num);
@@ -2455,6 +2577,16 @@ Controlla questi dati prima di premere Importa.`;
         }
         syncDeliveryToGrid(d);
       });
+      let expensesAdded=0, expensesAlreadyPresent=0;
+      state.riderExpenses=Array.isArray(state.riderExpenses)?state.riderExpenses:[];
+      preparedExpenses.forEach(item=>{
+        const existing=state.riderExpenses.findIndex(e=>e.id===item.id);
+        const assignedIdx=Number.isInteger(targetSubjectIdx)&&targetSubjectIdx>=0&&targetSubjectIdx<S?targetSubjectIdx:resolveSubjectIndex(item.riderName);
+        const finalItem={...item,subjectIdx:assignedIdx};
+        if(existing>=0) expensesAlreadyPresent++;
+        else {state.riderExpenses.push(finalItem);expensesAdded++;}
+      });
+
       // Saldo di apertura per fattorino: sostituisce il valore del soggetto, non si somma alle consegne.
       let startsUpdated = 0, startsUnmatched = 0;
       state.riderOpeningBalancesByName = state.riderOpeningBalancesByName || {};
@@ -2470,11 +2602,11 @@ Controlla questi dati prima di premere Importa.`;
           startsUnmatched++;
         }
       });
-      audit('IMPORTAZIONE CSV', `${file.name}: ${added} nuove, ${updated} aggiornate, ${startsUpdated} marsupi iniziali aggiornati${startsUnmatched ? `, ${startsUnmatched} da associare` : ''}${Number.isInteger(targetSubjectIdx) ? ` · soggetto ${state.names[targetSubjectIdx]}` : ''}`);
+      audit('IMPORTAZIONE CSV', `${file.name}: ${added} nuove, ${updated} aggiornate, ${startsUpdated} marsupi iniziali aggiornati, ${expensesAdded} spese/storni importati${expensesAlreadyPresent ? `, ${expensesAlreadyPresent} già presenti` : ''}${startsUnmatched ? `, ${startsUnmatched} da associare` : ''}${Number.isInteger(targetSubjectIdx) ? ` · soggetto ${state.names[targetSubjectIdx]}` : ''}`);
       runRetentionCleanup();
       renderChannels(); renderGrid(); renderDeliveries(); renderRiderMappings(); recomputeAll(); scheduleSave();
       const syncErrors = state.deliveries.filter(d => d.gridSyncError).length;
-      $('importStatus').textContent = `Importazione completata: ${added} nuove consegne, ${updated} aggiornate, ${startsUpdated} marsupi iniziali aggiornati${startsUnmatched ? `, ${startsUnmatched} da associare` : ''}.${syncErrors ? ` Attenzione: ${syncErrors} non sincronizzate nella griglia; verifica i dettagli qui sotto.` : ' Tutte le consegne assegnate sono state sincronizzate.'} Controlla e associa i nomi non riconosciuti.`;
+      $('importStatus').textContent = `Importazione completata: ${added} nuove consegne, ${updated} aggiornate, ${startsUpdated} marsupi iniziali aggiornati, ${expensesAdded} spese/storni importati${expensesAlreadyPresent ? `, ${expensesAlreadyPresent} già presenti` : ''}${startsUnmatched ? `, ${startsUnmatched} da associare` : ''}.${syncErrors ? ` Attenzione: ${syncErrors} non sincronizzate nella griglia; verifica i dettagli qui sotto.` : ' Tutte le consegne assegnate sono state sincronizzate.'} Controlla e associa i nomi non riconosciuti.`;
       input.value = '';
     } catch (e) {
       $('importStatus').textContent = 'Importazione non riuscita: ' + e.message;
@@ -2535,6 +2667,7 @@ Controlla questi dati prima di premere Importa.`;
       state.riderOpeningBalancesByName = {};
       state.channels = [...DEFAULT_CHANNELS];
       state.deliveries = [];
+      state.riderExpenses = [];
       state.bonusFScaled = false;
       state.bonusFScaledAmount = 0;
       state.bonusFManualConfirmed = false;
@@ -2844,6 +2977,7 @@ Controlla questi dati prima di premere Importa.`;
     };
 
     $('riderExportCsv').onclick = exportRiderCsv;
+    if ($('addRiderExpenseBtn')) $('addRiderExpenseBtn').onclick = addRiderExpense;
     $('riderExportPdf').onclick = () => window.print();
     $('exportCsvBtn').onclick = exportAdminCsv;
 
@@ -3036,6 +3170,7 @@ Controlla questi dati prima di premere Importa.`;
         refRows:JSON.parse(JSON.stringify(state.refRows||[])),
         subjects:JSON.parse(JSON.stringify(state.subjects||[])),
         deliveries:JSON.parse(JSON.stringify(deliveries)),
+        riderExpenses:JSON.parse(JSON.stringify(state.riderExpenses||[])),
         expenses:JSON.parse(JSON.stringify(state.expenses||[])),
         walletClosures:JSON.parse(JSON.stringify(state.walletClosures||{})),
         marsupioStart:state.marsupioStart||'',
@@ -3061,6 +3196,7 @@ Controlla questi dati prima di premere Importa.`;
     }
     // Nuova giornata: mantiene anagrafiche e impostazioni, azzera solo i dati operativi.
     state.deliveries=[];
+    state.riderExpenses=[];
     state.refRows=Array.from({length:state.rowsCount||150},()=>({an:'',at:''}));
     state.subjects=Array.from({length:state.rowsCount||150},()=>Array.from({length:S},()=>blankSubjectCell()));
     state.expenses=Array.from({length:10},(_,i)=>({label:i===0?'Voci fuori (EF)':(i===1?'Mangia spesa (EF)':''),raw:''}));
@@ -3109,6 +3245,7 @@ Controlla questi dati prima di premere Importa.`;
     if (typeof state.riderProfileConfirmed !== 'boolean') state.riderProfileConfirmed = false;
     if (!Array.isArray(state.expenses)) state.expenses = [];
     if (!Array.isArray(state.deliveries)) state.deliveries = [];
+    if (!Array.isArray(state.riderExpenses)) state.riderExpenses = [];
     if (!Array.isArray(state.zones)) state.zones = [{ id: 'zone_poncarale', name: 'Poncarale', amount: '1,00' }, { id: 'zone_fuori', name: 'Fuori', amount: '2,00' }];
     normalizeZones();
     if (!Array.isArray(state.auditLog)) state.auditLog = [];
